@@ -1,8 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { createEmptyRequestDraft } from '@/components/request-editor/createEmptyRequestDraft'
+import { createEmptyRequestFormState } from '@/components/request-editor/createEmptyRequestFormState'
 import type { HttpMethod } from '@/components/primitives'
 import type { RequestState } from '@/components/request-editor/requestState'
+
+export type WorkspaceTab = {
+  id: string
+  type: 'request' | 'workflow'
+  isDirty: boolean
+  request?: RequestState
+}
 
 type WorkspaceStore = {
   requests: Record<string, RequestState>
@@ -37,7 +44,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         }),
       getRequest: (id) => get().requests[id],
       createRequest: (id, method = 'GET') => {
-        const draft = createEmptyRequestDraft()
+        const draft = createEmptyRequestFormState()
         const request: RequestState = {
           id,
           name: 'Untitled request',

@@ -12,12 +12,12 @@ export function IndependentDivider({ x, height }: IndependentDividerProps) {
           y1={0}
           x2={0}
           y2={height}
-          stroke="#CBD5E1"
+          stroke="var(--color-border)"
           strokeWidth={0.5}
           strokeDasharray="4 4"
         />
       </svg>
-      <span className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90 whitespace-nowrap bg-white px-1 text-[10px] font-[400] text-slate-400 dark:bg-[#16171d] dark:text-slate-500">
+      <span className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90 whitespace-nowrap bg-surface px-1 text-[10px] font-[400] text-text-muted">
         independent
       </span>
     </div>

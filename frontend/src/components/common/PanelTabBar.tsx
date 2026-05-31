@@ -37,17 +37,17 @@ export function PanelTabBar({
             aria-selected={isActive}
             data-testid={`${testIdPrefix}-${tab.id}`}
             className={cn(
-              'shrink-0 border-b-2 border-transparent font-medium text-text-muted',
+              'shrink-0 border-b-2 -mb-px border-transparent font-medium text-text-muted',
               'px-[var(--density-padding-sm)] py-[var(--density-padding-xs)]',
               'text-[length:var(--density-font-label)] leading-[var(--density-line-height)]',
               'min-h-[var(--density-row-height)]',
               'hover:text-text',
               isActive &&
                 !isScript &&
-                '-mb-[0.5px] border-primary bg-primary-bg text-text',
+                'border-primary bg-primary-bg text-text',
               isActive &&
                 isScript &&
-                '-mb-[0.5px] border-[#185FA5] bg-[#185FA5]/10 text-[#185FA5]',
+                'border-primary bg-info-bg text-info-fg',
             )}
             onClick={() => onTabChange(tab.id)}
           >

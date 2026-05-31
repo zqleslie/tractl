@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RequestConfigTabContent } from '@/components/request-editor/config/RequestConfigTabContent'
 import { RequestConfigTabs } from '@/components/request-editor/config/RequestConfigTabs'
-import { createEmptyRequestDraft } from '@/components/request-editor/createEmptyRequestDraft'
+import { createEmptyRequestFormState } from '@/components/request-editor/createEmptyRequestFormState'
 import { ThemeSync } from '@/app/ThemeSync'
 import { useExecutionStore } from '@/stores/executionStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -10,7 +10,7 @@ import { useUiStore } from '@/stores/uiStore'
 const editorStub = {
   method: 'GET' as const,
   url: 'https://api.example.com',
-  draft: createEmptyRequestDraft(),
+  draft: createEmptyRequestFormState(),
   params: {
     rows: [],
     add: vi.fn(),
@@ -25,15 +25,15 @@ const editorStub = {
     replace: vi.fn(),
   },
   body: {
-    value: createEmptyRequestDraft().body,
+    value: createEmptyRequestFormState().body,
     update: vi.fn(),
   },
   auth: {
-    value: createEmptyRequestDraft().auth,
+    value: createEmptyRequestFormState().auth,
     update: vi.fn(),
   },
   scripts: {
-    value: createEmptyRequestDraft().scripts,
+    value: createEmptyRequestFormState().scripts,
     update: vi.fn(),
   },
   assertions: {
@@ -49,7 +49,7 @@ const editorStub = {
     remove: vi.fn(),
   },
   settings: {
-    value: createEmptyRequestDraft().settings,
+    value: createEmptyRequestFormState().settings,
     update: vi.fn(),
   },
 }
@@ -110,7 +110,7 @@ describe('Request editor panels', () => {
             ...editorStub,
             settings: {
               value: {
-                ...createEmptyRequestDraft().settings,
+                ...createEmptyRequestFormState().settings,
                 retry: 'Fixed',
                 retryConfig: {
                   strategy: 'fixed',
@@ -214,7 +214,7 @@ describe('Auth panel', () => {
     const onChange = vi.fn()
     const { rerender } = render(
       <AuthPanel
-        value={{ ...createEmptyRequestDraft().auth, type: 'None' }}
+        value={{ ...createEmptyRequestFormState().auth, type: 'None' }}
         onChange={onChange}
       />,
     )
@@ -222,7 +222,7 @@ describe('Auth panel', () => {
 
     rerender(
       <AuthPanel
-        value={{ ...createEmptyRequestDraft().auth, type: 'Bearer token', token: '' }}
+        value={{ ...createEmptyRequestFormState().auth, type: 'Bearer token', token: '' }}
         onChange={onChange}
       />,
     )

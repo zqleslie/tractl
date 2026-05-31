@@ -9,6 +9,7 @@ export type EnvironmentVariableInputProps = {
   'aria-label'?: string
   multiline?: boolean
   rows?: number
+  readOnly?: boolean
 }
 
 export function EnvironmentVariableInput({
@@ -19,6 +20,7 @@ export function EnvironmentVariableInput({
   'aria-label': ariaLabel,
   multiline = false,
   rows = 4,
+  readOnly,
 }: EnvironmentVariableInputProps) {
   const listId = useId()
   const activeEnvironmentId = useEnvironmentStore((state) => state.activeEnvironmentId)
@@ -38,6 +40,7 @@ export function EnvironmentVariableInput({
     placeholder,
     className,
     value,
+    readOnly,
     onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       onChange(event.currentTarget.value),
     list: variableNames.length > 0 ? listId : undefined,

@@ -75,9 +75,9 @@ describe('App shell v4', () => {
   it('closing the active tab activates the adjacent tab', () => {
     useUiStore.setState({
       tabs: [
-        { id: 'tab-a', type: 'request', title: 'First', method: 'GET' },
-        { id: 'tab-b', type: 'request', title: 'Second', method: 'POST' },
-        { id: 'tab-c', type: 'workflow', title: 'Flow', method: 'WF' },
+        { id: 'tab-a', type: 'request', title: 'First', method: 'GET', isDirty: false },
+        { id: 'tab-b', type: 'request', title: 'Second', method: 'POST', isDirty: false },
+        { id: 'tab-c', type: 'workflow', title: 'Flow', method: 'WF', isDirty: false },
       ],
       activeTabId: 'tab-b',
     })
@@ -92,7 +92,15 @@ describe('App shell v4', () => {
 
   it('updates the active request tab after request metadata changes', () => {
     useUiStore.setState({
-      tabs: [{ id: 'tab-a', type: 'request', title: 'Untitled request', method: 'GET' }],
+      tabs: [
+        {
+          id: 'tab-a',
+          type: 'request',
+          title: 'Untitled request',
+          method: 'GET',
+          isDirty: false,
+        },
+      ],
       activeTabId: 'tab-a',
     })
 

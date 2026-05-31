@@ -12,18 +12,18 @@ export interface StepCardProps {
 }
 
 const methodBadgeClass: Record<HttpMethod, string> = {
-  GET: 'bg-[#E6F1FB] text-[#185FA5] dark:bg-[#042C53] dark:text-[#B5D4F4]',
-  POST: 'bg-[#EAF3DE] text-[#3B6D11] dark:bg-[#173404] dark:text-[#C0DD97]',
-  PUT: 'bg-[#FAEEDA] text-[#854F0B] dark:bg-[#412402] dark:text-[#FAC775]',
-  PATCH: 'bg-[#FAEEDA] text-[#854F0B] dark:bg-[#412402] dark:text-[#FAC775]',
-  DELETE: 'bg-[#FCEBEB] text-[#A32D2D] dark:bg-[#501313] dark:text-[#F7C1C1]',
+  GET: 'method-badge-get',
+  POST: 'method-badge-post',
+  PUT: 'method-badge-put',
+  PATCH: 'method-badge-patch',
+  DELETE: 'method-badge-delete',
 }
 
 const outcomeBorderClass: Record<StepOutcome, string> = {
   idle: 'border-slate-200 dark:border-slate-700',
   running: 'border-slate-200 dark:border-slate-700',
-  passed: 'border-[#3B6D11] dark:border-[#C0DD97]',
-  failed: 'border-[#A32D2D] dark:border-[#F7C1C1]',
+  passed: 'border-success-fg',
+  failed: 'border-danger-fg',
   skipped: 'border-dashed border-slate-300 dark:border-slate-600',
 }
 
@@ -44,14 +44,14 @@ function OutcomeBadge({ outcome }: { outcome: StepOutcome }) {
   }
   if (outcome === 'passed') {
     return (
-      <span className={cn(pillBase, 'bg-[#EAF3DE] text-[#3B6D11] dark:bg-[#173404] dark:text-[#C0DD97]')}>
+      <span className={cn(pillBase, 'bg-success-bg text-success-fg')}>
         passed
       </span>
     )
   }
   if (outcome === 'failed') {
     return (
-      <span className={cn(pillBase, 'bg-[#FCEBEB] text-[#A32D2D] dark:bg-[#501313] dark:text-[#F7C1C1]')}>
+      <span className={cn(pillBase, 'bg-danger-bg text-danger-fg')}>
         failed
       </span>
     )
@@ -78,13 +78,13 @@ function AssertionPill({ step }: { step: WorkflowStep }) {
   const failed = total - passed
   if (failed > 0) {
     return (
-      <span className={cn(pillBase, 'bg-[#FCEBEB] text-[#A32D2D] dark:bg-[#501313] dark:text-[#F7C1C1]')}>
+      <span className={cn(pillBase, 'bg-danger-bg text-danger-fg')}>
         {failed}/{total} failed
       </span>
     )
   }
   return (
-    <span className={cn(pillBase, 'bg-[#EAF3DE] text-[#3B6D11] dark:bg-[#173404] dark:text-[#C0DD97]')}>
+    <span className={cn(pillBase, 'bg-success-bg text-success-fg')}>
       {passed}/{total} passed
     </span>
   )
@@ -92,7 +92,7 @@ function AssertionPill({ step }: { step: WorkflowStep }) {
 
 const extractPillClass = cn(
   pillBase,
-  'bg-[#E6F1FB] text-[#185FA5] dark:bg-[#042C53] dark:text-[#B5D4F4]',
+  'bg-info-bg text-info-fg',
 )
 
 function ExtractPills({ step }: { step: WorkflowStep }) {
@@ -139,7 +139,7 @@ export function StepCard({ step, stepNumber, onClick, onInsertBelow }: StepCardP
         onClick={onClick}
         onKeyDown={handleKeyDown}
         className={cn(
-          'flex min-h-[110px] cursor-pointer flex-col gap-2 rounded-card border-[1.5px] bg-white p-3 dark:bg-[#1f2028]',
+          'flex min-h-[110px] cursor-pointer flex-col gap-2 rounded-card border-[1.5px] bg-surface p-3',
           outcomeBorderClass[outcome],
         )}
       >
@@ -179,7 +179,7 @@ export function StepCard({ step, stepNumber, onClick, onInsertBelow }: StepCardP
           )}
           <AssertionPill step={step} />
           {step.hasPreScript && (
-            <span className="text-[10px] leading-none text-[#185FA5] dark:text-[#B5D4F4]" title="Has pre-script">
+            <span className="text-[10px] leading-none text-info-fg" title="Has pre-script">
               ●
             </span>
           )}

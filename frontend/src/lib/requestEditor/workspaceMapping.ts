@@ -1,4 +1,4 @@
-import { createEmptyRequestDraft } from '@/components/request-editor/createEmptyRequestDraft'
+import { createEmptyRequestFormState } from '@/components/request-editor/createEmptyRequestFormState'
 import type { RequestState } from '@/components/request-editor/requestState'
 import type {
   AuthType,
@@ -6,7 +6,7 @@ import type {
   BodyEncodingId,
   RequestAuthDraft,
   RequestBodyDraft,
-  RequestDraft,
+  RequestFormState,
   RequestSettingsDraft,
   RetryStrategy,
 } from '@/components/request-editor/types'
@@ -131,7 +131,7 @@ function authDraftToState(auth: RequestAuthDraft): RequestState['auth'] {
   }
 }
 
-export function requestStateToDraft(state: RequestState): RequestDraft {
+export function requestStateToDraft(state: RequestState): RequestFormState {
   const retryStrategy = state.settings.retry
     ? retryToUi[state.settings.retry.strategy]
     : 'None'
@@ -170,7 +170,7 @@ export function draftToRequestState(
   name: string,
   method: HttpMethod,
   url: string,
-  draft: RequestDraft,
+  draft: RequestFormState,
 ): RequestState {
   const retryStrategy = draft.settings.retry
   const strategy = retryFromUi[retryStrategy]
@@ -225,6 +225,6 @@ export function createWorkspaceRequestState(
     'Untitled request',
     method,
     '',
-    createEmptyRequestDraft(),
+    createEmptyRequestFormState(),
   )
 }

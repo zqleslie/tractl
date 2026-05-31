@@ -1,4 +1,4 @@
-import type { RequestDraft } from '@/components/request-editor/types'
+import type { RequestFormState } from '@/components/request-editor/types'
 import { normalizeRequestTargetUrl } from '@/components/request-editor/normalizeRequestUrl'
 import type {
   TraCtlAssertion,
@@ -12,7 +12,7 @@ const WORKFLOW_ID = 'request-flow'
 const STEP_ID = 'request-step'
 
 function enabledRows(
-  rows: RequestDraft['headers'],
+  rows: RequestFormState['headers'],
 ): Record<string, string> | undefined {
   const headers: Record<string, string> = {}
   for (const row of rows) {
@@ -24,7 +24,7 @@ function enabledRows(
   return Object.keys(headers).length > 0 ? headers : undefined
 }
 
-function queryFromParams(rows: RequestDraft['params']): string {
+function queryFromParams(rows: RequestFormState['params']): string {
   const parts: string[] = []
   for (const row of rows) {
     if (!row.enabled) continue
@@ -37,7 +37,7 @@ function queryFromParams(rows: RequestDraft['params']): string {
   return parts.join('&')
 }
 
-function resolveTarget(_method: HttpMethod, url: string, draft: RequestDraft): string {
+function resolveTarget(_method: HttpMethod, url: string, draft: RequestFormState): string {
   const trimmed = normalizeRequestTargetUrl(url)
   if (!trimmed) return ''
   const query = queryFromParams(draft.params)
@@ -46,7 +46,7 @@ function resolveTarget(_method: HttpMethod, url: string, draft: RequestDraft): s
   return `${trimmed}${separator}${query}`
 }
 
-function parseBodyContent(encoding: RequestDraft['body']['encoding'], value: string) {
+function parseBodyContent(encoding: RequestFormState['body']['encoding'], value: string) {
   const trimmed = value.trim()
   if (!trimmed || encoding === 'None') return undefined
 
@@ -61,7 +61,7 @@ function parseBodyContent(encoding: RequestDraft['body']['encoding'], value: str
   return trimmed
 }
 
-function bodyDescriptor(draft: RequestDraft) {
+function bodyDescriptor(draft: RequestFormState) {
   const content = parseBodyContent(draft.body.encoding, draft.body.value)
   if (content === undefined) return undefined
 
@@ -77,7 +77,7 @@ function bodyDescriptor(draft: RequestDraft) {
   return { encoding, content }
 }
 
-function toAssertions(rows: RequestDraft['assertions']): TraCtlAssertion[] {
+function toAssertions(rows: RequestFormState['assertions']): TraCtlAssertion[] {
   return rows
     .filter((row) => row.kind.trim() && row.expected.trim())
     .map((row, index) => {
@@ -94,7 +94,7 @@ function toAssertions(rows: RequestDraft['assertions']): TraCtlAssertion[] {
     })
 }
 
-function toExtracts(rows: RequestDraft['extracts']): TraCtlExtract[] {
+function toExtracts(rows: RequestFormState['extracts']): TraCtlExtract[] {
   return rows
     .filter((row) => row.variable.trim())
     .map((row, index) => ({
@@ -106,7 +106,7 @@ function toExtracts(rows: RequestDraft['extracts']): TraCtlExtract[] {
     }))
 }
 
-function toTimeout(settings: RequestDraft['settings']): string | undefined {
+function toTimeout(settings: RequestFormState['settings']): string | undefined {
   const value = settings.timeoutValue.trim()
   if (!value) return undefined
 
@@ -116,7 +116,7 @@ function toTimeout(settings: RequestDraft['settings']): string | undefined {
   return `PT${value}S`
 }
 
-function toRetry(settings: RequestDraft['settings']): TraCtlStep['retry'] | undefined {
+function toRetry(settings: RequestFormState['settings']): TraCtlStep['retry'] | undefined {
   if (settings.retry === 'None' || !settings.retryConfig) return undefined
   return {
     maxAttempts: settings.retryConfig.maxAttempts,
@@ -125,7 +125,7 @@ function toRetry(settings: RequestDraft['settings']): TraCtlStep['retry'] | unde
   }
 }
 
-function toHooks(draft: RequestDraft): TraCtlStep['hooks'] | undefined {
+function toHooks(draft: RequestFormState): TraCtlStep['hooks'] | undefined {
   const before = draft.scripts.pre.trim()
   const after = draft.scripts.post.trim()
   if (!before && !after) return undefined
@@ -138,10 +138,10 @@ function toHooks(draft: RequestDraft): TraCtlStep['hooks'] | undefined {
   }
 }
 
-export function requestDraftToTraCtlSpec(
+export function requestFormStateToTraCtlSpec(
   method: HttpMethod,
   url: string,
-  draft: RequestDraft,
+  draft: RequestFormState,
   requestName = 'Untitled request',
 ): TraCtlSpecDocument {
   const target = resolveTarget(method, url, draft)

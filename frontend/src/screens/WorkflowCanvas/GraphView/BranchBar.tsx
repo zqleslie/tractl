@@ -4,7 +4,7 @@ export interface BranchBarProps {
   width: number
 }
 
-const STROKE = '#94A3B8'
+const STROKE = 'var(--color-border)'
 
 /** Visual fan-out connector only — parallel steps are added via the parent step card +. */
 export function BranchBar({ x, y, width }: BranchBarProps) {

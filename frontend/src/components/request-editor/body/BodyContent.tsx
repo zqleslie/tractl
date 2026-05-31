@@ -180,6 +180,7 @@ function JsonBodyEditor({
           multiline
           rows={7}
           value={value}
+          readOnly={readOnly}
           onChange={onChange}
         />
       ) : (

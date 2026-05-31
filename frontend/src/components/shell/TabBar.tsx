@@ -1,7 +1,79 @@
+import { useState } from 'react'
 import { IconPlus, IconX } from '@tabler/icons-react'
 import { MethodBadge } from '@/components/primitives'
 import { cn } from '@/lib/cn'
-import { useUiStore } from '@/stores/uiStore'
+import { useUiStore, type WorkspaceTab } from '@/stores/uiStore'
+
+type WorkspaceTabButtonProps = {
+  tab: WorkspaceTab
+  active: boolean
+  onActivate: () => void
+  onClose: () => void
+}
+
+function WorkspaceTabButton({
+  tab,
+  active,
+  onActivate,
+  onClose,
+}: WorkspaceTabButtonProps) {
+  const [isHovered, setIsHovered] = useState(false)
+
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      className={cn(
+        'flex h-8 max-w-[240px] items-center gap-2 rounded-t-ui border border-b-0 px-3 text-ui-xs',
+        active
+          ? 'border-border bg-surface text-text shadow-sm'
+          : 'border-transparent text-text-muted hover:bg-surface/80 hover:text-text',
+      )}
+      data-testid={`workspace-tab-${tab.id}`}
+      onClick={onActivate}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <MethodBadge method={tab.method} />
+      <span className="min-w-0 flex-1 truncate">{tab.title}</span>
+      {tab.isDirty && !isHovered ? (
+        <span
+          aria-label="Unsaved changes"
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: '50%',
+            background: 'var(--dot-unsaved, var(--color-warning-fg))',
+            flexShrink: 0,
+            display: 'inline-block',
+          }}
+        />
+      ) : (
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label={`Close ${tab.title}`}
+          className="rounded p-0.5 hover:bg-surface-elevated"
+          data-testid={`close-tab-${tab.id}`}
+          style={{ opacity: isHovered ? 1 : active ? 0.4 : 0 }}
+          onClick={(event) => {
+            event.stopPropagation()
+            onClose()
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            event.preventDefault()
+            event.stopPropagation()
+            onClose()
+          }}
+        >
+          <IconX size={12} stroke={1.75} />
+        </span>
+      )}
+    </button>
+  )
+}
 
 export function TabBar() {
   const tabs = useUiStore((state) => state.tabs)
@@ -20,42 +92,13 @@ export function TabBar() {
       {tabs.map((tab) => {
         const active = tab.id === activeTabId
         return (
-          <button
+          <WorkspaceTabButton
             key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            className={cn(
-              'group flex h-8 max-w-[240px] items-center gap-2 rounded-t-ui border border-b-0 px-3 text-ui-xs',
-              active
-                ? 'border-border bg-surface text-text shadow-sm'
-                : 'border-transparent text-text-muted hover:bg-surface/80 hover:text-text',
-            )}
-            data-testid={`workspace-tab-${tab.id}`}
-            onClick={() => activateTab(tab.id)}
-          >
-            <MethodBadge method={tab.method} />
-            <span className="min-w-0 flex-1 truncate">{tab.title}</span>
-            <span
-              role="button"
-              tabIndex={0}
-              aria-label={`Close ${tab.title}`}
-              className="rounded p-0.5 opacity-60 hover:bg-surface-elevated hover:opacity-100"
-              data-testid={`close-tab-${tab.id}`}
-              onClick={(event) => {
-                event.stopPropagation()
-                closeTab(tab.id)
-              }}
-              onKeyDown={(event) => {
-                if (event.key !== 'Enter' && event.key !== ' ') return
-                event.preventDefault()
-                event.stopPropagation()
-                closeTab(tab.id)
-              }}
-            >
-              <IconX size={12} stroke={1.75} />
-            </span>
-          </button>
+            tab={tab}
+            active={active}
+            onActivate={() => activateTab(tab.id)}
+            onClose={() => closeTab(tab.id)}
+          />
         )
       })}
       <button

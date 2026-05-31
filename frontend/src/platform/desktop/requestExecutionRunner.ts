@@ -16,14 +16,11 @@ export const desktopRequestExecutionRunner: RequestExecutionRunner = {
     return saveRequestFile({
       id: input.id,
       name: input.name,
-      document: input.document,
+      request: input.request,
     })
   },
 
   async runRequest(input) {
-    if (!input.fileId) {
-      throw new Error('Request must be saved before running')
-    }
-    return runRequestFile({ fileId: input.fileId })
+    return runRequestFile({ request: input.request })
   },
 }

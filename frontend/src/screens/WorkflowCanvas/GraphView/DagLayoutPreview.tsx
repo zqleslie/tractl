@@ -12,9 +12,9 @@ const MOCK_WORKFLOW: LayoutStep[] = [
 ];
 
 const EDGE_STROKE: Record<string, string> = {
-  sequential: '#64748b',
-  fanout: '#2563eb',
-  merge: '#9333ea',
+  sequential: 'var(--color-border)',
+  fanout: 'var(--color-primary)',
+  merge: 'var(--color-info-fg)',
 };
 
 /**
@@ -32,7 +32,7 @@ export function DagLayoutPreview() {
   };
 
   return (
-    <div style={{ padding: 24, background: '#f8fafc', overflow: 'auto' }}>
+    <div style={{ padding: 24, background: 'var(--color-surface-elevated)', overflow: 'auto' }}>
       <h2 style={{ fontFamily: 'sans-serif', fontSize: 16, marginBottom: 16 }}>
         DAG Layout Preview
       </h2>
@@ -41,8 +41,8 @@ export function DagLayoutPreview() {
           position: 'relative',
           width: layout.canvasWidth,
           height: layout.canvasHeight,
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
         }}
       >
         <svg
@@ -57,7 +57,7 @@ export function DagLayoutPreview() {
               y1={0}
               x2={divider.x}
               y2={layout.canvasHeight}
-              stroke="#cbd5e1"
+              stroke="var(--color-border)"
               strokeDasharray="6 6"
             />
           ))}
@@ -72,7 +72,7 @@ export function DagLayoutPreview() {
                 y1={from.cy}
                 x2={to.cx}
                 y2={to.cy}
-                stroke={EDGE_STROKE[edge.edgeType] ?? '#64748b'}
+                stroke={EDGE_STROKE[edge.edgeType] ?? 'var(--color-border)'}
                 strokeWidth={2}
               />
             );
@@ -85,7 +85,7 @@ export function DagLayoutPreview() {
               y1={bar.y}
               x2={bar.xEnd}
               y2={bar.y}
-              stroke="#2563eb"
+              stroke="var(--color-primary)"
               strokeWidth={3}
             />
           ))}
@@ -101,15 +101,15 @@ export function DagLayoutPreview() {
               width: CARD_W,
               height: CARD_H,
               boxSizing: 'border-box',
-              border: '1px solid #cbd5e1',
+              border: '1px solid var(--color-border)',
               borderRadius: 8,
-              background: '#ffffff',
+              background: 'var(--color-surface)',
               padding: 12,
               fontFamily: 'sans-serif',
             }}
           >
             <div style={{ fontSize: 14, fontWeight: 600 }}>{node.stepId}</div>
-            <div style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8 }}>
               row {node.row} · col {node.col} · group {node.columnGroup}
             </div>
           </div>

@@ -8,7 +8,7 @@ export type CollectionFolder = {
   createdAt: string
 }
 
-export type SavedCollectionRequest = {
+export type SavedRequestItem = {
   id: string
   folderId: string
   name: string
@@ -18,13 +18,13 @@ export type SavedCollectionRequest = {
 
 type RequestCollectionsState = {
   folders: CollectionFolder[]
-  items: SavedCollectionRequest[]
+  items: SavedRequestItem[]
   createFolder: (name: string) => string
   renameFolder: (id: string, name: string) => void
   removeFolder: (id: string) => void
   saveRequest: (folderId: string, state: RequestState, name?: string) => string
   removeItem: (id: string) => void
-  getItemsByFolder: (folderId: string) => SavedCollectionRequest[]
+  getItemsByFolder: (folderId: string) => SavedRequestItem[]
 }
 
 export const useRequestCollectionsStore = create<RequestCollectionsState>()(
@@ -55,7 +55,7 @@ export const useRequestCollectionsStore = create<RequestCollectionsState>()(
           items: state.items.filter((item) => item.folderId !== id),
         })),
       saveRequest: (folderId, state, name) => {
-        const item: SavedCollectionRequest = {
+        const item: SavedRequestItem = {
           id: crypto.randomUUID(),
           folderId,
           name: name?.trim() || state.name || 'Untitled request',

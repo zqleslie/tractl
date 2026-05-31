@@ -6,7 +6,7 @@ export type ActionCardIconTone = 'request' | 'workflow' | 'file' | 'openapi' | '
 const iconToneClass: Record<ActionCardIconTone, string> = {
   request: 'bg-primary-bg text-primary',
   workflow: 'bg-success-bg text-success-fg',
-  file: 'bg-[#E1F5EE] text-[#0F6E56] dark:bg-[#0F6E56]/20 dark:text-[#7EC8B8]',
+  file: 'bg-info-bg text-info-fg',
   openapi: 'bg-warning-bg text-warning-fg',
   history: 'bg-surface text-text-muted',
 }

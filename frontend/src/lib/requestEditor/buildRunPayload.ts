@@ -1,9 +1,9 @@
-import type { RunRequestPayload } from '@/api/requests'
-import type { RequestDraft } from '@/components/request-editor/types'
+import type { RequestFormState } from '@/components/request-editor/types'
 import type { HttpMethod } from '@/components/primitives'
+import type { RequestDef } from '@/types/requestDef'
 
 function enabledHeaders(
-  headers: RequestDraft['headers'],
+  headers: RequestFormState['headers'],
 ): Record<string, string> {
   const result: Record<string, string> = {}
   for (const row of headers) {
@@ -16,16 +16,22 @@ function enabledHeaders(
 export function buildRunRequestPayload(input: {
   method: HttpMethod
   url: string
-  draft: RequestDraft
+  draft: RequestFormState
   environmentId: string | null
-}): RunRequestPayload {
-  const { draft, method, url, environmentId } = input
+}): RequestDef {
+  const { draft, method, url } = input
   const authType = draft.auth.type
 
   return {
     method,
     url,
-    headers: enabledHeaders(draft.headers),
+    id: crypto.randomUUID(),
+    name: url || 'Untitled request',
+    headers: Object.entries(enabledHeaders(draft.headers)).map(([key, value]) => ({
+      enabled: true,
+      key,
+      value,
+    })),
     body:
       draft.body.encoding === 'None'
         ? undefined
@@ -61,6 +67,5 @@ export function buildRunRequestPayload(input: {
           : 30_000,
       failurePolicy: draft.settings.failurePolicy,
     },
-    environmentId,
-  }
+  } as unknown as RequestDef
 }

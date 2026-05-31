@@ -1,4 +1,7 @@
 import type { RequestExecutionRunner } from '@/platform/requestExecution/types'
+import { requestFormStateToTraCtlSpec } from '@/components/request-editor/requestFormStateToTraCtlSpec'
+import type { RequestState } from '@/components/request-editor/requestState'
+import { requestStateToDraft } from '@/lib/requestEditor/workspaceMapping'
 import {
   isTractlWasmRuntimeReady,
   loadTractlWasmRuntime,
@@ -27,6 +30,13 @@ export const webRequestExecutionRunner: RequestExecutionRunner = {
   },
 
   async runRequest(input) {
-    return runRequestInWasm(input.document)
+    const request = input.request as RequestState
+    const document = requestFormStateToTraCtlSpec(
+      request.method,
+      request.url,
+      requestStateToDraft(request),
+      request.name,
+    )
+    return runRequestInWasm(document)
   },
 }

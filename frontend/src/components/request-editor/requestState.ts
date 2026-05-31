@@ -1,4 +1,5 @@
 import type { HttpMethod } from '@/components/primitives'
+import type { RequestDef } from '@/types/requestDef'
 import type {
   AssertionDef,
   ExtractDef,
@@ -9,11 +10,11 @@ import type {
   RetryConfig,
 } from '@/components/request-editor/types'
 
-export type RequestState = {
-  id: string
-  name: string
+export type RequestState = Omit<
+  RequestDef,
+  'method' | 'params' | 'headers' | 'body' | 'auth' | 'assertions' | 'extracts' | 'settings'
+> & {
   method: HttpMethod
-  url: string
   params: KVRow[]
   headers: KVRow[]
   body: RequestBodyState

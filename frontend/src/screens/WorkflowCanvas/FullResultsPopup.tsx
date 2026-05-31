@@ -15,10 +15,10 @@ function formatDuration(ms: number): string {
 
 function StepOutcomeIcon({ outcome }: { outcome: StepOutcome }) {
   if (outcome === 'passed') {
-    return <IconCheck size={14} stroke={1.5} className="text-[#3B6D11] dark:text-[#C0DD97]" />
+    return <IconCheck size={14} stroke={1.5} className="text-success-fg" />
   }
   if (outcome === 'failed') {
-    return <IconX size={14} stroke={1.5} className="text-[#A32D2D] dark:text-[#F7C1C1]" />
+    return <IconX size={14} stroke={1.5} className="text-danger-fg" />
   }
   return <IconMinus size={14} stroke={1.5} className="text-text-muted" />
 }
@@ -36,8 +36,8 @@ function SummaryCard({
     <div
       className={cn(
         'flex flex-col items-center justify-center gap-1 rounded-card border border-[0.5px] border-border p-3',
-        tone === 'passed' && 'bg-[#EAF3DE] dark:bg-[#173404]',
-        tone === 'failed' && 'bg-[#FCEBEB] dark:bg-[#501313]',
+        tone === 'passed' && 'bg-success-bg',
+        tone === 'failed' && 'bg-danger-bg',
       )}
     >
       <span className="text-[11px] font-[400] text-text-muted">{label}</span>
@@ -92,7 +92,7 @@ export function FullResultsPopup({ summary, steps, onClose }: FullResultsPopupPr
           </div>
 
           {summary.outcome === 'error' && summary.errorMessage && (
-            <div className="mt-4 rounded-card border border-[0.5px] border-[#A32D2D]/40 bg-[#FCEBEB] px-3 py-2 text-[12px] font-[400] text-[#A32D2D] dark:border-[#F7C1C1]/30 dark:bg-[#501313] dark:text-[#F7C1C1]">
+            <div className="mt-4 rounded-card border border-[0.5px] border-danger-fg bg-danger-bg px-3 py-2 text-[12px] font-[400] text-danger-fg">
               {summary.errorMessage}
             </div>
           )}
@@ -118,7 +118,7 @@ export function FullResultsPopup({ summary, steps, onClose }: FullResultsPopupPr
                   key={step.id}
                   className={cn(
                     'rounded-card border border-[0.5px] border-border px-3 py-2',
-                    outcome === 'failed' && 'border-l-2 border-l-[#A32D2D]',
+                    outcome === 'failed' && 'border-l-2 border-l-danger-fg',
                   )}
                 >
                   <div className="flex items-center gap-2 text-[12px] font-[400] text-text">

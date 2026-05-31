@@ -58,7 +58,15 @@ export function ResponseTabContent({
   }
 
   if (tab === 'headers') {
-    return <KeyValueTable rows={runResult.headers} readOnly addLabel="Add header" />
+    const rows = Array.isArray(runResult.headers)
+      ? runResult.headers
+      : Object.entries(runResult.headers).map(([key, value], index) => ({
+          id: `response-header-${index}`,
+          enabled: true,
+          key,
+          value,
+        }))
+    return <KeyValueTable rows={rows} readOnly addLabel="Add header" />
   }
 
   if (tab === 'assertions') {
@@ -81,10 +89,16 @@ export function ResponseTabContent({
               : 'danger'
           }
         >
-          {runResult.statusLabel || String(runResult.statusCode)}
+          {runResult.statusText || runResult.statusLabel || String(runResult.statusCode)}
         </Badge>
         <Badge tone="neutral">{runResult.durationMs} ms</Badge>
-        <Badge tone="neutral">{runResult.contentType}</Badge>
+        <Badge tone="neutral">
+          {runResult.contentType ??
+            (Array.isArray(runResult.headers)
+              ? undefined
+              : runResult.headers['content-type']) ??
+            'text/plain'}
+        </Badge>
         {prettyBody !== null ? (
           <div className="ml-auto inline-flex rounded-ui border-[0.5px] border-border bg-surface-elevated p-0.5">
             <BodyModeButton

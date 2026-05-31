@@ -10,7 +10,7 @@ export interface ConnectionLineProps {
   dependencyKind?: 'explicit' | 'implicit'
 }
 
-const STROKE = '#94A3B8'
+const STROKE = 'var(--color-border)'
 const STROKE_WIDTH = 0.5
 
 export function ConnectionLine({

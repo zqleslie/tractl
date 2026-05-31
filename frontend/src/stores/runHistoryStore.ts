@@ -38,7 +38,8 @@ function trimHistoryEntries(
   while (next.length > max) {
     let removed = false
     for (let index = next.length - 1; index >= 0; index -= 1) {
-      if (!pinnedIds.includes(next[index].id)) {
+      const entry = next[index]
+      if (entry && !pinnedIds.includes(entry.id)) {
         next.splice(index, 1)
         removed = true
         break

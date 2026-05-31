@@ -105,9 +105,14 @@ export function mapWasmRunResultToRequestRunResult(
     const kind = assertion.Kind || 'assertion'
     return {
       id,
+      kind,
+      op: 'equals',
+      expected: id,
+      received: assertion.Message || '',
       passed: assertion.Outcome === 'pass',
       label: `${kind} ${id}`,
       detail: assertion.Message || '',
+      severity: 'error' as const,
     }
   })
 
@@ -129,12 +134,16 @@ export function mapWasmRunResultToRequestRunResult(
     passed: run.Passed === true && !bodyLooksLikeAppShell,
     durationMs,
     statusCode,
+    statusText: statusLabel,
     statusLabel,
     contentType,
     body,
     headers,
+    timing: timeline.timing,
     assertionResults,
     extractResults: extractResultsFromDiagnostics(run.diagnostics),
+    assertionsPassed: passedCount,
+    assertionsTotal: assertionResults.length,
     passedCount,
     totalCount: assertionResults.length,
     timeline: timeline.segments,
@@ -152,12 +161,16 @@ function mapWasmFailure(code: string, message: string): RequestRunResult {
     passed: false,
     durationMs: 0,
     statusCode: 0,
+    statusText: 'Error',
     statusLabel: 'Error',
     contentType: 'text/plain',
     body: detail,
-    headers: [],
+    headers: {},
+    timing: { dns: 0, tcp: 0, tls: 0, ttfb: 0, transfer: 0, total: 0, unit: 'ms' },
     assertionResults: [],
     extractResults: [],
+    assertionsPassed: 0,
+    assertionsTotal: 0,
     passedCount: 0,
     totalCount: 0,
     timeline: [],
@@ -166,12 +179,7 @@ function mapWasmFailure(code: string, message: string): RequestRunResult {
 }
 
 function responseHeaders(headers: Record<string, string>) {
-  return Object.entries(headers).map(([key, value], index) => ({
-    id: `response-header-${index + 1}`,
-    enabled: true,
-    key,
-    value,
-  }))
+  return headers
 }
 
 function responseStatusLabel(statusCode: number): string {
@@ -212,22 +220,37 @@ function headerValue(headers: Record<string, string>, key: string): string {
 function timelineFromDiagnostics(diagnostics?: WasmDiagnostics): {
   segments: RequestRunResult['timeline']
   durationMs: number
+  timing: RequestRunResult['timing']
 } {
   const timeline =
     diagnostics?.Workflows?.[0]?.Steps?.[0]?.Requests?.[0]?.Timeline ?? undefined
   if (!timeline) {
-    return { segments: [], durationMs: 0 }
+    return {
+      segments: [],
+      durationMs: 0,
+      timing: { dns: 0, tcp: 0, tls: 0, ttfb: 0, transfer: 0, total: 0, unit: 'ms' },
+    }
+  }
+  const timing = {
+    dns: timeline.DNSMs ?? 0,
+    tcp: timeline.TCPMs ?? 0,
+    tls: timeline.TLSMs ?? 0,
+    ttfb: timeline.TTFBMs ?? 0,
+    transfer: timeline.TransferMs ?? 0,
+    total: timeline.TotalMs ?? 0,
+    unit: 'ms' as const,
   }
 
   return {
     segments: [
-      { label: 'DNS', ms: timeline.DNSMs ?? 0 },
-      { label: 'TCP', ms: timeline.TCPMs ?? 0 },
-      { label: 'TLS', ms: timeline.TLSMs ?? 0 },
-      { label: 'TTFB', ms: timeline.TTFBMs ?? 0 },
-      { label: 'Transfer', ms: timeline.TransferMs ?? 0 },
+      { label: 'DNS', ms: timing.dns },
+      { label: 'TCP', ms: timing.tcp },
+      { label: 'TLS', ms: timing.tls },
+      { label: 'TTFB', ms: timing.ttfb },
+      { label: 'Transfer', ms: timing.transfer },
     ],
-    durationMs: timeline.TotalMs ?? 0,
+    durationMs: timing.total,
+    timing,
   }
 }
 
@@ -238,7 +261,7 @@ function extractResultsFromDiagnostics(diagnostics?: WasmDiagnostics) {
     return {
       variable: `steps.this.extracts.${variable}`,
       value: extract.Source || '',
-      scope: 'workflow',
+      scope: 'workflow' as const,
     }
   })
 }

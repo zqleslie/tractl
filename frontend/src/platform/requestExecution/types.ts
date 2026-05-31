@@ -1,17 +1,17 @@
-import type { TraCtlSpecDocument } from '@/components/request-editor/tractlSpecDocument'
 import type {
   RequestRunResult,
   SaveRequestFileResponse,
 } from '@/platform/localApi/types'
+import type { RequestDef } from '@/types/requestDef'
 
 export type SaveRequestInput = {
   id?: string | null
   name: string
-  document: TraCtlSpecDocument
+  request: RequestDef
 }
 
 export type RunRequestInput = {
-  document: TraCtlSpecDocument
+  request: RequestDef
   fileId?: string | null
   name: string
 }

@@ -1,17 +1,29 @@
 export const colors = {
-  success: { light: { bg: '#EAF3DE', text: '#3B6D11' }, dark: { bg: '#173404', text: '#C0DD97' } },
-  error: { light: { bg: '#FCEBEB', text: '#A32D2D' }, dark: { bg: '#501313', text: '#F7C1C1' } },
-  warning: { light: { bg: '#FAEEDA', text: '#854F0B' }, dark: { bg: '#412402', text: '#FAC775' } },
-  info: { light: { bg: '#E6F1FB', text: '#185FA5' }, dark: { bg: '#042C53', text: '#B5D4F4' } },
-  run: { bg: '#185FA5', text: '#E6F1FB' },
+  success: {
+    light: { bg: 'var(--color-success-bg)', text: 'var(--color-success-fg)' },
+    dark: { bg: 'var(--color-success-bg)', text: 'var(--color-success-fg)' },
+  },
+  error: {
+    light: { bg: 'var(--color-danger-bg)', text: 'var(--color-danger-fg)' },
+    dark: { bg: 'var(--color-danger-bg)', text: 'var(--color-danger-fg)' },
+  },
+  warning: {
+    light: { bg: 'var(--color-warning-bg)', text: 'var(--color-warning-fg)' },
+    dark: { bg: 'var(--color-warning-bg)', text: 'var(--color-warning-fg)' },
+  },
+  info: {
+    light: { bg: 'var(--color-info-bg)', text: 'var(--color-info-fg)' },
+    dark: { bg: 'var(--color-info-bg)', text: 'var(--color-info-fg)' },
+  },
+  run: { bg: 'var(--color-primary)', text: 'var(--color-primary-fg)' },
 } as const
 
 export const methodColors: Record<string, { bg: string; text: string }> = {
-  GET: { bg: '#E6F1FB', text: '#185FA5' },
-  POST: { bg: '#EAF3DE', text: '#3B6D11' },
-  PUT: { bg: '#FAEEDA', text: '#854F0B' },
-  PATCH: { bg: '#FAEEDA', text: '#854F0B' },
-  DELETE: { bg: '#FCEBEB', text: '#A32D2D' },
+  GET: { bg: 'var(--method-get-bg)', text: 'var(--method-get-fg)' },
+  POST: { bg: 'var(--method-post-bg)', text: 'var(--method-post-fg)' },
+  PUT: { bg: 'var(--method-put-bg)', text: 'var(--method-put-fg)' },
+  PATCH: { bg: 'var(--method-patch-bg)', text: 'var(--method-patch-fg)' },
+  DELETE: { bg: 'var(--method-delete-bg)', text: 'var(--method-delete-fg)' },
 }
 
 export const typography = {

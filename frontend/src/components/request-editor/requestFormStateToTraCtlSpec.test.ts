@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { createEmptyRequestDraft } from '@/components/request-editor/createEmptyRequestDraft'
-import { requestDraftToTraCtlSpec } from '@/components/request-editor/requestDraftToTraCtlSpec'
+import { createEmptyRequestFormState } from '@/components/request-editor/createEmptyRequestFormState'
+import { requestFormStateToTraCtlSpec } from '@/components/request-editor/requestFormStateToTraCtlSpec'
 
-describe('requestDraftToTraCtlSpec', () => {
+describe('requestFormStateToTraCtlSpec', () => {
   it('serializes a minimal GET request', () => {
-    const draft = createEmptyRequestDraft()
+    const draft = createEmptyRequestFormState()
     draft.headers.push({
       id: 'h1',
       enabled: true,
@@ -12,7 +12,7 @@ describe('requestDraftToTraCtlSpec', () => {
       value: 'application/json',
     })
 
-    const spec = requestDraftToTraCtlSpec(
+    const spec = requestFormStateToTraCtlSpec(
       'GET',
       'https://jsonplaceholder.typicode.com/todos/1',
       draft,
@@ -30,13 +30,13 @@ describe('requestDraftToTraCtlSpec', () => {
   })
 
   it('appends enabled query params to the target URL', () => {
-    const draft = createEmptyRequestDraft()
+    const draft = createEmptyRequestFormState()
     draft.params.push(
       { id: 'p1', enabled: true, key: 'limit', value: '10' },
       { id: 'p2', enabled: false, key: 'offset', value: '5' },
     )
 
-    const spec = requestDraftToTraCtlSpec(
+    const spec = requestFormStateToTraCtlSpec(
       'GET',
       'https://api.example.com/items',
       draft,

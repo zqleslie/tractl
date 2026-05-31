@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestSaveAndRunRequestFile(t *testing.T) {
@@ -28,43 +30,25 @@ func TestSaveAndRunRequestFile(t *testing.T) {
 	ts := httptest.NewServer(server.handler)
 	t.Cleanup(ts.Close)
 
-	document := map[string]any{
-		"schemaVersion": 1,
-		"capabilities":  []string{"protocol.http"},
-		"metadata":      map[string]string{"name": "ping"},
-		"workflows": []map[string]any{
-			{
-				"id": "request-flow",
-				"steps": []map[string]any{
-					{
-						"id":   "request-step",
-						"kind": "request",
-						"request": map[string]any{
-							"protocol":  "http",
-							"target":    upstream.URL,
-							"operation": "GET",
-						},
-						"assertions": []map[string]any{
-							{
-								"id":       "status-ok",
-								"kind":     "status",
-								"op":       "equals",
-								"expected": 200,
-							},
-						},
-					},
-				},
-			},
-		},
+	requestDef := RequestDef{
+		ID:     "ping",
+		Name:   "ping",
+		Method: "GET",
+		URL:    upstream.URL,
+		Assertions: []AssertionDef{{
+			ID:       "status-ok",
+			Kind:     "status",
+			Op:       "equals",
+			Expected: "200",
+			Severity: "error",
+		}},
 	}
-	docBytes, _ := json.Marshal(document)
+	yamlBytes, _ := yaml.Marshal(requestDef)
 
 	saveBody, _ := json.Marshal(map[string]any{
-		"kind":     "request",
-		"name":     "ping",
-		"document": json.RawMessage(docBytes),
+		"content": string(yamlBytes),
 	})
-	saveReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost, ts.URL+"/api/v1/files", bytes.NewReader(saveBody))
+	saveReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost, ts.URL+"/api/v1/files/requests/ping.yaml", bytes.NewReader(saveBody))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,19 +66,19 @@ func TestSaveAndRunRequestFile(t *testing.T) {
 		t.Fatalf("save status %d", saveResp.StatusCode)
 	}
 
-	var saved SaveFileResponse
+	var saved FileWriteResponse
 	if err := json.NewDecoder(saveResp.Body).Decode(&saved); err != nil {
 		t.Fatal(err)
 	}
-	if saved.ID == "" {
-		t.Fatal("expected file id")
+	if saved.Path == "" {
+		t.Fatal("expected file path")
 	}
 
-	if _, err := os.Stat(filepath.Join(root, "requests", saved.ID+".yaml")); err != nil {
+	if _, err := os.Stat(filepath.Join(root, "requests", "ping.yaml")); err != nil {
 		t.Fatalf("yaml file missing: %v", err)
 	}
 
-	runBody, _ := json.Marshal(map[string]string{"fileId": saved.ID})
+	runBody, _ := json.Marshal(requestDef)
 	runReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost, ts.URL+"/api/v1/run", bytes.NewReader(runBody))
 	if err != nil {
 		t.Fatal(err)
@@ -113,15 +97,15 @@ func TestSaveAndRunRequestFile(t *testing.T) {
 		t.Fatalf("run status %d", runResp.StatusCode)
 	}
 
-	var run RunResponse
+	var run RunResult
 	if err := json.NewDecoder(runResp.Body).Decode(&run); err != nil {
 		t.Fatal(err)
 	}
 	if run.StatusCode != 200 {
 		t.Fatalf("expected status 200, got %d", run.StatusCode)
 	}
-	if run.TotalCount != 1 {
-		t.Fatalf("expected 1 assertion, got %d", run.TotalCount)
+	if run.AssertionsTotal != 1 {
+		t.Fatalf("expected 1 assertion, got %d", run.AssertionsTotal)
 	}
 }
 

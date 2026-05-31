@@ -20,12 +20,12 @@ type TimeoutUnit = 's' | 'ms' | 'min'
 const chipClass =
   'inline-flex h-5 shrink-0 items-center rounded-full border border-[0.5px] border-border px-2 text-[11px] font-[400] text-text-muted'
 const inputClass =
-  'h-7 rounded-[7px] border border-[0.5px] border-border bg-surface px-2 text-[12px] font-[400] text-text outline-none focus:border-[#185FA5]'
+  'h-7 rounded-[7px] border border-[0.5px] border-border bg-surface px-2 text-[12px] font-[400] text-text outline-none focus:border-primary'
 const policyBase =
   'inline-flex h-7 items-center rounded-[7px] border border-[0.5px] px-3 text-[12px] font-[400] transition-colors'
 const policyInactive = 'border-border text-text-muted hover:text-text'
 const policyActive =
-  'border-[#185FA5] bg-[#E6F1FB] text-[#185FA5] dark:border-[#B5D4F4] dark:bg-[#042C53] dark:text-[#B5D4F4]'
+  'border-primary bg-primary-bg text-primary'
 
 function toUnitValue(timeoutMs: number, unit: TimeoutUnit): number {
   if (unit === 'ms') return timeoutMs
@@ -178,7 +178,7 @@ export function WorkflowConfigStrip({
               <span className={chipClass}>{config.hasHooks ? 'Enabled' : 'None'}</span>
               <button
                 type="button"
-                className="text-[11px] font-[400] text-[#185FA5] hover:underline dark:text-[#B5D4F4]"
+                className="text-[11px] font-[400] text-primary hover:underline"
               >
                 Configure
               </button>

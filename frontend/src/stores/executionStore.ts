@@ -26,6 +26,7 @@ export type RunTiming = {
   ttfb: number
   transfer: number
   total: number
+  unit?: 'ms'
 }
 
 export type RunResult = {

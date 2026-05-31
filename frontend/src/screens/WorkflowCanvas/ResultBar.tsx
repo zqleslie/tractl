@@ -33,9 +33,9 @@ function OutcomeIcon({ outcome }: { outcome: StepOutcome }) {
 }
 
 const chipToneClass: Record<StepOutcome, string> = {
-  passed: 'bg-[#EAF3DE] text-[#3B6D11] dark:bg-[#173404] dark:text-[#C0DD97]',
-  failed: 'bg-[#FCEBEB] text-[#A32D2D] dark:bg-[#501313] dark:text-[#F7C1C1]',
-  running: 'bg-[#FAEEDA] text-[#854F0B] dark:bg-[#412402] dark:text-[#FAC775]',
+  passed: 'bg-success-bg text-success-fg',
+  failed: 'bg-danger-bg text-danger-fg',
+  running: 'bg-warning-bg text-warning-fg',
   skipped: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
   idle: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
 }
@@ -56,7 +56,7 @@ function OutcomeBadge({
   }
   if (runState === 'running') {
     return (
-      <span className={cn(badgeBase, 'bg-[#FAEEDA] text-[#854F0B] dark:bg-[#412402] dark:text-[#FAC775]')}>
+      <span className={cn(badgeBase, 'bg-warning-bg text-warning-fg')}>
         Running…
       </span>
     )
@@ -116,7 +116,7 @@ export function ResultBar({
         <span className="text-[12px] font-[500] text-text">Results</span>
         <OutcomeBadge runState={runState} summary={summary} steps={steps} />
         {summary?.outcome === 'error' && summary.errorMessage ? (
-          <span className="min-w-0 truncate text-[11px] font-[400] text-[#A32D2D] dark:text-[#F7C1C1]">
+          <span className="min-w-0 truncate text-[11px] font-[400] text-danger-fg">
             {summary.errorMessage}
           </span>
         ) : null}
@@ -130,7 +130,7 @@ export function ResultBar({
           <button
             type="button"
             onClick={handleViewFull}
-            className="text-[11px] font-[400] text-[#185FA5] hover:underline dark:text-[#B5D4F4]"
+            className="text-[11px] font-[400] text-primary hover:underline"
           >
             View full results
           </button>
@@ -143,7 +143,7 @@ export function ResultBar({
       </div>
 
       {isExpanded && summary?.outcome === 'error' && summary.errorMessage && (
-        <div className="mx-3 mb-2 rounded-card border border-[0.5px] border-[#A32D2D]/40 bg-[#FCEBEB] px-3 py-2 text-[11px] font-[400] text-[#A32D2D] dark:border-[#F7C1C1]/30 dark:bg-[#501313] dark:text-[#F7C1C1]">
+        <div className="mx-3 mb-2 rounded-card border border-[0.5px] border-danger-fg bg-danger-bg px-3 py-2 text-[11px] font-[400] text-danger-fg">
           {summary.errorMessage}
         </div>
       )}

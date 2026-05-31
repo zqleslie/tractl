@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { HttpMethod } from '@/components/primitives'
 import type { RunHistoryEntry } from '@/stores/runHistoryStore'
-import type { SavedCollectionRequest } from '@/stores/requestCollectionsStore'
+import type { SavedRequestItem } from '@/stores/requestCollectionsStore'
 
 export type RequestsSidebarView = 'history' | 'collections'
 
@@ -33,6 +33,7 @@ export type WorkspaceTab = {
   type: WorkspaceTabType
   title: string
   method: HttpMethod | 'WF'
+  isDirty: boolean
   workflowId?: string | null
 }
 
@@ -52,7 +53,7 @@ type UiState = {
   activeScreen: AppScreen
   activeWorkflowId: string | null
   pendingHistoryEntry: RunHistoryEntry | null
-  pendingCollectionRequest: SavedCollectionRequest | null
+  pendingRequestItem: SavedRequestItem | null
   requestsSidebarView: RequestsSidebarView
   requestsHistoryShowAll: boolean
   requestEditorKey: number
@@ -78,15 +79,17 @@ type UiState = {
   setKeyboardShortcutsOpen: (open: boolean) => void
   activateTab: (tabId: string) => void
   closeTab: (tabId: string) => void
-  updateActiveRequestTab: (patch: Partial<Pick<WorkspaceTab, 'method' | 'title'>>) => void
+  updateActiveRequestTab: (
+    patch: Partial<Pick<WorkspaceTab, 'method' | 'title' | 'isDirty'>>,
+  ) => void
   setActiveScreen: (screen: AppScreen) => void
   openNewRequest: () => void
   openWorkflow: (id: string | null) => void
   openWorkflowPlaceholder: () => void
   openHistoryEntry: (entry: RunHistoryEntry) => void
   clearPendingHistoryEntry: () => void
-  openCollectionRequest: (item: SavedCollectionRequest) => void
-  clearPendingCollectionRequest: () => void
+  openRequestItem: (item: SavedRequestItem) => void
+  clearPendingRequestItem: () => void
   setRequestsSidebarView: (view: RequestsSidebarView) => void
   setRequestsHistoryShowAll: (showAll: boolean) => void
 }
@@ -109,7 +112,7 @@ export const useUiStore = create<UiState>()(
       activeScreen: 'fast-start',
       activeWorkflowId: null,
       pendingHistoryEntry: null,
-      pendingCollectionRequest: null,
+      pendingRequestItem: null,
       requestsSidebarView: 'history',
       requestsHistoryShowAll: false,
       requestEditorKey: 0,
@@ -157,6 +160,7 @@ export const useUiStore = create<UiState>()(
                       type: 'workflow',
                       title: state.activeWorkflowId ?? 'Untitled workflow',
                       method: 'WF',
+                      isDirty: false,
                       workflowId: state.activeWorkflowId,
                     },
                   ],
@@ -246,6 +250,7 @@ export const useUiStore = create<UiState>()(
               type: 'request',
               title: 'Untitled request',
               method: 'GET',
+              isDirty: false,
             },
           ],
           activeTabId: `request-${s.requestEditorKey + 1}`,
@@ -267,6 +272,7 @@ export const useUiStore = create<UiState>()(
                     type: 'workflow',
                     title: id ?? 'Untitled workflow',
                     method: 'WF',
+                    isDirty: false,
                     workflowId: id,
                   },
                 ],
@@ -286,6 +292,7 @@ export const useUiStore = create<UiState>()(
               type: 'request',
               title: entry.requestName,
               method: entry.method,
+              isDirty: false,
             },
           ],
           activeTabId: `history-${entry.id}`,
@@ -294,7 +301,7 @@ export const useUiStore = create<UiState>()(
           requestEditorKey: s.requestEditorKey + 1,
         })),
       clearPendingHistoryEntry: () => set({ pendingHistoryEntry: null }),
-      openCollectionRequest: (item) =>
+      openRequestItem: (item) =>
         set((s) => {
           const tabId = `collection-${item.id}`
           const existing = s.tabs.some((tab) => tab.id === tabId)
@@ -308,16 +315,17 @@ export const useUiStore = create<UiState>()(
                     type: 'request',
                     title: item.name,
                     method: item.state.method,
+                    isDirty: false,
                   },
                 ],
             activeTabId: tabId,
             activeScreen: 'request',
-            pendingCollectionRequest: item,
+            pendingRequestItem: item,
             pendingHistoryEntry: null,
             requestEditorKey: s.requestEditorKey + 1,
           }
         }),
-      clearPendingCollectionRequest: () => set({ pendingCollectionRequest: null }),
+      clearPendingRequestItem: () => set({ pendingRequestItem: null }),
       setRequestsSidebarView: (requestsSidebarView) => set({ requestsSidebarView }),
       setRequestsHistoryShowAll: (requestsHistoryShowAll) =>
         set({ requestsHistoryShowAll }),

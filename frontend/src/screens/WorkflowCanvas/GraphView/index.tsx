@@ -39,7 +39,7 @@ export function GraphView() {
           onClick={() => insertStepAfter('')}
           title="Add first step"
           aria-label="Add first step"
-          className="flex h-12 w-12 items-center justify-center rounded-full border border-[0.5px] border-slate-300 text-slate-400 hover:border-[#185FA5] hover:text-[#185FA5] dark:border-slate-600 dark:text-slate-500 dark:hover:border-[#B5D4F4] dark:hover:text-[#B5D4F4]"
+          className="flex h-12 w-12 items-center justify-center rounded-full border border-[0.5px] border-border text-text-muted hover:border-primary hover:text-primary"
         >
           <IconPlus size={22} stroke={1.5} />
         </button>

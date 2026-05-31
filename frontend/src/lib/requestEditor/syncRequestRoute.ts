@@ -27,6 +27,7 @@ export function syncRequestRouteFromLocation(pathname = window.location.pathname
           type: 'request',
           title: route.isNew ? 'Untitled request' : route.id,
           method: 'GET',
+          isDirty: false,
         },
       ],
       activeTabId: requestId,

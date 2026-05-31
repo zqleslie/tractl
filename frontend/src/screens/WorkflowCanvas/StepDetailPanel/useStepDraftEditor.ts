@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { createEmptyRequestDraft } from '@/components/request-editor/createEmptyRequestDraft'
+import { createEmptyRequestFormState } from '@/components/request-editor/createEmptyRequestFormState'
 import {
   addAssertionRow,
   addExtractRow,
@@ -11,14 +11,14 @@ import {
   updateAssertionRow,
   updateExtractRow,
   updateKeyValueRow,
-} from '@/components/request-editor/requestDraftMutations'
+} from '@/components/request-editor/requestFormStateMutations'
 import type {
   AssertionRowModel,
   ExtractRowModel,
   KeyValueRow,
   RequestAuthDraft,
   RequestBodyDraft,
-  RequestDraft,
+  RequestFormState,
   RequestScriptDraft,
 } from '@/components/request-editor/types'
 import type { HttpMethod } from '@/components/primitives'
@@ -86,8 +86,8 @@ export interface StepDraftEditorSlice {
   }
 }
 
-function createInitialStepDraft(step: WorkflowStep): RequestDraft {
-  const draft = createEmptyRequestDraft()
+function createInitialStepDraft(step: WorkflowStep): RequestFormState {
+  const draft = createEmptyRequestFormState()
 
   return {
     ...draft,
@@ -98,7 +98,7 @@ function createInitialStepDraft(step: WorkflowStep): RequestDraft {
   }
 }
 
-function draftToStepPatch(draft: RequestDraft): Partial<WorkflowStep> {
+function draftToStepPatch(draft: RequestFormState): Partial<WorkflowStep> {
   return {
     hasAuth: draft.auth.type !== 'None',
     hasPreScript: draft.scripts.pre.trim().length > 0,
@@ -114,7 +114,7 @@ export function useStepDraftEditor(step: WorkflowStep): StepDraftEditorSlice {
   const [stepId, setStepId] = useState(step.id)
   const [method, setMethodState] = useState<HttpMethod>(step.method)
   const [url, setUrlState] = useState<string>(step.url)
-  const [draft, setDraft] = useState<RequestDraft>(() => createInitialStepDraft(step))
+  const [draft, setDraft] = useState<RequestFormState>(() => createInitialStepDraft(step))
 
   useEffect(() => {
     setStepId(step.id)
@@ -124,14 +124,14 @@ export function useStepDraftEditor(step: WorkflowStep): StepDraftEditorSlice {
   }, [step.id, step.method, step.url, step.hasAuth])
 
   const persistDraft = useCallback(
-    (nextDraft: RequestDraft) => {
+    (nextDraft: RequestFormState) => {
       updateStep(step.id, draftToStepPatch(nextDraft))
     },
     [step.id, updateStep],
   )
 
   const updateDraft = useCallback(
-    (updater: (current: RequestDraft) => RequestDraft) => {
+    (updater: (current: RequestFormState) => RequestFormState) => {
       setDraft((current) => {
         const next = updater(current)
         persistDraft(next)

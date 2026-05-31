@@ -1,7 +1,7 @@
-import type { RequestDraft } from '@/components/request-editor/types'
+import type { RequestFormState } from '@/components/request-editor/types'
 
 /** Blank request editor state — no prefilled rows or sample URL. */
-export function createEmptyRequestDraft(): RequestDraft {
+export function createEmptyRequestFormState(): RequestFormState {
   return {
     params: [],
     headers: [],

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
+  IconDotsVertical,
   IconFolderPlus,
   IconPlayerPlay,
   IconPin,
@@ -11,17 +12,16 @@ import {
 import { Button } from '@/components/primitives'
 import { MethodBadge } from '@/components/primitives/MethodBadge'
 import { SaveToCollectionDialog } from '@/components/sidebar/SaveToCollectionDialog'
-import { SidebarCollapsibleGroup } from '@/components/sidebar/SidebarCollapsibleGroup'
 import { SidebarSection } from '@/components/sidebar/SidebarSection'
 import { groupHistoryByDate } from '@/lib/history/groupHistoryByDate'
 import { historyEntryTitle } from '@/lib/history/historyEntryLabel'
-import { createEmptyRequestDraft } from '@/components/request-editor/createEmptyRequestDraft'
+import { createEmptyRequestFormState } from '@/components/request-editor/createEmptyRequestFormState'
 import { draftToRequestState } from '@/lib/requestEditor/workspaceMapping'
 import { cn } from '@/lib/cn'
 import type { RequestState } from '@/components/request-editor/requestState'
 import {
   useRequestCollectionsStore,
-  type SavedCollectionRequest,
+  type SavedRequestItem,
 } from '@/stores/requestCollectionsStore'
 import {
   RUN_HISTORY_SIDEBAR_PREVIEW,
@@ -122,7 +122,7 @@ function RequestSidebarRow({
         {onRun ? (
           <Button
             variant="ghost"
-            className="absolute right-1 h-7 w-7 p-0 opacity-0 transition-opacity group-hover:opacity-100"
+            className="h-7 w-7 p-0 opacity-0 transition-opacity group-hover:opacity-100"
             aria-label="Run"
             onClick={(event) => {
               event.stopPropagation()
@@ -165,6 +165,84 @@ function RequestSidebarRow({
   )
 }
 
+function CollectionFolderGroup({
+  title,
+  suffix,
+  onDelete,
+  children,
+}: {
+  title: string
+  suffix: string
+  onDelete: () => void
+  children?: ReactNode
+}) {
+  const [open, setOpen] = useState(true)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    const close = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    const closeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', closeKey)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('keydown', closeKey)
+    }
+  }, [menuOpen])
+
+  return (
+    <div>
+      <div className="group/folder flex items-center gap-1.5 px-3 py-2 text-ui-xs font-medium text-text hover:bg-surface-elevated">
+        <button
+          type="button"
+          className="min-w-0 flex-1 truncate text-left"
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? '▾' : '▸'} {title}
+        </button>
+        <span className="text-[10px] font-normal text-text-muted">{suffix}</span>
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            aria-label={`Collection folder menu for ${title}`}
+            className="flex h-6 w-6 items-center justify-center rounded-ui text-text-muted opacity-0 hover:bg-surface group-hover/folder:opacity-100"
+            onClick={(event) => {
+              event.stopPropagation()
+              setMenuOpen((value) => !value)
+            }}
+          >
+            <IconDotsVertical size={13} stroke={1.75} />
+          </button>
+          {menuOpen ? (
+            <div className="fixed z-20 min-w-[140px] rounded-ui border-[0.5px] border-border bg-surface py-1 shadow-lg">
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-ui-xs text-danger-fg hover:bg-surface-elevated"
+                onClick={() => {
+                  onDelete()
+                  setMenuOpen(false)
+                }}
+              >
+                <IconTrash size={12} stroke={1.75} />
+                Delete folder
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+      {open ? children : null}
+    </div>
+  )
+}
+
 function formatTriggeredTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, {
     hour: '2-digit',
@@ -175,7 +253,7 @@ function formatTriggeredTime(iso: string): string {
 export function SidebarRequestsPanel() {
   const openNewRequest = useUiStore((s) => s.openNewRequest)
   const openHistoryEntry = useUiStore((s) => s.openHistoryEntry)
-  const openCollectionRequest = useUiStore((s) => s.openCollectionRequest)
+  const openRequestItem = useUiStore((s) => s.openRequestItem)
   const sidebarView = useUiStore((s) => s.requestsSidebarView)
   const setSidebarView = useUiStore((s) => s.setRequestsSidebarView)
   const showAllHistory = useUiStore((s) => s.requestsHistoryShowAll)
@@ -285,7 +363,7 @@ export function SidebarRequestsPanel() {
     ]
   }
 
-  const collectionItemContextMenu = (item: SavedCollectionRequest) => [
+  const collectionItemContextMenu = (item: SavedRequestItem) => [
     {
       label: 'Delete',
       icon: <IconTrash size={12} stroke={1.75} />,
@@ -308,7 +386,7 @@ export function SidebarRequestsPanel() {
         historyEntryTitle(entry),
         entry.method,
         entry.url,
-        createEmptyRequestDraft(),
+        createEmptyRequestFormState(),
       )
       return { defaultName: historyEntryTitle(entry), state }
     }
@@ -328,17 +406,17 @@ export function SidebarRequestsPanel() {
           New request
         </button>
 
-        <label className="relative mt-3 flex items-center">
+        <label className="mt-3 flex items-center gap-2 rounded-ui border-[0.5px] border-border bg-surface px-2 focus-within:border-primary">
           <IconSearch
             size={14}
             stroke={1.75}
-            className="pointer-events-none absolute left-2.5 text-text-muted"
+            className="pointer-events-none text-text-muted"
           />
           <input
             type="search"
             aria-label="Search requests"
             placeholder={sidebarView === 'history' ? 'Search history…' : 'Search collections…'}
-            className="h-8 w-full rounded-ui border-[0.5px] border-border bg-surface pl-8 pr-2 text-ui-xs text-text outline-none focus:border-primary"
+            className="h-8 w-full bg-transparent text-ui-xs text-text outline-none"
             data-testid="sidebar-requests-search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.currentTarget.value)}
@@ -358,9 +436,9 @@ export function SidebarRequestsPanel() {
               aria-selected={sidebarView === view}
               data-testid={`sidebar-requests-tab-${view}`}
               className={cn(
-                'flex-1 border-b-2 border-transparent px-2 pb-1.5 pt-1 text-ui-sm font-semibold capitalize transition-colors',
+                'flex-1 border-b-2 -mb-px border-transparent px-2 pb-1.5 pt-1 text-ui-sm capitalize transition-colors',
                 sidebarView === view
-                  ? '-mb-[0.5px] border-primary text-text'
+                  ? 'border-primary text-primary font-medium'
                   : 'text-text-muted hover:text-text',
               )}
               onClick={() => setSidebarView(view)}
@@ -371,9 +449,9 @@ export function SidebarRequestsPanel() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className="min-h-0 flex-1 overflow-hidden">
         {sidebarView === 'history' ? (
-          <>
+          <div className="h-full overflow-auto">
             {pinned.length > 0 ? (
               <>
                 <SidebarSection>Pinned</SidebarSection>
@@ -438,10 +516,10 @@ export function SidebarRequestsPanel() {
                 Show less
               </button>
             ) : null}
-          </>
+          </div>
         ) : (
-          <>
-            <div className="mx-2 mb-2 flex gap-1.5">
+          <div className="flex h-full flex-col overflow-hidden">
+            <div className="flex shrink-0 gap-1.5 border-b-[0.5px] border-border px-2.5 py-2">
               <input
                 aria-label="New collection folder name"
                 placeholder="New collection folder…"
@@ -459,44 +537,41 @@ export function SidebarRequestsPanel() {
               </button>
             </div>
 
-            {collectionTree.length === 0 ? (
-              <p className="px-3 py-4 text-ui-xs leading-relaxed text-text-muted">
-                Create a collection folder, then use Save in the request editor to
-                store requests here.
-              </p>
-            ) : (
-              collectionTree.map(({ folder, items: folderItems }) => (
-                <SidebarCollapsibleGroup
-                  key={folder.id}
-                  title={folder.name}
-                  suffix={String(folderItems.length)}
-                  defaultOpen
-                >
-                  {folderItems.map((item) => (
-                    <RequestSidebarRow
-                      key={item.id}
-                      testId={`sidebar-collection-${item.id}`}
-                      method={item.state.method}
-                      title={item.name}
-                      meta={formatTriggeredTime(item.savedAt)}
-                      onClick={() => openCollectionRequest(item)}
-                      contextMenu={collectionItemContextMenu(item)}
-                    />
-                  ))}
-                  {folderItems.length === 0 ? (
-                    <p className="px-2 py-1 text-[10px] text-text-muted">No saved requests</p>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="mx-3 mb-2 text-[10px] text-text-muted hover:text-danger-fg"
-                    onClick={() => removeFolder(folder.id)}
+            <div className="flex-1 overflow-y-auto py-1">
+              {collectionTree.length === 0 ? (
+                <p className="px-3 py-4 text-ui-xs leading-relaxed text-text-muted">
+                  Create a collection folder, then use Save in the request editor to
+                  store requests here.
+                </p>
+              ) : (
+                collectionTree.map(({ folder, items: folderItems }) => (
+                  <CollectionFolderGroup
+                    key={folder.id}
+                    title={folder.name}
+                    suffix={String(folderItems.length)}
+                    onDelete={() => removeFolder(folder.id)}
                   >
-                    Delete folder
-                  </button>
-                </SidebarCollapsibleGroup>
-              ))
-            )}
-          </>
+                    {folderItems.map((item) => (
+                      <RequestSidebarRow
+                        key={item.id}
+                        testId={`sidebar-collection-${item.id}`}
+                        method={item.state.method}
+                        title={item.name}
+                        meta={formatTriggeredTime(item.savedAt)}
+                        onClick={() => openRequestItem(item)}
+                        contextMenu={collectionItemContextMenu(item)}
+                      />
+                    ))}
+                    {folderItems.length === 0 ? (
+                      <p className="px-3 py-1 text-[10px] text-text-muted">
+                        No saved requests
+                      </p>
+                    ) : null}
+                  </CollectionFolderGroup>
+                ))
+              )}
+            </div>
+          </div>
         )}
       </div>
 

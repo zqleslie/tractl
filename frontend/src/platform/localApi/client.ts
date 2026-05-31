@@ -2,17 +2,23 @@ import type {
   ApiErrorBody,
   ApiStatusResponse,
   EngineWorkflowRunResult,
+  FileWriteResponse,
   RequestRunResult,
   RunRequestInput,
   SaveRequestFileInput,
   SaveRequestFileResponse,
   WorkflowRunDocumentInput,
 } from '@/platform/localApi/types'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:7428'
 
 function baseUrl(): string {
-  return import.meta.env.VITE_TRACTL_API_BASE_URL ?? DEFAULT_BASE_URL
+  return (
+    useSettingsStore.getState().serverUrl ??
+    import.meta.env.VITE_TRACTL_API_BASE_URL ??
+    DEFAULT_BASE_URL
+  )
 }
 
 async function parseError(response: Response): Promise<Error> {
@@ -54,14 +60,28 @@ export async function getApiStatus(): Promise<ApiStatusResponse> {
 export async function saveRequestFile(
   input: SaveRequestFileInput,
 ): Promise<SaveRequestFileResponse> {
-  return requestJson<SaveRequestFileResponse>('/api/v1/files', {
+  const path = input.path ?? `requests/${input.request.id}.yaml`
+  const content = `${JSON.stringify(input.request, null, 2)}\n`
+  const saved = await requestJson<FileWriteResponse>(
+    `/api/v1/files/${encodeFilePath(path)}`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    },
+  )
+  return {
+    path: saved.path,
+    updatedAt: saved.modifiedAt,
+  }
+}
+
+export async function writeWorkspaceFile(
+  path: string,
+  content: string,
+): Promise<FileWriteResponse> {
+  return requestJson<FileWriteResponse>(`/api/v1/files/${encodeFilePath(path)}`, {
     method: 'POST',
-    body: JSON.stringify({
-      id: input.id ?? undefined,
-      kind: 'request',
-      name: input.name,
-      document: input.document,
-    }),
+    body: JSON.stringify({ content }),
   })
 }
 
@@ -70,7 +90,7 @@ export async function runRequestFile(
 ): Promise<RequestRunResult> {
   return requestJson<RequestRunResult>('/api/v1/run', {
     method: 'POST',
-    body: JSON.stringify(input),
+    body: JSON.stringify(input.request),
   })
 }
 
@@ -81,6 +101,13 @@ export async function runWorkflowDocument(
     method: 'POST',
     body: JSON.stringify(input),
   })
+}
+
+function encodeFilePath(path: string): string {
+  return path
+    .split('/')
+    .map((part) => encodeURIComponent(part))
+    .join('/')
 }
 
 export class LocalApiUnavailableError extends Error {

@@ -2,7 +2,7 @@ import type {
   AssertionRowModel,
   ExtractRowModel,
   KeyValueRow,
-  RequestDraft,
+  RequestFormState,
 } from '@/components/request-editor/types'
 
 let rowCounter = 0
@@ -89,8 +89,8 @@ export function countPopulatedRows(rows: KeyValueRow[]): number {
 }
 
 export function patchDraft(
-  draft: RequestDraft,
-  patch: Partial<RequestDraft>,
-): RequestDraft {
+  draft: RequestFormState,
+  patch: Partial<RequestFormState>,
+): RequestFormState {
   return { ...draft, ...patch }
 }

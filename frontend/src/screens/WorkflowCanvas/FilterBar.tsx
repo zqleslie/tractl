@@ -12,7 +12,7 @@ const chipBase =
   'inline-flex h-6 shrink-0 items-center rounded-full border border-[0.5px] px-3 text-[11px] font-[400] transition-colors'
 const chipInactive = 'border-border text-text-muted hover:text-text'
 const chipActive =
-  'border-[#185FA5] bg-[#E6F1FB] text-[#185FA5] dark:border-[#B5D4F4] dark:bg-[#042C53] dark:text-[#B5D4F4]'
+  'border-primary bg-primary-bg text-primary'
 
 const OVERFLOW_THRESHOLD = 5
 
@@ -35,7 +35,7 @@ export function FilterBar({
         aria-label="Add workflow"
         className={cn(
           chipBase,
-          'gap-1 border-dashed border-border text-text-muted hover:border-[#185FA5] hover:text-[#185FA5] dark:hover:border-[#B5D4F4] dark:hover:text-[#B5D4F4]',
+          'gap-1 border-dashed border-border text-text-muted hover:border-primary hover:text-primary',
         )}
       >
         <IconPlus size={12} stroke={1.5} />

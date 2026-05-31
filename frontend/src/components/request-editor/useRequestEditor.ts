@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createEmptyRequestDraft } from '@/components/request-editor/createEmptyRequestDraft'
+import { createEmptyRequestFormState } from '@/components/request-editor/createEmptyRequestFormState'
 import {
   addAssertionRow,
   addExtractRow,
@@ -12,8 +12,8 @@ import {
   updateAssertionRow,
   updateExtractRow,
   updateKeyValueRow,
-} from '@/components/request-editor/requestDraftMutations'
-import { requestDraftToTraCtlSpec } from '@/components/request-editor/requestDraftToTraCtlSpec'
+} from '@/components/request-editor/requestFormStateMutations'
+import { requestFormStateToTraCtlSpec } from '@/components/request-editor/requestFormStateToTraCtlSpec'
 import { validateRequestRunUrl } from '@/components/request-editor/normalizeRequestUrl'
 import {
   formatMissingEnvironmentVariables,
@@ -26,7 +26,7 @@ import type {
   KeyValueRow,
   RequestAuthDraft,
   RequestBodyDraft,
-  RequestDraft,
+  RequestFormState,
   RequestScriptDraft,
   RequestSettingsDraft,
   ResultTab,
@@ -37,12 +37,7 @@ import { LocalApiUnavailableError } from '@/platform/localApi/client'
 import type { RequestRunResult } from '@/platform/localApi/types'
 import { WasmRuntimeUnavailableError } from '@/platform/web/requestExecutionRunner'
 import { useEnvironmentStore } from '@/stores/environmentStore'
-import { saveRequestFile, runRequest as apiRunRequest } from '@/api/requests'
-import {
-  executionResultToRequestRunResult,
-  requestRunResultToExecutionResult,
-} from '@/lib/execution/mapRunResults'
-import { buildRunRequestPayload } from '@/lib/requestEditor/buildRunPayload'
+import { requestRunResultToExecutionResult } from '@/lib/execution/mapRunResults'
 import { syncContentTypeHeader } from '@/lib/requestEditor/contentTypeHeader'
 import {
   draftToRequestState,
@@ -52,6 +47,7 @@ import { recordRunHistoryEntry } from '@/lib/runHistory/recordRunHistoryEntry'
 import { useExecutionStore } from '@/stores/executionStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import type { RequestDef } from '@/types/requestDef'
 
 const requestRunner = getRequestExecutionRunner()
 
@@ -72,18 +68,16 @@ function environmentResolutionErrorResult(missing: string[]): RequestRunResult {
   const message = formatMissingEnvironmentVariables(missing)
 
   return {
-    passed: false,
     durationMs: 0,
     statusCode: 0,
-    statusLabel: 'Environment error',
-    contentType: 'text/plain',
+    statusText: 'Environment error',
     body: message,
-    headers: [],
+    headers: {},
+    timing: { dns: 0, tcp: 0, tls: 0, ttfb: 0, transfer: 0, total: 0, unit: 'ms' },
     assertionResults: [],
     extractResults: [],
-    passedCount: 0,
-    totalCount: 0,
-    timeline: [],
+    assertionsPassed: 0,
+    assertionsTotal: 0,
     error: message,
   }
 }
@@ -91,9 +85,9 @@ function environmentResolutionErrorResult(missing: string[]): RequestRunResult {
 export function useRequestEditor() {
   const pendingHistoryEntry = useUiStore((s) => s.pendingHistoryEntry)
   const clearPendingHistoryEntry = useUiStore((s) => s.clearPendingHistoryEntry)
-  const pendingCollectionRequest = useUiStore((s) => s.pendingCollectionRequest)
-  const clearPendingCollectionRequest = useUiStore(
-    (s) => s.clearPendingCollectionRequest,
+  const pendingRequestItem = useUiStore((s) => s.pendingRequestItem)
+  const clearPendingRequestItem = useUiStore(
+    (s) => s.clearPendingRequestItem,
   )
   const updateActiveRequestTab = useUiStore((s) => s.updateActiveRequestTab)
   const activeTabId = useUiStore((s) => s.activeTabId)
@@ -112,11 +106,11 @@ export function useRequestEditor() {
     () => pendingHistoryEntry?.requestName ?? 'Untitled request',
   )
   const [fileId, setFileId] = useState<string | null>(null)
-  const [draft, setDraft] = useState<RequestDraft>(createEmptyRequestDraft)
+  const [draft, setDraft] = useState<RequestFormState>(createEmptyRequestFormState)
   const [activeConfigTab, setActiveConfigTab] = useState<ConfigTab>('params')
   const [activeResultTab, setActiveResultTab] = useState<ResultTab>('body')
   const [resultsOpen, setResultsOpen] = useState(
-    () => pendingHistoryEntry != null || pendingCollectionRequest != null,
+    () => pendingHistoryEntry != null || pendingRequestItem != null,
   )
   const [isSaving, setIsSaving] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
@@ -131,6 +125,8 @@ export function useRequestEditor() {
       (environment) => environment.id === state.activeEnvironmentId,
     ),
   )
+  const activeEnvironmentId = useEnvironmentStore((state) => state.activeEnvironmentId)
+  const setLocalEnvironmentVariable = useEnvironmentStore((state) => state.setVariable)
 
   const saveGeneration = useRef(0)
   const startRun = useExecutionStore((state) => state.startRun)
@@ -139,7 +135,7 @@ export function useRequestEditor() {
   const resetExecution = useExecutionStore((state) => state.reset)
 
   const syncWorkspace = useCallback(
-    (nextDraft: RequestDraft, nextMethod: HttpMethod, nextUrl: string) => {
+    (nextDraft: RequestFormState, nextMethod: HttpMethod, nextUrl: string) => {
       upsertWorkspaceRequest(
         draftToRequestState(requestId, requestName, nextMethod, nextUrl, nextDraft),
       )
@@ -155,17 +151,17 @@ export function useRequestEditor() {
         existing ??
         createWorkspaceRequest(requestId, pendingHistoryEntry?.method ?? 'GET')
 
-      if (pendingCollectionRequest) {
+      if (pendingRequestItem) {
         const saved = {
-          ...pendingCollectionRequest.state,
+          ...pendingRequestItem.state,
           id: requestId,
-          name: pendingCollectionRequest.name,
+          name: pendingRequestItem.name,
         }
         setMethod(saved.method)
         setUrl(saved.url)
         setDraft(requestStateToDraft(saved))
         upsertWorkspaceRequest(saved)
-        clearPendingCollectionRequest()
+        clearPendingRequestItem()
         return
       }
 
@@ -209,30 +205,10 @@ export function useRequestEditor() {
 
   const persistDraft = useCallback(async () => {
     const generation = ++saveGeneration.current
-    const document = requestDraftToTraCtlSpec(method, url, draft, requestName)
+    const request = draftToRequestState(requestId, requestName, method, url, draft)
 
     if (!requestRunner.supportsPersistence) {
-      setIsSaving(true)
-      setSaveError(null)
-      try {
-        const saved = await saveRequestFile({
-          id: fileId,
-          name: requestName,
-          yaml: JSON.stringify(document, null, 2),
-        })
-        if (generation !== saveGeneration.current) return saved
-        setFileId(saved.id)
-        return saved
-      } catch (error) {
-        if (generation !== saveGeneration.current) return null
-        const message = error instanceof Error ? error.message : 'Save failed'
-        setSaveError(message)
-        return null
-      } finally {
-        if (generation === saveGeneration.current) {
-          setIsSaving(false)
-        }
-      }
+      return null
     }
 
     setIsSaving(true)
@@ -243,13 +219,14 @@ export function useRequestEditor() {
       const saved = await requestRunner.saveRequest({
         id: fileId,
         name: requestName,
-        document,
+        request: request as unknown as RequestDef,
       })
 
       if (generation !== saveGeneration.current) return saved
 
       if (saved) {
-        setFileId(saved.id)
+        setFileId(saved.path)
+        updateActiveRequestTab({ isDirty: false })
       }
       return saved
     } catch (error) {
@@ -268,16 +245,17 @@ export function useRequestEditor() {
         setIsSaving(false)
       }
     }
-  }, [draft, fileId, method, requestName, url])
+  }, [draft, fileId, method, requestId, requestName, updateActiveRequestTab, url])
 
   const markDirty = useCallback(() => {
     resetExecution()
     setRunResult(null)
     setRunError(null)
-  }, [resetExecution])
+    updateActiveRequestTab({ isDirty: true })
+  }, [resetExecution, updateActiveRequestTab])
 
   const updateDraft = useCallback(
-    (updater: (current: RequestDraft) => RequestDraft) => {
+    (updater: (current: RequestFormState) => RequestFormState) => {
       setDraft((current) => {
         const next = updater(current)
         syncWorkspace(next, method, url)
@@ -305,7 +283,7 @@ export function useRequestEditor() {
   )
 
   const recordHistoryResult = useCallback(
-    (result: RequestRunResult, document: ReturnType<typeof requestDraftToTraCtlSpec>) => {
+    (result: RequestRunResult, document: ReturnType<typeof requestFormStateToTraCtlSpec>) => {
       recordRunHistoryEntry({
         requestName,
         method,
@@ -316,6 +294,23 @@ export function useRequestEditor() {
       })
     },
     [method, requestName, url],
+  )
+
+  const persistExtractedVariables = useCallback(
+    (result: ReturnType<typeof requestRunResultToExecutionResult>) => {
+      if (result.extractResults.length === 0 || !activeEnvironmentId) return
+
+      for (const extract of result.extractResults) {
+        if (extract.resolvedValue !== null) {
+          setLocalEnvironmentVariable(
+            activeEnvironmentId,
+            extract.variableName,
+            extract.resolvedValue,
+          )
+        }
+      }
+    },
+    [activeEnvironmentId, setLocalEnvironmentVariable],
   )
 
   const runState = useExecutionStore((state) => state.runState)
@@ -333,7 +328,7 @@ export function useRequestEditor() {
     setResultsOpen(true)
 
     try {
-      const document = requestDraftToTraCtlSpec(method, url, draft, requestName)
+      const document = requestFormStateToTraCtlSpec(method, url, draft, requestName)
       const resolved = resolveTraCtlSpecEnvironmentVariables(
         document,
         activeEnvironment?.variables ?? {},
@@ -360,57 +355,39 @@ export function useRequestEditor() {
         return
       }
 
-      let runFileId = fileId
+      const request = draftToRequestState(
+        requestId,
+        requestName,
+        method,
+        resolvedTarget,
+        draft,
+      )
 
       if (requestRunner.supportsPersistence) {
         await requestRunner.checkAvailable()
         const saved = await requestRunner.saveRequest({
           id: fileId,
           name: requestName,
-          document: resolved.value,
+          request: request as unknown as RequestDef,
         })
-        if (!saved?.id) {
-          throw new Error('Request must be saved before running')
-        }
-        runFileId = saved.id
-        setFileId(saved.id)
+        if (saved?.path) setFileId(saved.path)
+        updateActiveRequestTab({ isDirty: false })
       }
       const result = await requestRunner.runRequest({
-        document: resolved.value,
-        fileId: runFileId,
+        request: request as unknown as RequestDef,
+        fileId,
         name: requestName,
       })
+      const executionResult = requestRunResultToExecutionResult(result)
       setRunResult(result)
-      setExecutionResult(requestRunResultToExecutionResult(result))
+      setExecutionResult(executionResult)
+      persistExtractedVariables(executionResult)
       if (result.error) {
         setRunError(result.error)
         setExecutionError(result.error)
       }
       recordHistoryResult(result, resolved.value)
     } catch (error) {
-      const useApiStub =
-        error instanceof LocalApiUnavailableError ||
-        error instanceof WasmRuntimeUnavailableError
-
-      if (useApiStub) {
-        try {
-          const payload = buildRunRequestPayload({
-            method,
-            url,
-            draft,
-            environmentId: activeEnvironment?.id ?? null,
-          })
-          const apiResult = await apiRunRequest(payload)
-          const mapped = executionResultToRequestRunResult(apiResult)
-          setRunResult(mapped)
-          setExecutionResult(apiResult)
-          recordHistoryResult(mapped, requestDraftToTraCtlSpec(method, url, draft, requestName))
-          return
-        } catch (stubError) {
-          console.error('[tractl:request-run] API stub run failed', stubError)
-        }
-      }
-
       const message =
         error instanceof LocalApiUnavailableError
           ? 'Desktop API unavailable — start traCtl Desktop on port 7428'
@@ -428,10 +405,13 @@ export function useRequestEditor() {
     }
   }, [
     activeEnvironment,
+    activeEnvironmentId,
     draft,
     fileId,
+    persistExtractedVariables,
     method,
     recordHistoryResult,
+    requestId,
     requestName,
     setExecutionError,
     setExecutionResult,
@@ -454,6 +434,7 @@ export function useRequestEditor() {
     activeResultTab,
     resultsOpen,
     isSaving,
+    persistDraft,
     getRequestState,
     isRunning,
     apiAvailable,

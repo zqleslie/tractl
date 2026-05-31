@@ -11,8 +11,8 @@ export function SeverityBadge({ severity, onToggle }: SeverityBadgeProps) {
       className={cn(
         'inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
         severity === 'error'
-          ? 'bg-[#FCEBEB] text-[#791F1F]'
-          : 'bg-[#FAEEDA] text-[#633806]',
+          ? 'bg-danger-bg text-danger-fg'
+          : 'bg-warning-bg text-warning-fg',
       )}
     >
       {severity}

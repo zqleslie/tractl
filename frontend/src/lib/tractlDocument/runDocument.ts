@@ -7,6 +7,7 @@ import { parseAndValidateDocument } from '@/lib/tractlDocument/parseValidateDocu
 import type { TraCtlSpecDocument } from '@/components/request-editor/tractlSpecDocument'
 import { getRequestExecutionRunner } from '@/platform/requestExecution/getRequestExecutionRunner'
 import type { RequestRunResult } from '@/platform/localApi/types'
+import type { RequestDef } from '@/types/requestDef'
 import type {
   RunHistorySourceFormat,
   RunHistorySourceType,
@@ -93,8 +94,19 @@ export async function runTraCtlDocument(
 
   try {
     await runner.checkAvailable()
+    const request: RequestDef = {
+      id: input.sourceName,
+      name: summary.requestName,
+      method: summary.method as RequestDef['method'],
+      url: summary.url,
+      headers: [],
+      params: [],
+      assertions: [],
+      extracts: [],
+      settings: { failurePolicy: 'resilient' },
+    }
     const result = await runner.runRequest({
-      document: resolved.value,
+      request,
       name: summary.requestName,
     })
 

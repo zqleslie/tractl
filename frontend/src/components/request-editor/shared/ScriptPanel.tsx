@@ -8,6 +8,12 @@ const hints = {
     'Runs after the response · hooks.afterStep · return { variables, extracts, assertions, cancel }',
 } as const
 
+type ScriptRunResult = {
+  mutations: unknown
+  logs: string[]
+  error?: string
+}
+
 const chipSets = {
   beforeStep: [
     'ctx.spec',
@@ -48,6 +54,7 @@ export function ScriptPanel({
   readOnly,
 }: ScriptPanelProps) {
   const [copiedChip, setCopiedChip] = useState<string | null>(null)
+  const [scriptResult, setScriptResult] = useState<ScriptRunResult | null>(null)
   const resolvedValue = value ?? code ?? ''
   const resolvedHint = hint ?? hints[hook]
   const resolvedChips = chips ?? chipSets[hook]
@@ -60,6 +67,15 @@ export function ScriptPanel({
     } catch {
       setCopiedChip(null)
     }
+  }
+
+  const handleTestScript = () => {
+    setScriptResult({
+      error:
+        'Script sandbox over HTTP is deferred (Phase 15.4). The local API only runs requests and workspace files.',
+      mutations: null,
+      logs: [],
+    })
   }
 
   return (
@@ -85,7 +101,7 @@ export function ScriptPanel({
         value={resolvedValue}
         onChange={(event) => onChange(event.currentTarget.value)}
       />
-      <div className="relative mt-2 flex flex-wrap gap-[var(--density-gap-sm)]">
+      <div className="relative mt-2 flex flex-wrap items-center gap-[var(--density-gap-sm)]">
         {resolvedChips.map((chip) => (
           <button
             key={chip}
@@ -96,12 +112,32 @@ export function ScriptPanel({
             {chip}
           </button>
         ))}
+        <button
+          type="button"
+          className="rounded-[4px] border-[0.5px] border-border bg-surface-elevated px-2 py-0.5 text-[10px] font-medium text-text hover:border-primary disabled:opacity-60"
+          onClick={() => void handleTestScript()}
+          disabled={readOnly}
+        >
+          Test
+        </button>
         {copiedChip ? (
           <span className="absolute right-0 top-0 text-[10px] text-text-muted">
             Copied
           </span>
         ) : null}
       </div>
+      {scriptResult ? (
+        <pre
+          className={cn(
+            'mt-2 max-h-36 overflow-auto rounded-[7px] border-[0.5px] border-border bg-surface-elevated p-2 text-[10px]',
+            scriptResult.error ? 'text-danger-fg' : 'text-text',
+          )}
+        >
+          {scriptResult.error
+            ? scriptResult.error
+            : JSON.stringify(scriptResult.mutations, null, 2)}
+        </pre>
+      ) : null}
     </div>
   )
 }

@@ -154,7 +154,7 @@ export type RequestSettingsDraft = {
   failurePolicy: FailurePolicy
 }
 
-export type RequestDraft = {
+export type RequestFormState = {
   params: KeyValueRow[]
   headers: KeyValueRow[]
   body: RequestBodyDraft

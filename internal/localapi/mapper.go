@@ -9,7 +9,7 @@ import (
 	"github.com/tractl/tractl/internal/engine"
 )
 
-func mapRunResult(result *engine.RunResult) (*RunResponse, error) {
+func mapRunResult(result *engine.RunResult) (*RunResult, error) {
 	if result.ParseError != "" {
 		return nil, fmt.Errorf("parse error: %s", result.ParseError)
 	}
@@ -40,15 +40,17 @@ func mapRunResult(result *engine.RunResult) (*RunResponse, error) {
 			passedCount++
 		}
 		assertionRows = append(assertionRows, AssertionResult{
-			ID:     ar.AssertionID,
-			Passed: passed,
-			Label:  fmt.Sprintf("%s %s", ar.Kind, ar.AssertionID),
-			Detail: ar.Message,
+			ID:       ar.AssertionID,
+			Kind:     string(ar.Kind),
+			Op:       "",
+			Expected: "",
+			Received: ar.Message,
+			Passed:   passed,
+			Severity: "error",
 		})
 	}
 
-	headers := responseHeaders(step.ResponseHeaders)
-	timeline, durationMs := timelineFromDiagnostics(result, step)
+	timing := timingFromDiagnostics(result, step)
 
 	statusLabel := http.StatusText(step.ResponseStatus)
 	if statusLabel == "" && step.ResponseStatus > 0 {
@@ -65,63 +67,54 @@ func mapRunResult(result *engine.RunResult) (*RunResponse, error) {
 
 	extractRows := extractResultsFromDiagnostics(result)
 
-	return &RunResponse{
-		Passed:           result.Passed,
-		DurationMs:       durationMs,
+	return &RunResult{
 		StatusCode:       step.ResponseStatus,
-		StatusLabel:      strings.TrimSpace(statusLabel),
-		ContentType:      contentType,
+		StatusText:       strings.TrimSpace(statusLabel),
+		DurationMs:       timing.Total,
 		Body:             step.ResponseBody,
-		Headers:          headers,
+		Headers:          responseHeaders(step.ResponseHeaders, contentType),
+		Timing:           timing,
 		AssertionResults: assertionRows,
 		ExtractResults:   extractRows,
-		PassedCount:      passedCount,
-		TotalCount:       len(step.AssertionResults),
-		Timeline:         timeline,
+		AssertionsPassed: passedCount,
+		AssertionsTotal:  len(step.AssertionResults),
 		Error:            step.Error,
 	}, nil
 }
 
-func responseHeaders(headers map[string]string) []HeaderRow {
-	if len(headers) == 0 {
-		return []HeaderRow{}
-	}
-	rows := make([]HeaderRow, 0, len(headers))
-	i := 0
+func responseHeaders(headers map[string]string, contentType string) map[string]string {
+	out := make(map[string]string, len(headers)+1)
 	for key, value := range headers {
-		i++
-		rows = append(rows, HeaderRow{
-			ID:      fmt.Sprintf("response-header-%d", i),
-			Enabled: true,
-			Key:     key,
-			Value:   value,
-		})
+		out[key] = value
 	}
-	return rows
+	if _, ok := out["content-type"]; !ok && contentType != "" {
+		out["content-type"] = contentType
+	}
+	return out
 }
 
-func timelineFromDiagnostics(result *engine.RunResult, step engine.StepOutcome) ([]TimelineSegment, int64) {
+func timingFromDiagnostics(result *engine.RunResult, step engine.StepOutcome) TimingResult {
 	if result.Diagnostics != nil && len(result.Diagnostics.Workflows) > 0 {
 		wf := result.Diagnostics.Workflows[0]
 		if len(wf.Steps) > 0 && len(wf.Steps[0].Requests) > 0 {
 			t := wf.Steps[0].Requests[0].Timeline
-			return []TimelineSegment{
-				{Label: "DNS", Ms: t.DNSMs},
-				{Label: "TCP", Ms: t.TCPMs},
-				{Label: "TLS", Ms: t.TLSMs},
-				{Label: "TTFB", Ms: t.TTFBMs},
-				{Label: "Transfer", Ms: t.TransferMs},
-			}, t.TotalMs
+			return TimingResult{
+				DNS:      t.DNSMs,
+				TCP:      t.TCPMs,
+				TLS:      t.TLSMs,
+				TTFB:     t.TTFBMs,
+				Transfer: t.TransferMs,
+				Total:    t.TotalMs,
+				Unit:     "ms",
+			}
 		}
 	}
 
 	totalMs := step.Duration.Milliseconds()
 	if totalMs <= 0 {
-		return []TimelineSegment{}, 0
+		totalMs = 0
 	}
-	return []TimelineSegment{
-		{Label: "Total", Ms: totalMs},
-	}, totalMs
+	return TimingResult{Total: totalMs, Unit: "ms"}
 }
 
 func extractResultsFromDiagnostics(result *engine.RunResult) []ExtractResult {
@@ -139,9 +132,10 @@ func extractResultsFromDiagnostics(result *engine.RunResult) []ExtractResult {
 			variable = ex.ID
 		}
 		rows = append(rows, ExtractResult{
-			Variable: "steps.this.extracts." + variable,
-			Value:    ex.Source,
-			Scope:    "workflow",
+			ID:            ex.ID,
+			VariableName:  variable,
+			Scope:         "workflow",
+			ResolvedValue: ex.Source,
 		})
 	}
 	return rows

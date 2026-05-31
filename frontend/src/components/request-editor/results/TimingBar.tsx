@@ -5,16 +5,11 @@ export type TimingBarProps = {
 }
 
 const segmentStyles = [
-  { key: 'dns' as const, label: 'DNS', light: '#B5D4F4', dark: '#0C447C' },
-  { key: 'tcp' as const, label: 'TCP', light: '#85B7EB', dark: '#185FA5' },
-  { key: 'tls' as const, label: 'TLS', light: '#378ADD', dark: '#378ADD' },
-  { key: 'ttfb' as const, label: 'TTFB', light: '#185FA5', dark: '#85B7EB' },
-  {
-    key: 'transfer' as const,
-    label: 'Transfer',
-    light: '#0C447C',
-    dark: '#B5D4F4',
-  },
+  { key: 'dns' as const, label: 'DNS', color: 'var(--color-info-bg)' },
+  { key: 'tcp' as const, label: 'TCP', color: 'var(--color-primary-bg)' },
+  { key: 'tls' as const, label: 'TLS', color: 'var(--color-primary)' },
+  { key: 'ttfb' as const, label: 'TTFB', color: 'var(--color-info-fg)' },
+  { key: 'transfer' as const, label: 'Transfer', color: 'var(--color-primary)' },
 ]
 
 export function TimingBar({ timing }: TimingBarProps) {
@@ -37,7 +32,7 @@ export function TimingBar({ timing }: TimingBarProps) {
             data-segment={segment.key}
             style={{
               flex: Math.max(timing[segment.key], 1),
-              backgroundColor: segment.light,
+              backgroundColor: segment.color,
             }}
           />
         ))}
@@ -47,19 +42,12 @@ export function TimingBar({ timing }: TimingBarProps) {
           <span key={segment.key} className="inline-flex items-center gap-1">
             <span
               className="inline-block size-[7px] rounded-[2px]"
-              style={{ backgroundColor: segment.light }}
+              style={{ backgroundColor: segment.color }}
             />
             {segment.label} {timing[segment.key]}ms
           </span>
         ))}
       </div>
-      <style>{`
-        [data-theme='dark'] .timing-segment[data-segment='dns'] { background: #B5D4F4 !important; }
-        [data-theme='dark'] .timing-segment[data-segment='tcp'] { background: #85B7EB !important; }
-        [data-theme='dark'] .timing-segment[data-segment='tls'] { background: #378ADD !important; }
-        [data-theme='dark'] .timing-segment[data-segment='ttfb'] { background: #185FA5 !important; }
-        [data-theme='dark'] .timing-segment[data-segment='transfer'] { background: #0C447C !important; }
-      `}</style>
       <span className="sr-only">Total duration {total} ms</span>
     </div>
   )

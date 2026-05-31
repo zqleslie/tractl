@@ -21,7 +21,7 @@ const toggleBase =
 const toggleInactive =
   'border-border text-text-muted hover:text-text'
 const toggleActive =
-  'border-[#185FA5] bg-[#E6F1FB] text-[#185FA5] dark:border-[#B5D4F4] dark:bg-[#042C53] dark:text-[#B5D4F4]'
+  'border-primary bg-primary-bg text-primary'
 
 export function WorkflowBar({
   workflowName,
@@ -56,7 +56,7 @@ export function WorkflowBar({
           onChange={(event) => setDraftName(event.target.value)}
           onBlur={commit}
           onKeyDown={handleKeyDown}
-          className="border-0 border-b border-[0.5px] border-border bg-transparent px-0 text-[13px] font-[500] text-text outline-none focus:border-[#185FA5]"
+          className="border-0 border-b border-[0.5px] border-border bg-transparent px-0 text-[13px] font-[500] text-text outline-none focus:border-primary"
           aria-label="Workflow name"
         />
       ) : (
@@ -109,7 +109,7 @@ export function WorkflowBar({
         type="button"
         onClick={onRun}
         disabled={isRunning}
-        className="flex h-7 items-center gap-1.5 rounded-[7px] bg-[#185FA5] px-3 text-[12px] font-[500] text-[#E6F1FB] disabled:opacity-70"
+        className="flex h-7 items-center gap-1.5 rounded-[7px] bg-primary px-3 text-[12px] font-[500] text-primary-fg disabled:opacity-70"
       >
         {isRunning ? (
           <>
