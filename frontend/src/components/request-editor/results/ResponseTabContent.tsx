@@ -6,14 +6,14 @@ import { AssertionResult } from '@/components/request-editor/results/AssertionRe
 import { ExtractResult } from '@/components/request-editor/results/ExtractResult'
 import type { ResultTab } from '@/components/request-editor/types'
 import { cn } from '@/lib/cn'
-import type { RequestRunResult } from '@/platform/localApi/types'
+import type { RunResult as PlatformRunResult } from '@/platform/types'
 import type { RunResult, RunState } from '@/stores/executionStore'
 import { useUiStore } from '@/stores/uiStore'
 
 export type ResponseTabContentProps = {
   tab: ResultTab
   runState: RunState
-  runResult: RequestRunResult | null
+  runResult: PlatformRunResult | null
   executionResult: RunResult | null
 }
 
@@ -58,14 +58,12 @@ export function ResponseTabContent({
   }
 
   if (tab === 'headers') {
-    const rows = Array.isArray(runResult.headers)
-      ? runResult.headers
-      : Object.entries(runResult.headers).map(([key, value], index) => ({
-          id: `response-header-${index}`,
-          enabled: true,
-          key,
-          value,
-        }))
+    const rows = Object.entries(runResult.headers).map(([key, value], index) => ({
+      id: `response-header-${index}`,
+      enabled: true,
+      key,
+      value,
+    }))
     return <KeyValueTable rows={rows} readOnly addLabel="Add header" />
   }
 
@@ -89,15 +87,11 @@ export function ResponseTabContent({
               : 'danger'
           }
         >
-          {runResult.statusText || runResult.statusLabel || String(runResult.statusCode)}
+          {runResult.statusText || String(runResult.statusCode)}
         </Badge>
         <Badge tone="neutral">{runResult.durationMs} ms</Badge>
         <Badge tone="neutral">
-          {runResult.contentType ??
-            (Array.isArray(runResult.headers)
-              ? undefined
-              : runResult.headers['content-type']) ??
-            'text/plain'}
+          {runResult.headers['content-type'] ?? 'text/plain'}
         </Badge>
         {prettyBody !== null ? (
           <div className="ml-auto inline-flex rounded-ui border-[0.5px] border-border bg-surface-elevated p-0.5">

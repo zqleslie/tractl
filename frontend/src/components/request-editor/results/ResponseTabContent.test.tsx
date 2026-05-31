@@ -1,21 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ResponseTabContent } from '@/components/request-editor/results/ResponseTabContent'
-import type { RequestRunResult } from '@/platform/localApi/types'
+import type { RunResult } from '@/platform/types'
 
-const mockRunResult: RequestRunResult = {
+const mockRunResult: RunResult = {
   passed: true,
   durationMs: 120,
   statusCode: 200,
-  statusLabel: '200 OK',
-  contentType: 'application/json',
+  statusText: '200 OK',
   body: '{"id":"1"}',
-  headers: [],
+  headers: { 'content-type': 'application/json' },
+  timing: { dns: 0, tcp: 0, tls: 0, ttfb: 0, transfer: 0, total: 120, unit: 'ms' },
   assertionResults: [],
   extractResults: [],
-  passedCount: 0,
-  totalCount: 0,
-  timeline: [],
+  assertionsPassed: 0,
+  assertionsTotal: 0,
 }
 
 describe('ResponseTabContent', () => {

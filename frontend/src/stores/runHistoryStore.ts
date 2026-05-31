@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { HttpMethod } from '@/components/primitives'
 import type { TraCtlSpecDocument } from '@/components/request-editor/tractlSpecDocument'
-import type { RequestRunResult } from '@/platform/localApi/types'
+import type { RunResult } from '@/platform/types'
 
 export type RunOutcome = 'success' | 'error'
 export type RunHistorySourceType = 'request' | 'workflow'
@@ -21,7 +21,7 @@ export type RunHistoryEntry = {
   statusCode: number
   durationMs: number
   outcome: RunOutcome
-  result: RequestRunResult
+  result: RunResult
 }
 
 export const RUN_HISTORY_MAX_ENTRIES = 50

@@ -96,7 +96,7 @@ function HistoryRow({
         </span>
 
         <Badge tone={statusTone} data-testid="history-outcome-badge">
-          {isError ? 'Error' : entry.result.statusLabel || String(entry.statusCode)}
+          {isError ? 'Error' : entry.result.statusText || String(entry.statusCode)}
         </Badge>
 
         <span className="shrink-0 text-ui-xs text-text-muted">

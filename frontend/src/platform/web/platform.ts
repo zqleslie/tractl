@@ -1,4 +1,4 @@
-import type { PlatformCapabilities } from '@/platform/types'
+import type { PlatformCapabilities } from '@/platform/surface'
 
 export const webPlatform: PlatformCapabilities = {
   kind: 'web',

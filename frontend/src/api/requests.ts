@@ -1,11 +1,11 @@
-import type { RunResult } from '@/stores/executionStore'
+import type { RunResult } from '@/platform/types'
 import { requestRunResultToExecutionResult } from '@/lib/execution/mapRunResults'
-import type { RequestRunResult } from '@/platform/localApi/types'
 import type { RequestDef } from '@/types/requestDef'
 import { apiPost } from './client'
+import type { RunResult as ExecutionRunResult } from '@/stores/executionStore'
 
-export async function runRequest(payload: RequestDef): Promise<RunResult> {
-  const result = await apiPost<RequestRunResult>('/run', payload)
+export async function runRequest(payload: RequestDef): Promise<ExecutionRunResult> {
+  const result = await apiPost<RunResult>('/run', payload)
   return requestRunResultToExecutionResult(result)
 }
 

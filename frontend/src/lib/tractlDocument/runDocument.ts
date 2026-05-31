@@ -6,7 +6,7 @@ import { extractRunSummaryFromDocument } from '@/lib/tractlDocument/extractRunSu
 import { parseAndValidateDocument } from '@/lib/tractlDocument/parseValidateDocument'
 import type { TraCtlSpecDocument } from '@/components/request-editor/tractlSpecDocument'
 import { getRequestExecutionRunner } from '@/platform/requestExecution/getRequestExecutionRunner'
-import type { RequestRunResult } from '@/platform/localApi/types'
+import type { RunResult } from '@/platform/types'
 import type { RequestDef } from '@/types/requestDef'
 import type {
   RunHistorySourceFormat,
@@ -26,7 +26,7 @@ export type RunDocumentInput = {
 export type RunDocumentSuccess = {
   ok: true
   spec: TraCtlSpecDocument
-  result: RequestRunResult
+  result: RunResult
   summary: NonNullable<ReturnType<typeof extractRunSummaryFromDocument>>
   sourceFormat: RunHistorySourceFormat
 }

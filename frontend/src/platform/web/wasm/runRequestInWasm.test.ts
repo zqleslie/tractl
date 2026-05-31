@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mapWasmRunResultToRequestRunResult } from '@/platform/web/wasm/runRequestInWasm'
 
 describe('mapWasmRunResultToRequestRunResult', () => {
-  it('maps a successful WASM run into RequestRunResult', () => {
+  it('maps a successful WASM run into RunResult', () => {
     const result = mapWasmRunResultToRequestRunResult({
       surface: 'web-wasm',
       executionMode: 'browser',
@@ -64,25 +64,22 @@ describe('mapWasmRunResultToRequestRunResult', () => {
 
     expect(result.passed).toBe(true)
     expect(result.statusCode).toBe(200)
-    expect(result.statusLabel).toBe('200 OK')
+    expect(result.statusText).toBe('200 OK')
     expect(result.body).toBe('{"ok":true}')
-    expect(result.passedCount).toBe(1)
-    expect(result.totalCount).toBe(1)
-    expect(result.timeline).toEqual([
-      { label: 'DNS', ms: 1 },
-      { label: 'TCP', ms: 2 },
-      { label: 'TLS', ms: 3 },
-      { label: 'TTFB', ms: 4 },
-      { label: 'Transfer', ms: 5 },
-    ])
+    expect(result.assertionsPassed).toBe(1)
+    expect(result.assertionsTotal).toBe(1)
+    expect(result.timing).toEqual({
+      dns: 1, tcp: 2, tls: 3, ttfb: 4, transfer: 5, total: 15, unit: 'ms',
+    })
     expect(result.extractResults[0]).toEqual({
-      variable: 'steps.this.extracts.token',
-      value: 'body',
+      id: 'extract-1',
+      variableName: 'token',
       scope: 'workflow',
+      resolvedValue: 'body',
     })
   })
 
-  it('maps bridge failures into structured RequestRunResult errors', () => {
+  it('maps bridge failures into structured RunResult errors', () => {
     const result = mapWasmRunResultToRequestRunResult({
       error: {
         code: 'TRACTL_EXECUTION_ERROR',

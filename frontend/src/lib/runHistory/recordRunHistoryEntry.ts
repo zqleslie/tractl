@@ -1,5 +1,5 @@
 import type { TraCtlSpecDocument } from '@/components/request-editor/tractlSpecDocument'
-import type { RequestRunResult } from '@/platform/localApi/types'
+import type { RunResult } from '@/platform/types'
 import {
   useRunHistoryStore,
   type RunHistorySourceFormat,
@@ -11,7 +11,7 @@ export type RecordRunHistoryInput = {
   requestName: string
   method: HttpMethod
   url: string
-  result: RequestRunResult
+  result: RunResult
   sourceType?: RunHistorySourceType
   sourceName?: string
   sourceFormat?: RunHistorySourceFormat

@@ -1,6 +1,6 @@
 import { desktopPlatform } from '@/platform/desktop/platform'
 import { getRequestExecutionRunner } from '@/platform/requestExecution/getRequestExecutionRunner'
-import type { PlatformCapabilities, SurfaceKind } from '@/platform/types'
+import type { PlatformCapabilities, SurfaceKind } from '@/platform/surface'
 import { webPlatform } from '@/platform/web/platform'
 
 export function detectSurface(): SurfaceKind {

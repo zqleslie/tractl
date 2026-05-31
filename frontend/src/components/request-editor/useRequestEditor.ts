@@ -34,7 +34,7 @@ import type {
 import type { HttpMethod } from '@/components/primitives'
 import { getRequestExecutionRunner } from '@/platform/requestExecution/getRequestExecutionRunner'
 import { LocalApiUnavailableError } from '@/platform/localApi/client'
-import type { RequestRunResult } from '@/platform/localApi/types'
+import type { RunResult as PlatformRunResult } from '@/platform/types'
 import { WasmRuntimeUnavailableError } from '@/platform/web/requestExecutionRunner'
 import { useEnvironmentStore } from '@/stores/environmentStore'
 import { requestRunResultToExecutionResult } from '@/lib/execution/mapRunResults'
@@ -64,7 +64,7 @@ function requestTabTitleFromUrl(url: string): string {
   }
 }
 
-function environmentResolutionErrorResult(missing: string[]): RequestRunResult {
+function environmentResolutionErrorResult(missing: string[]): PlatformRunResult {
   const message = formatMissingEnvironmentVariables(missing)
 
   return {
@@ -78,6 +78,7 @@ function environmentResolutionErrorResult(missing: string[]): RequestRunResult {
     extractResults: [],
     assertionsPassed: 0,
     assertionsTotal: 0,
+    passed: false,
     error: message,
   }
 }
@@ -117,7 +118,7 @@ export function useRequestEditor() {
   const [apiAvailable, setApiAvailable] = useState<boolean | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [runError, setRunError] = useState<string | null>(null)
-  const [runResult, setRunResult] = useState<RequestRunResult | null>(
+  const [runResult, setRunResult] = useState<PlatformRunResult | null>(
     () => pendingHistoryEntry?.result ?? null,
   )
   const activeEnvironment = useEnvironmentStore((state) =>
@@ -283,7 +284,7 @@ export function useRequestEditor() {
   )
 
   const recordHistoryResult = useCallback(
-    (result: RequestRunResult, document: ReturnType<typeof requestFormStateToTraCtlSpec>) => {
+    (result: PlatformRunResult, document: ReturnType<typeof requestFormStateToTraCtlSpec>) => {
       recordRunHistoryEntry({
         requestName,
         method,

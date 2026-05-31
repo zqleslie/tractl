@@ -1,7 +1,7 @@
-import type { RequestTimelineSegment } from '@/platform/localApi/types'
+type TimelineSegment = { label: string; ms: number }
 
 export type RequestTimelineProps = {
-  segments: RequestTimelineSegment[]
+  segments: TimelineSegment[]
   totalMs: number
 }
 

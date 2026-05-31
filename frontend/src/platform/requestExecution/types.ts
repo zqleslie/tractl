@@ -1,7 +1,5 @@
-import type {
-  RequestRunResult,
-  SaveRequestFileResponse,
-} from '@/platform/localApi/types'
+import type { RunResult } from '@/platform/types'
+import type { SaveRequestFileResponse } from '@/platform/localApi/client'
 import type { RequestDef } from '@/types/requestDef'
 
 export type SaveRequestInput = {
@@ -21,5 +19,5 @@ export type RequestExecutionRunner = {
   readonly supportsPersistence: boolean
   checkAvailable(): Promise<void>
   saveRequest(input: SaveRequestInput): Promise<SaveRequestFileResponse | null>
-  runRequest(input: RunRequestInput): Promise<RequestRunResult>
+  runRequest(input: RunRequestInput): Promise<RunResult>
 }

@@ -1,19 +1,43 @@
 import type {
-  ApiErrorBody,
   ApiStatusResponse,
-  EngineWorkflowRunResult,
   FileWriteResponse,
-  RequestRunResult,
-  RunRequestInput,
-  SaveRequestFileInput,
-  SaveRequestFileResponse,
-  WorkflowRunDocumentInput,
-} from '@/platform/localApi/types'
+  RunResult,
+} from '@/platform/types'
 import { useSettingsStore } from '@/stores/settingsStore'
+
+type SaveRequestFileInput = {
+  id?: string | null
+  name: string
+  request: unknown
+  path?: string
+}
+
+export type SaveRequestFileResponse = {
+  path: string
+  updatedAt: string
+}
+
+type RunRequestInput = {
+  request: unknown
+  env?: string
+}
+
+type WorkflowRunDocumentInput = {
+  document: string
+  format?: 'yaml' | 'yml' | 'json' | 'toon'
+  env?: string
+}
+
+type EngineWorkflowRunResult = Record<string, unknown>
+
+type ApiErrorBody = {
+  error: string
+  details?: string
+}
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:7428'
 
-function baseUrl(): string {
+export function baseUrl(): string {
   return (
     useSettingsStore.getState().serverUrl ??
     import.meta.env.VITE_TRACTL_API_BASE_URL ??
@@ -60,7 +84,8 @@ export async function getApiStatus(): Promise<ApiStatusResponse> {
 export async function saveRequestFile(
   input: SaveRequestFileInput,
 ): Promise<SaveRequestFileResponse> {
-  const path = input.path ?? `requests/${input.request.id}.yaml`
+  const requestId = (input.request as { id?: string })?.id
+  const path = input.path ?? `requests/${requestId}.yaml`
   const content = `${JSON.stringify(input.request, null, 2)}\n`
   const saved = await requestJson<FileWriteResponse>(
     `/api/v1/files/${encodeFilePath(path)}`,
@@ -87,8 +112,8 @@ export async function writeWorkspaceFile(
 
 export async function runRequestFile(
   input: RunRequestInput,
-): Promise<RequestRunResult> {
-  return requestJson<RequestRunResult>('/api/v1/run', {
+): Promise<RunResult> {
+  return requestJson<RunResult>('/api/v1/run', {
     method: 'POST',
     body: JSON.stringify(input.request),
   })

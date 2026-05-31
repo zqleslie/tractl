@@ -3,7 +3,7 @@ import { ResponseTabContent } from '@/components/request-editor/results/Response
 import { TimingBar } from '@/components/request-editor/results/TimingBar'
 import type { ResultTab } from '@/components/request-editor/types'
 import { cn } from '@/lib/cn'
-import type { RequestRunResult } from '@/platform/localApi/types'
+import type { RunResult as PlatformRunResult } from '@/platform/types'
 import type { RunResult, RunState } from '@/stores/executionStore'
 import type { EditorLayout } from '@/stores/uiStore'
 
@@ -11,7 +11,7 @@ export type RequestResultsPanelProps = {
   layout: EditorLayout
   activeTab: ResultTab
   runState: RunState
-  runResult: RequestRunResult | null
+  runResult: PlatformRunResult | null
   executionResult: RunResult | null
   isRunning: boolean
   onTabChange: (tab: ResultTab) => void
