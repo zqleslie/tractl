@@ -1,0 +1,43 @@
+# build/docker/Dockerfile.ci
+#
+# CI runner image — tractl CLI on debian-slim.
+#
+# Usage in GitHub Actions:
+#   jobs:
+#     validate:
+#       container: tractl/tractl:ci
+#       steps:
+#         - run: tractl run workflows/api-tests.yaml --output json
+#
+# Usage standalone:
+#   docker run --rm \
+#     -v $(pwd)/workflows:/workflows \
+#     -v $(pwd)/env:/env \
+#     tractl/tractl:ci \
+#     run /workflows/api-tests.yaml --env /env/ci.yaml
+
+FROM debian:bookworm-slim
+
+ARG VERSION=dev
+ARG COMMIT=unknown
+
+LABEL org.opencontainers.image.title="tractl-ci" \
+      org.opencontainers.image.description="traCtl CI runner image" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${COMMIT}" \
+      org.opencontainers.image.source="https://github.com/tractl/tractl"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY tractl /usr/local/bin/tractl
+RUN chmod +x /usr/local/bin/tractl
+
+RUN useradd --system --uid 10001 --shell /bin/sh tractl-runner
+USER tractl-runner
+
+ENTRYPOINT ["/usr/local/bin/tractl"]
+CMD ["--help"]

@@ -1,0 +1,37 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-cancel-signal
+  description: "{ cancel: true } in a hook stops the workflow immediately. Use beforeAll to gate on a precondition."
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: hooks-cancel-signal-flow
+    hooks:
+      beforeAll:
+        language: js
+        source: |
+          var gateOpen = ctx.workflow["skip-cancel"] === "true";
+          if (!gateOpen) {
+            tractl.log("gate closed — cancelling workflow");
+            return { cancel: true };
+          }
+          tractl.log("gate open — proceeding");
+          return {};
+
+    steps:
+      - id: fetch-user
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1"
+          operation: GET
+        assertions:
+          - id: status-ok
+            kind: status
+            op: equals
+            expected: 200

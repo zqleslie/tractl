@@ -1,0 +1,511 @@
+
+<h2 class="sr-only">traCtl Run History screen — chronological list of all runs with filters, outcome badges, and detail popup</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+--sb:#fff;--sb-b:#e5e5e5;--bg:#f0f0ee;--tb:#fff;--tb-b:#e5e5e5;
+--tp:#1a1a1a;--ts:#6b6b6b;--tt:#a0a0a0;
+--inp:#fff;--inp-b:#d0d0d0;--surf:#f5f5f3;--surf2:#ebebeb;
+--run:#185FA5;--runc:#E6F1FB;--runh:#0C447C;
+--code:#f0f0ee;--bb:#e0e0e0;
+--pass-bg:#EAF3DE;--pass-c:#3B6D11;
+--fail-bg:#FCEBEB;--fail-c:#A32D2D;
+--warn-bg:#FAEEDA;--warn-c:#854F0B;
+--info-bg:#E6F1FB;--info-c:#185FA5;
+}
+.dark{
+--sb:#1a1a1a;--sb-b:#2e2e2e;--bg:#141414;--tb:#1a1a1a;--tb-b:#2e2e2e;
+--tp:#e8e8e8;--ts:#888;--tt:#555;
+--inp:#222;--inp-b:#333;--surf:#1e1e1e;--surf2:#252525;
+--code:#1e1e1e;--bb:#333;
+--pass-bg:#173404;--pass-c:#C0DD97;
+--fail-bg:#501313;--fail-c:#F7C1C1;
+--warn-bg:#412402;--warn-c:#FAC775;
+--info-bg:#042C53;--info-c:#B5D4F4;
+}
+.root{display:flex;height:660px;font-family:var(--font-sans);background:var(--bg);border-radius:var(--border-radius-lg);overflow:hidden;border:0.5px solid var(--sb-b);position:relative;}
+
+.sidebar{width:210px;background:var(--sb);border-right:0.5px solid var(--sb-b);display:flex;flex-direction:column;flex-shrink:0;}
+.sb-top{padding:10px 10px 0;flex-shrink:0;}
+.tr{display:flex;align-items:center;gap:6px;margin-bottom:11px;}
+.dot{width:11px;height:11px;border-radius:50%;}
+.hbtn{margin-left:7px;width:22px;height:22px;border-radius:6px;border:none;background:transparent;color:var(--tt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.hbtn:hover{background:var(--surf2);color:var(--tp);}
+.tabs{display:flex;background:var(--surf);border-radius:8px;padding:2px;gap:1px;margin-bottom:9px;}
+.tab{flex:1;font-size:11px;font-weight:500;padding:5px 2px;border-radius:6px;border:none;background:transparent;color:var(--ts);cursor:pointer;text-align:center;}
+.tab.active{background:var(--sb);color:var(--tp);border:0.5px solid var(--sb-b);}
+.sba{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:8px;font-size:12px;color:var(--ts);cursor:pointer;margin-bottom:1px;white-space:nowrap;}
+.sba:hover{background:var(--surf);color:var(--tp);}
+.sba.pri{color:var(--tp);font-weight:500;}
+.sba i{font-size:14px;width:16px;text-align:center;}
+.sb-scroll{flex:1;overflow-y:auto;padding:0 3px 8px;}
+.sbs{font-size:10px;font-weight:500;color:var(--tt);text-transform:uppercase;letter-spacing:.07em;padding:10px 7px 4px;}
+.sbi{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:8px;font-size:12px;color:var(--tp);cursor:pointer;position:relative;}
+.sbi:hover{background:var(--surf);}
+.sbi.active{background:var(--surf);}
+.sbi i{font-size:13px;color:var(--ts);width:15px;flex-shrink:0;}
+.sbi-n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.grp{display:flex;align-items:center;gap:5px;padding:5px 7px;font-size:10px;font-weight:500;color:var(--tt);text-transform:uppercase;letter-spacing:.07em;cursor:pointer;white-space:nowrap;}
+.grp i{font-size:11px;}
+.sb-bot{padding:7px;border-top:0.5px solid var(--sb-b);flex-shrink:0;}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.titlebar{height:40px;background:var(--tb);border-bottom:0.5px solid var(--tb-b);display:flex;align-items:center;padding:0 13px;gap:8px;flex-shrink:0;}
+.tlogo{font-size:13px;font-weight:500;color:var(--tp);}
+.ttag{font-size:10px;padding:2px 6px;border-radius:6px;background:var(--info-bg);color:var(--info-c);}
+.tr2{margin-left:auto;display:flex;align-items:center;gap:7px;}
+.envb{font-size:11px;padding:3px 8px;border-radius:7px;border:0.5px solid var(--inp-b);color:var(--ts);cursor:pointer;display:flex;align-items:center;gap:5px;background:transparent;}
+.edot{width:6px;height:6px;border-radius:50%;background:#1D9E75;flex-shrink:0;}
+.tbtn{width:26px;height:26px;border-radius:6px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.tbtn:hover{background:var(--surf);}
+
+.page-bar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--tb);border-bottom:0.5px solid var(--tb-b);flex-shrink:0;}
+.page-title{font-size:14px;font-weight:500;color:var(--tp);}
+.page-sub{font-size:11px;color:var(--ts);}
+.search-wrap{flex:1;max-width:240px;position:relative;margin-left:auto;}
+.search-inp{width:100%;font-size:12px;padding:5px 10px 5px 30px;border-radius:7px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);}
+.search-inp:focus{outline:none;border-color:#378ADD;}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--tt);}
+.clear-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;}
+.clear-btn:hover{background:var(--surf);}
+
+.filter-row{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--tb);border-bottom:0.5px solid var(--tb-b);flex-shrink:0;overflow-x:auto;}
+.filter-row::-webkit-scrollbar{display:none;}
+.fl-label{font-size:10px;color:var(--tt);white-space:nowrap;flex-shrink:0;}
+.fc{font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.fc:hover{background:var(--surf);}
+.fc.active{background:var(--info-bg);color:var(--info-c);border-color:var(--info-c);}
+.fc.pass-f.active{background:var(--pass-bg);color:var(--pass-c);border-color:var(--pass-c);}
+.fc.fail-f.active{background:var(--fail-bg);color:var(--fail-c);border-color:var(--fail-c);}
+.filter-sep{width:1px;height:16px;background:var(--bb);flex-shrink:0;}
+.sort-sel{font-size:11px;padding:3px 8px;border-radius:6px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);margin-left:auto;flex-shrink:0;}
+
+.history-body{flex:1;overflow-y:auto;}
+
+.day-group{padding:0 14px;}
+.day-label{font-size:10px;font-weight:500;color:var(--tt);text-transform:uppercase;letter-spacing:.07em;padding:12px 0 6px;border-bottom:0.5px solid var(--bb);margin-bottom:2px;}
+
+.run-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;}
+.run-row:hover{background:var(--surf);}
+.run-oc{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.oc-p{background:var(--pass-bg);color:var(--pass-c);}
+.oc-f{background:var(--fail-bg);color:var(--fail-c);}
+.run-info{flex:1;min-width:0;}
+.run-name{font-size:12px;font-weight:500;color:var(--tp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.run-detail{font-size:11px;color:var(--ts);margin-top:1px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.run-type{font-size:9px;padding:1px 5px;border-radius:3px;border:0.5px solid var(--bb);color:var(--tt);flex-shrink:0;}
+.run-time{font-size:11px;color:var(--tt);white-space:nowrap;flex-shrink:0;}
+.run-dur{font-size:11px;color:var(--ts);white-space:nowrap;flex-shrink:0;}
+.run-ass{font-size:10px;font-weight:500;padding:2px 7px;border-radius:5px;flex-shrink:0;}
+.ass-p{background:var(--pass-bg);color:var(--pass-c);}
+.ass-f{background:var(--fail-bg);color:var(--fail-c);}
+.run-env{font-size:10px;padding:1px 6px;border-radius:4px;background:var(--surf);border:0.5px solid var(--bb);color:var(--tt);flex-shrink:0;}
+.run-actions{display:flex;gap:4px;opacity:0;}
+.run-row:hover .run-actions{opacity:1;}
+.ra-btn{width:24px;height:24px;border-radius:6px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;}
+.ra-btn:hover{background:var(--surf2);color:var(--tp);}
+
+.statusbar{height:22px;background:var(--tb);border-top:0.5px solid var(--sb-b);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;}
+.sdot{width:6px;height:6px;border-radius:50%;}
+.stxt{font-size:11px;color:var(--ts);}
+.sr{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.git-b{font-size:10px;color:var(--tt);display:flex;align-items:center;gap:3px;}
+.sver{font-size:11px;color:var(--tt);}
+
+.overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,0.3);z-index:20;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.popup{background:var(--tb);border-radius:12px;border:0.5px solid var(--sb-b);width:92%;max-width:540px;max-height:88%;display:flex;flex-direction:column;overflow:hidden;}
+.popup-head{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:0.5px solid var(--sb-b);flex-shrink:0;}
+.popup-title{font-size:13px;font-weight:500;color:var(--tp);flex:1;}
+.popup-close{width:24px;height:24px;border-radius:6px;border:none;background:transparent;color:var(--tt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.popup-close:hover{background:var(--surf2);}
+.popup-body{flex:1;overflow-y:auto;padding:12px 14px;}
+.sec-title{font-size:10px;font-weight:500;color:var(--tt);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px;}
+.sec-title:first-child{margin-top:0;}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:14px;}
+.metric{background:var(--surf);border-radius:8px;padding:8px;text-align:center;border:0.5px solid var(--bb);}
+.mlabel{font-size:10px;color:var(--tt);margin-bottom:3px;}
+.mval{font-size:14px;font-weight:500;color:var(--tp);}
+.mval.pass{color:var(--pass-c);}
+.mval.fail{color:var(--fail-c);}
+.code-block{font-family:var(--font-mono);font-size:11px;color:var(--tp);background:var(--code);border-radius:7px;padding:9px;line-height:1.7;white-space:pre;overflow-x:auto;border:0.5px solid var(--bb);margin-bottom:12px;}
+.ar{display:flex;align-items:flex-start;gap:7px;padding:5px 8px;border-radius:7px;font-size:11px;margin-bottom:4px;}
+.ar.pass{background:var(--pass-bg);}
+.ar.fail{background:var(--fail-bg);}
+.ar i{font-size:13px;flex-shrink:0;margin-top:1px;}
+.ar.pass i{color:var(--pass-c);}
+.ar.fail i{color:var(--fail-c);}
+.ar-d{flex:1;color:var(--tp);line-height:1.5;}
+.ar-sub{font-size:10px;color:var(--ts);}
+.ar-exp{font-size:10px;font-family:var(--font-mono);margin-top:3px;padding:2px 5px;border-radius:4px;background:rgba(0,0,0,0.06);}
+.ar.fail .ar-exp{color:var(--fail-c);}
+.rerun-btn{font-size:12px;font-weight:500;padding:6px 16px;border-radius:7px;border:none;background:var(--run);color:var(--runc);cursor:pointer;display:flex;align-items:center;gap:5px;}
+.rerun-btn:hover{background:var(--runh);}
+.open-btn{font-size:12px;padding:6px 14px;border-radius:7px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;}
+.open-btn:hover{background:var(--surf);}
+</style>
+
+<div class="root" id="root">
+  <div class="sidebar">
+    <div class="sb-top">
+      <div class="tr">
+        <div class="dot" style="background:#ED6A5A;"></div>
+        <div class="dot" style="background:#F5B33A;"></div>
+        <div class="dot" style="background:#62C554;"></div>
+        <button class="hbtn" aria-label="Dashboard"><i class="ti ti-home" aria-hidden="true"></i></button>
+      </div>
+      <div class="tabs">
+        <button class="tab">Requests</button>
+        <button class="tab">Workflows</button>
+        <button class="tab">Envs</button>
+      </div>
+    </div>
+    <div class="sb-scroll">
+      <div class="sba pri"><i class="ti ti-plus" aria-hidden="true"></i> New request</div>
+      <div class="sbs">Pinned</div>
+      <div class="sbi"><i class="ti ti-bolt" aria-hidden="true"></i><span class="sbi-n">GET /health</span></div>
+      <div class="sbs">Recent</div>
+      <div class="sbi"><i class="ti ti-topology-star-3" aria-hidden="true"></i><span class="sbi-n">auth-flow</span></div>
+      <div class="sbi"><i class="ti ti-bolt" aria-hidden="true"></i><span class="sbi-n">POST /users/register</span></div>
+      <div class="sbi active"><i class="ti ti-history" aria-hidden="true"></i><span class="sbi-n">Run history</span></div>
+    </div>
+    <div class="sb-bot">
+      <div class="sba"><i class="ti ti-settings" aria-hidden="true"></i> Settings</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="titlebar">
+      <span class="tlogo">traCtl</span>
+      <span class="ttag">alpha</span>
+      <div class="tr2">
+        <div class="envb"><div class="edot"></div> staging <i class="ti ti-chevron-down" style="font-size:10px;" aria-hidden="true"></i></div>
+        <button class="tbtn" onclick="toggleTheme()" aria-label="Toggle theme"><i class="ti ti-moon" id="th-icon" aria-hidden="true"></i></button>
+      </div>
+    </div>
+
+    <div class="page-bar">
+      <div>
+        <div class="page-title">Run history</div>
+        <div class="page-sub">48 runs across all workflows and requests</div>
+      </div>
+      <div class="search-wrap">
+        <i class="ti ti-search search-icon" aria-hidden="true"></i>
+        <input class="search-inp" placeholder="Search by name, env, status…" id="search-inp" oninput="filterRows()">
+      </div>
+      <button class="clear-btn" onclick="clearAll()">Clear all</button>
+    </div>
+
+    <div class="filter-row">
+      <span class="fl-label">Type</span>
+      <button class="fc active" onclick="setFilter(this,'type','all')">All</button>
+      <button class="fc" onclick="setFilter(this,'type','workflow')">Workflows</button>
+      <button class="fc" onclick="setFilter(this,'type','request')">Requests</button>
+      <div class="filter-sep"></div>
+      <span class="fl-label">Outcome</span>
+      <button class="fc active" onclick="setFilter(this,'outcome','all')">All</button>
+      <button class="fc pass-f" onclick="setFilter(this,'outcome','passed')">Passed</button>
+      <button class="fc fail-f" onclick="setFilter(this,'outcome','failed')">Failed</button>
+      <div class="filter-sep"></div>
+      <span class="fl-label">Env</span>
+      <button class="fc active" onclick="setFilter(this,'env','all')">All</button>
+      <button class="fc" onclick="setFilter(this,'env','staging')">staging</button>
+      <button class="fc" onclick="setFilter(this,'env','production')">production</button>
+      <select class="sort-sel"><option>Newest first</option><option>Oldest first</option><option>Slowest first</option><option>Most failures first</option></select>
+    </div>
+
+    <div class="history-body">
+
+      <div class="day-group">
+        <div class="day-label">Today — 29 May 2026</div>
+
+        <div class="run-row" onclick="openDetail('auth-fail')">
+          <div class="run-oc oc-f"><i class="ti ti-x" aria-hidden="true"></i></div>
+          <div class="run-info">
+            <div class="run-name">auth-flow</div>
+            <div class="run-detail">
+              <span class="run-type">workflow</span>
+              <span>4 steps · 1 assertion failed</span>
+              <span class="run-env">staging</span>
+            </div>
+          </div>
+          <div class="run-ass ass-f">1/5 failed</div>
+          <div class="run-dur">487ms</div>
+          <div class="run-time">08:14</div>
+          <div class="run-actions">
+            <button class="ra-btn" title="Re-run" aria-label="Re-run"><i class="ti ti-player-play" aria-hidden="true"></i></button>
+            <button class="ra-btn" title="Open workflow" aria-label="Open workflow"><i class="ti ti-external-link" aria-hidden="true"></i></button>
+          </div>
+        </div>
+
+        <div class="run-row" onclick="openDetail('register-pass')">
+          <div class="run-oc oc-p"><i class="ti ti-check" aria-hidden="true"></i></div>
+          <div class="run-info">
+            <div class="run-name">POST /users/register</div>
+            <div class="run-detail">
+              <span class="run-type">request</span>
+              <span>2 assertions</span>
+              <span class="run-env">staging</span>
+            </div>
+          </div>
+          <div class="run-ass ass-p">2/2 passed</div>
+          <div class="run-dur">234ms</div>
+          <div class="run-time">07:58</div>
+          <div class="run-actions">
+            <button class="ra-btn" title="Re-run" aria-label="Re-run"><i class="ti ti-player-play" aria-hidden="true"></i></button>
+            <button class="ra-btn" title="Open request" aria-label="Open request"><i class="ti ti-external-link" aria-hidden="true"></i></button>
+          </div>
+        </div>
+
+        <div class="run-row" onclick="openDetail('auth-pass')">
+          <div class="run-oc oc-p"><i class="ti ti-check" aria-hidden="true"></i></div>
+          <div class="run-info">
+            <div class="run-name">auth-flow</div>
+            <div class="run-detail">
+              <span class="run-type">workflow</span>
+              <span>4 steps</span>
+              <span class="run-env">staging</span>
+            </div>
+          </div>
+          <div class="run-ass ass-p">5/5 passed</div>
+          <div class="run-dur">412ms</div>
+          <div class="run-time">07:31</div>
+          <div class="run-actions">
+            <button class="ra-btn" title="Re-run" aria-label="Re-run"><i class="ti ti-player-play" aria-hidden="true"></i></button>
+            <button class="ra-btn" title="Open workflow" aria-label="Open workflow"><i class="ti ti-external-link" aria-hidden="true"></i></button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">Yesterday — 28 May 2026</div>
+
+        <div class="run-row">
+          <div class="run-oc oc-p"><i class="ti ti-check" aria-hidden="true"></i></div>
+          <div class="run-info">
+            <div class="run-name">billing-validation</div>
+            <div class="run-detail">
+              <span class="run-type">workflow</span>
+              <span>3 steps</span>
+              <span class="run-env">production</span>
+            </div>
+          </div>
+          <div class="run-ass ass-p">3/3 passed</div>
+          <div class="run-dur">318ms</div>
+          <div class="run-time">16:45</div>
+          <div class="run-actions">
+            <button class="ra-btn" title="Re-run" aria-label="Re-run"><i class="ti ti-player-play" aria-hidden="true"></i></button>
+            <button class="ra-btn" title="Open workflow" aria-label="Open workflow"><i class="ti ti-external-link" aria-hidden="true"></i></button>
+          </div>
+        </div>
+
+        <div class="run-row">
+          <div class="run-oc oc-f"><i class="ti ti-x" aria-hidden="true"></i></div>
+          <div class="run-info">
+            <div class="run-name">GET /health</div>
+            <div class="run-detail">
+              <span class="run-type">request</span>
+              <span>1 assertion failed</span>
+              <span class="run-env">production</span>
+            </div>
+          </div>
+          <div class="run-ass ass-f">0/1 failed</div>
+          <div class="run-dur">2341ms</div>
+          <div class="run-time">14:02</div>
+          <div class="run-actions">
+            <button class="ra-btn" title="Re-run" aria-label="Re-run"><i class="ti ti-player-play" aria-hidden="true"></i></button>
+            <button class="ra-btn" title="Open request" aria-label="Open request"><i class="ti ti-external-link" aria-hidden="true"></i></button>
+          </div>
+        </div>
+
+        <div class="run-row">
+          <div class="run-oc oc-p"><i class="ti ti-check" aria-hidden="true"></i></div>
+          <div class="run-info">
+            <div class="run-name">payments-api.yaml</div>
+            <div class="run-detail">
+              <span class="run-type">OpenAPI</span>
+              <span>12 steps</span>
+              <span class="run-env">staging</span>
+            </div>
+          </div>
+          <div class="run-ass ass-p">18/18 passed</div>
+          <div class="run-dur">1.2s</div>
+          <div class="run-time">09:17</div>
+          <div class="run-actions">
+            <button class="ra-btn" title="Re-run" aria-label="Re-run"><i class="ti ti-player-play" aria-hidden="true"></i></button>
+            <button class="ra-btn" title="Open" aria-label="Open"><i class="ti ti-external-link" aria-hidden="true"></i></button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="day-group">
+        <div class="day-label">27 May 2026</div>
+        <div class="run-row">
+          <div class="run-oc oc-p"><i class="ti ti-check" aria-hidden="true"></i></div>
+          <div class="run-info">
+            <div class="run-name">auth-flow</div>
+            <div class="run-detail"><span class="run-type">workflow</span><span>4 steps</span><span class="run-env">staging</span></div>
+          </div>
+          <div class="run-ass ass-p">5/5 passed</div>
+          <div class="run-dur">398ms</div>
+          <div class="run-time">17:30</div>
+          <div class="run-actions">
+            <button class="ra-btn" aria-label="Re-run"><i class="ti ti-player-play" aria-hidden="true"></i></button>
+            <button class="ra-btn" aria-label="Open"><i class="ti ti-external-link" aria-hidden="true"></i></button>
+          </div>
+        </div>
+        <div class="run-row">
+          <div class="run-oc oc-f"><i class="ti ti-x" aria-hidden="true"></i></div>
+          <div class="run-info">
+            <div class="run-name">billing-validation</div>
+            <div class="run-detail"><span class="run-type">workflow</span><span>2/3 steps completed</span><span class="run-env">staging</span></div>
+          </div>
+          <div class="run-ass ass-f">2/4 failed</div>
+          <div class="run-dur">541ms</div>
+          <div class="run-time">11:14</div>
+          <div class="run-actions">
+            <button class="ra-btn" aria-label="Re-run"><i class="ti ti-player-play" aria-hidden="true"></i></button>
+            <button class="ra-btn" aria-label="Open"><i class="ti ti-external-link" aria-hidden="true"></i></button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="statusbar">
+      <div class="sdot" style="background:#1D9E75;"></div>
+      <span class="stxt">Engine ready</span>
+      <div class="sr">
+        <span class="git-b"><i class="ti ti-git-branch" style="font-size:11px;" aria-hidden="true"></i> git: clean</span>
+        <span class="sver">Desktop · v0.1.0-alpha</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="detail-overlay">
+    <div class="popup">
+      <div class="popup-head">
+        <div style="flex:1;">
+          <div class="popup-title" id="d-title">auth-flow</div>
+          <div style="font-size:11px;color:var(--ts);margin-top:2px;" id="d-sub">29 May 2026 · 08:14 · staging</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="open-btn"><i class="ti ti-external-link" style="font-size:12px;" aria-hidden="true"></i> Open</button>
+          <button class="rerun-btn"><i class="ti ti-player-play" style="font-size:12px;" aria-hidden="true"></i> Re-run</button>
+          <button class="popup-close" onclick="closeDetail()" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
+        </div>
+      </div>
+      <div class="popup-body">
+        <div class="metrics">
+          <div class="metric"><div class="mlabel">outcome</div><div class="mval fail" id="d-outcome">1 failed</div></div>
+          <div class="metric"><div class="mlabel">duration</div><div class="mval" id="d-dur">487ms</div></div>
+          <div class="metric"><div class="mlabel">steps</div><div class="mval" id="d-steps">4/4</div></div>
+          <div class="metric"><div class="mlabel">assertions</div><div class="mval fail" id="d-ass">4/5</div></div>
+        </div>
+
+        <div class="sec-title">Dependency waterfall</div>
+        <div class="code-block" id="d-waterfall">login         [████████████████░░░░░░░░░░░░░░░░░░░░] 187ms
+health-check  [████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  42ms
+fetch-profile [░░░░░░░░░░░░░░░░█████████░░░░░░░░░░░]  94ms ← login
+check-billing [░░░░░░░░░░░░░░░░████████░░░░░░░░░░░░] 102ms ← login</div>
+
+        <div class="sec-title">Step outcomes</div>
+        <div id="d-steps-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var dark=false;
+var runs={
+  'auth-fail':{
+    title:'auth-flow',sub:'29 May 2026 · 08:14 · staging',
+    outcome:'1 failed',outClass:'fail',dur:'487ms',steps:'4/4',ass:'4/5',assClass:'fail',
+    waterfall:'login         [████████████████░░░░░░░░░░░░░░░░░░░░] 187ms\nhealth-check  [████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  42ms\nfetch-profile [░░░░░░░░░░░░░░░░█████████░░░░░░░░░░░]  94ms ← login\ncheck-billing [░░░░░░░░░░░░░░░░████████░░░░░░░░░░░░] 102ms ← login',
+    stepsList:[
+      {pass:true,name:'login',detail:'200 OK · 187ms · 1/1 assertions'},
+      {pass:true,name:'health-check',detail:'200 OK · 42ms · 1/1 assertions'},
+      {pass:false,name:'fetch-profile',detail:'200 OK · 94ms · 1/2 assertions',fail:'body $.userId exists · expected: present · received: missing · warning'},
+      {pass:true,name:'check-billing',detail:'200 OK · 102ms · 1/1 assertions'},
+    ]
+  },
+  'register-pass':{
+    title:'POST /users/register',sub:'29 May 2026 · 07:58 · staging',
+    outcome:'all passed',outClass:'pass',dur:'234ms',steps:'1/1',ass:'2/2',assClass:'pass',
+    waterfall:'register  [████████████████████░░░░░░░░░░░░░░░░] 234ms',
+    stepsList:[
+      {pass:true,name:'POST /users/register',detail:'201 Created · 234ms · 2/2 assertions'},
+    ]
+  },
+  'auth-pass':{
+    title:'auth-flow',sub:'29 May 2026 · 07:31 · staging',
+    outcome:'all passed',outClass:'pass',dur:'412ms',steps:'4/4',ass:'5/5',assClass:'pass',
+    waterfall:'login         [███████████████░░░░░░░░░░░░░░░░░░░░░] 172ms\nhealth-check  [████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  38ms\nfetch-profile [░░░░░░░░░░░░░░░███████░░░░░░░░░░░░░░░]  89ms ← login\ncheck-billing [░░░░░░░░░░░░░░░███████░░░░░░░░░░░░░░░]  97ms ← login',
+    stepsList:[
+      {pass:true,name:'login',detail:'200 OK · 172ms · 1/1 assertions'},
+      {pass:true,name:'health-check',detail:'200 OK · 38ms · 1/1 assertions'},
+      {pass:true,name:'fetch-profile',detail:'200 OK · 89ms · 2/2 assertions'},
+      {pass:true,name:'check-billing',detail:'200 OK · 97ms · 1/1 assertions'},
+    ]
+  }
+};
+
+function toggleTheme(){
+  dark=!dark;
+  document.getElementById('root').classList.toggle('dark',dark);
+  document.getElementById('th-icon').className=dark?'ti ti-sun':'ti ti-moon';
+}
+
+function setFilter(el,group,val){
+  el.closest('.filter-row').querySelectorAll('.fc').forEach(function(c){
+    if((group==='type'&&['all','workflow','request'].includes(c.textContent.toLowerCase()))||
+       (group==='outcome'&&['all','passed','failed'].includes(c.textContent.toLowerCase()))||
+       (group==='env'&&['all','staging','production'].includes(c.textContent.toLowerCase()))){
+      c.classList.remove('active');
+    }
+  });
+  el.classList.add('active');
+}
+
+function filterRows(){
+  var q=document.getElementById('search-inp').value.toLowerCase();
+  document.querySelectorAll('.run-row').forEach(function(r){
+    r.style.display=!q||r.textContent.toLowerCase().includes(q)?'flex':'none';
+  });
+}
+
+function clearAll(){
+  document.getElementById('search-inp').value='';
+  filterRows();
+}
+
+function openDetail(id){
+  var r=runs[id];
+  if(!r) return;
+  document.getElementById('d-title').textContent=r.title;
+  document.getElementById('d-sub').textContent=r.sub;
+  document.getElementById('d-outcome').textContent=r.outcome;
+  document.getElementById('d-outcome').className='mval '+r.outClass;
+  document.getElementById('d-dur').textContent=r.dur;
+  document.getElementById('d-steps').textContent=r.steps;
+  document.getElementById('d-ass').textContent=r.ass;
+  document.getElementById('d-ass').className='mval '+r.assClass;
+  document.getElementById('d-waterfall').textContent=r.waterfall;
+  var sl=document.getElementById('d-steps-list');
+  sl.innerHTML=r.stepsList.map(function(s){
+    return '<div class="ar '+(s.pass?'pass':'fail')+'"><i class="ti ti-'+(s.pass?'check':'x')+'" aria-hidden="true"></i><div class="ar-d">'+s.name+'<div class="ar-sub">'+s.detail+'</div>'+(s.fail?'<div class="ar-exp">'+s.fail+'</div>':'')+'</div></div>';
+  }).join('');
+  document.getElementById('detail-overlay').classList.add('open');
+}
+
+function closeDetail(){
+  document.getElementById('detail-overlay').classList.remove('open');
+}
+
+document.getElementById('detail-overlay').addEventListener('click',function(e){
+  if(e.target===this) closeDetail();
+});
+</script>

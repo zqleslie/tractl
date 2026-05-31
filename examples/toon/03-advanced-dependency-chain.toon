@@ -1,0 +1,122 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: advanced-dependency-chain
+  description: "Wave 1: step-1, step-2, step-4. Wave 2: step-3. Wave 3: step-5. Wave 4: step-6."
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: advanced-dep-flow
+    steps:
+      - id: step-1
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1"
+          operation: GET
+        assertions:
+          - id: step-1-status
+            kind: status
+            op: equals
+            expected: 200
+          - id: step-1-has-name
+            kind: body
+            target: name
+            op: exists
+        extracts:
+          - id: step-1-username
+            source: body
+            path: username
+            as: username
+            scope: workflow
+
+      - id: step-2
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/todos/2"
+          operation: GET
+        assertions:
+          - id: step-2-status
+            kind: status
+            op: equals
+            expected: 200
+
+      - id: step-4
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/posts/4"
+          operation: GET
+        assertions:
+          - id: step-4-status
+            kind: status
+            op: equals
+            expected: 200
+
+      - id: step-3
+        kind: request
+        dependsOn:
+          - step-1
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1/posts"
+          operation: GET
+        assertions:
+          - id: step-3-status
+            kind: status
+            op: equals
+            expected: 200
+        extracts:
+          - id: step-3-first-post-id
+            source: body
+            path: 0.id
+            as: first-post-id
+            scope: workflow
+
+      - id: step-5
+        kind: request
+        dependsOn:
+          - step-3
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/posts/1/comments"
+          operation: GET
+        assertions:
+          - id: step-5-status
+            kind: status
+            op: equals
+            expected: 200
+        extracts:
+          - id: step-5-email
+            source: body
+            path: 0.email
+            as: first-comment-email
+            scope: workflow
+
+      - id: step-6
+        kind: request
+        dependsOn:
+          - step-5
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/posts/1"
+          operation: GET
+        assertions:
+          - id: step-6-status
+            kind: status
+            op: equals
+            expected: 200
+          - id: step-6-title-exists
+            kind: body
+            target: title
+            op: exists
+          - id: step-6-content-type
+            kind: header
+            target: content-type
+            op: contains
+            expected: "application/json"

@@ -1,0 +1,109 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-deterministic-apis
+  description: |
+    Demonstrates the tractl.* deterministic API surface available in
+    every hook script.
+
+    tractl.now()      — returns a monotonically increasing integer
+                        representing epoch milliseconds. The starting
+                        value and step are seeded from the run's
+                        trace ID, making the sequence reproducible.
+                        Never calls the wall clock.
+
+    tractl.random()   — returns a float64 in [0, 1). Seeded from the
+                        trace ID; the same trace ID always produces
+                        the same sequence. Not cryptographically safe.
+
+    tractl.log(msg)   — appends a string to the step's log output.
+                        Accepts any value; non-strings are coerced.
+
+    ctx               — frozen read-only snapshot of the execution
+                        context, structured as:
+                          ctx.spec      — spec-scope variables
+                          ctx.workflow  — workflow-scope variables
+                          ctx.step      — step-scope variables
+                        All scopes are plain JS objects. Writes to
+                        ctx.* are local to the script and do not
+                        affect the live execution context.
+
+    Return a MutationSet object to persist changes back to the engine.
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+  region: "us-east-1"
+
+workflows:
+  - id: hooks-deterministic-apis-flow
+    variables:
+      env: "staging"
+
+    hooks:
+      beforeAll:
+        language: js
+        source: |
+          // Read from the frozen context.
+          var region  = ctx.spec["region"]  || "unknown";
+          var env     = ctx.workflow["env"] || "unknown";
+
+          // Deterministic time and random values.
+          var ts      = tractl.now();
+          var traceId = "tid-" + Math.floor(tractl.random() * 0xFFFFFF).toString(16);
+
+          tractl.log("region=" + region + " env=" + env);
+          tractl.log("ts=" + ts + " traceId=" + traceId);
+
+          return {
+            variables: {
+              "computed-trace-id": traceId,
+              "computed-ts":       String(ts)
+            }
+          };
+
+      afterAll:
+        language: js
+        source: |
+          // Read variables written by beforeAll back from context.
+          var traceId = ctx.workflow["computed-trace-id"] || "(not set)";
+          tractl.log("run completed, computed-trace-id=" + traceId);
+          return {};
+
+    steps:
+      - id: fetch-todo
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/todos/1"
+          operation: GET
+        assertions:
+          - id: status-ok
+            kind: status
+            op: equals
+            expected: 200
+
+      - id: fetch-user
+        kind: request
+        dependsOn:
+          - fetch-todo
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1"
+          operation: GET
+        assertions:
+          - id: user-status
+            kind: status
+            op: equals
+            expected: 200
+        hooks:
+          afterStep:
+            language: js
+            source: |
+              // Step-level afterStep hook showing per-step use of tractl.*.
+              var elapsed = tractl.now();
+              tractl.log("afterStep: elapsed-token=" + elapsed);
+              return {
+                variables: { "last-step-ts": String(elapsed) }
+              };

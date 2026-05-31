@@ -1,0 +1,817 @@
+
+<h2 class="sr-only">traCtl Workflow Canvas v3 — filter bar, junction plus buttons, code view, two-root DAG, result tab on card click, partial assertion failure</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+--sb:#fff;--sb-b:#e5e5e5;--bg:#f0f0ee;--tb:#fff;--tb-b:#e5e5e5;
+--tp:#1a1a1a;--ts:#6b6b6b;--tt:#a0a0a0;
+--inp:#fff;--inp-b:#d0d0d0;--surf:#f5f5f3;--surf2:#ebebeb;
+--run:#185FA5;--runc:#E6F1FB;--runh:#0C447C;
+--code:#f0f0ee;--bb:#e0e0e0;
+--pass-bg:#EAF3DE;--pass-c:#3B6D11;
+--fail-bg:#FCEBEB;--fail-c:#A32D2D;
+--skip-bg:#F1EFE8;--skip-c:#5F5E5A;
+--warn-bg:#FAEEDA;--warn-c:#854F0B;
+--info-bg:#E6F1FB;--info-c:#185FA5;
+--sc:#185FA5;
+}
+.dark{
+--sb:#1a1a1a;--sb-b:#2e2e2e;--bg:#141414;--tb:#1a1a1a;--tb-b:#2e2e2e;
+--tp:#e8e8e8;--ts:#888;--tt:#555;
+--inp:#222;--inp-b:#333;--surf:#1e1e1e;--surf2:#252525;
+--code:#1e1e1e;--bb:#333;
+--pass-bg:#173404;--pass-c:#C0DD97;
+--fail-bg:#501313;--fail-c:#F7C1C1;
+--skip-bg:#2C2C2A;--skip-c:#B4B2A9;
+--warn-bg:#412402;--warn-c:#FAC775;
+--info-bg:#042C53;--info-c:#B5D4F4;
+--sc:#85B7EB;
+}
+.root{display:flex;height:700px;font-family:var(--font-sans);background:var(--bg);border-radius:var(--border-radius-lg);overflow:hidden;border:0.5px solid var(--sb-b);position:relative;}
+
+.sidebar{width:210px;background:var(--sb);border-right:0.5px solid var(--sb-b);display:flex;flex-direction:column;flex-shrink:0;transition:width .2s;overflow:hidden;}
+.sidebar.collapsed{width:0;border-right:none;}
+.sb-top{padding:10px 10px 0;flex-shrink:0;min-width:210px;}
+.tr{display:flex;align-items:center;gap:6px;margin-bottom:11px;}
+.dot{width:11px;height:11px;border-radius:50%;}
+.hbtn{margin-left:7px;width:22px;height:22px;border-radius:6px;border:none;background:transparent;color:var(--tt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.hbtn:hover{background:var(--surf2);color:var(--tp);}
+.tabs{display:flex;background:var(--surf);border-radius:8px;padding:2px;gap:1px;margin-bottom:9px;}
+.tab{flex:1;font-size:11px;font-weight:500;padding:5px 2px;border-radius:6px;border:none;background:transparent;color:var(--ts);cursor:pointer;text-align:center;}
+.tab.active{background:var(--sb);color:var(--tp);border:0.5px solid var(--sb-b);}
+.sba{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:8px;font-size:12px;color:var(--ts);cursor:pointer;margin-bottom:1px;white-space:nowrap;}
+.sba:hover{background:var(--surf);color:var(--tp);}
+.sba.pri{color:var(--tp);font-weight:500;}
+.sba i{font-size:14px;width:16px;text-align:center;}
+.sb-scroll{flex:1;overflow-y:auto;padding:0 3px 8px;min-width:210px;}
+.sbs{font-size:10px;font-weight:500;color:var(--tt);text-transform:uppercase;letter-spacing:.07em;padding:10px 7px 4px;white-space:nowrap;}
+.sbi{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:8px;font-size:12px;color:var(--tp);cursor:pointer;position:relative;}
+.sbi:hover{background:var(--surf);}
+.sbi:hover .ctx{opacity:1;}
+.sbi.active{background:var(--surf);}
+.sbi i{font-size:13px;color:var(--ts);width:15px;flex-shrink:0;}
+.sbi-n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ctx{opacity:0;font-size:12px;color:var(--tt);cursor:pointer;background:none;border:none;padding:2px 3px;position:absolute;right:4px;border-radius:4px;}
+.grp{display:flex;align-items:center;gap:5px;padding:5px 7px;font-size:10px;font-weight:500;color:var(--tt);text-transform:uppercase;letter-spacing:.07em;cursor:pointer;white-space:nowrap;}
+.grp i{font-size:11px;}
+.sb-bot{padding:7px;border-top:0.5px solid var(--sb-b);flex-shrink:0;min-width:210px;}
+
+.sb-toggle{width:18px;background:var(--tb);border-right:0.5px solid var(--sb-b);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.sb-toggle:hover{background:var(--surf2);}
+.sb-toggle i{font-size:12px;color:var(--tt);}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.titlebar{height:40px;background:var(--tb);border-bottom:0.5px solid var(--tb-b);display:flex;align-items:center;padding:0 13px;gap:8px;flex-shrink:0;}
+.tlogo{font-size:13px;font-weight:500;color:var(--tp);}
+.ttag{font-size:10px;padding:2px 6px;border-radius:6px;background:var(--info-bg);color:var(--info-c);}
+.tr2{margin-left:auto;display:flex;align-items:center;gap:7px;}
+.envb{font-size:11px;padding:3px 8px;border-radius:7px;border:0.5px solid var(--inp-b);color:var(--ts);cursor:pointer;display:flex;align-items:center;gap:5px;background:transparent;}
+.edot{width:6px;height:6px;border-radius:50%;background:#1D9E75;flex-shrink:0;}
+.tbtn{width:26px;height:26px;border-radius:6px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.tbtn:hover{background:var(--surf);}
+
+.wf-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--tb);border-bottom:0.5px solid var(--tb-b);flex-shrink:0;}
+.wf-name{font-size:13px;font-weight:500;color:var(--tp);}
+.wf-sub{font-size:11px;color:var(--ts);margin-top:1px;}
+.view-toggle{display:flex;border:0.5px solid var(--inp-b);border-radius:7px;overflow:hidden;}
+.vt-btn{width:28px;height:26px;border:none;background:transparent;color:var(--ts);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.vt-btn.active{background:var(--surf);color:var(--tp);}
+.vt-btn:hover{background:var(--surf2);}
+.as-hint{font-size:10px;color:var(--tt);white-space:nowrap;display:flex;align-items:center;gap:3px;}
+.run-btn{font-size:12px;font-weight:500;padding:5px 14px;border-radius:7px;border:none;background:var(--run);color:var(--runc);cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.run-btn:hover{background:var(--runh);}
+
+.filter-bar{display:flex;align-items:center;gap:6px;padding:6px 14px;background:var(--tb);border-bottom:0.5px solid var(--tb-b);flex-shrink:0;overflow-x:auto;}
+.filter-bar::-webkit-scrollbar{display:none;}
+.filter-label{font-size:10px;color:var(--tt);white-space:nowrap;flex-shrink:0;}
+.filter-chip{font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.filter-chip:hover{background:var(--surf);}
+.filter-chip.active{background:var(--info-bg);color:var(--info-c);border-color:var(--info-c);}
+
+.body{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.canvas-wrap{flex:1;overflow:hidden;position:relative;}
+.canvas-scroll{height:100%;overflow-y:auto;overflow-x:auto;padding:20px 16px 8px;}
+.code-view{height:100%;overflow:auto;padding:14px;display:none;}
+.code-view.active{display:block;}
+.canvas-scroll.hidden{display:none;}
+
+.dag{display:flex;flex-direction:column;align-items:center;gap:0;min-width:520px;}
+.dag-roots{display:flex;gap:24px;justify-content:center;width:100%;}
+.dag-root-col{display:flex;flex-direction:column;align-items:center;flex:1;max-width:260px;}
+.roots-sep{display:flex;align-items:center;gap:8px;padding:0 8px;align-self:center;}
+.roots-sep-line{width:1px;height:40px;background:var(--bb);}
+.roots-sep-label{font-size:9px;color:var(--tt);white-space:nowrap;}
+
+.step-card{border-radius:10px;border:0.5px solid var(--bb);background:var(--tb);cursor:pointer;transition:border-color .15s;width:100%;max-width:220px;}
+.step-card:hover{border-color:var(--inp-b);}
+.step-card.selected{border:1.5px solid var(--info-c);}
+.step-card.running{border-color:var(--warn-c);}
+.step-card.passed{border-color:var(--pass-c);}
+.step-card.failed{border:1.5px solid var(--fail-c);}
+.step-card.skipped{opacity:.5;}
+
+.sc-head{display:flex;align-items:center;gap:7px;padding:9px 10px 4px;}
+.sc-num{width:20px;height:20px;border-radius:50%;background:var(--surf);font-size:10px;font-weight:500;color:var(--ts);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sc-id{font-size:12px;font-weight:500;color:var(--tp);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mb{font-size:9px;font-weight:500;padding:1px 4px;border-radius:3px;flex-shrink:0;}
+.m-get{background:var(--info-bg);color:var(--info-c);}
+.m-post{background:var(--pass-bg);color:var(--pass-c);}
+.sc-oc{font-size:9px;font-weight:500;padding:1px 6px;border-radius:4px;flex-shrink:0;}
+.oc-idle{background:var(--surf);color:var(--tt);}
+.oc-run{background:var(--warn-bg);color:var(--warn-c);}
+.oc-pass{background:var(--pass-bg);color:var(--pass-c);}
+.oc-fail{background:var(--fail-bg);color:var(--fail-c);}
+.oc-skip{background:var(--skip-bg);color:var(--skip-c);}
+.sc-url{padding:0 10px 5px 10px;font-size:10px;color:var(--ts);font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-pills{display:flex;gap:4px;padding:0 10px 9px;flex-wrap:wrap;}
+.pill{font-size:9px;padding:1px 5px;border-radius:3px;border:0.5px solid var(--bb);color:var(--tt);}
+.pill.has{border-color:var(--inp-b);color:var(--ts);}
+.pill.ext{background:var(--info-bg);color:var(--info-c);border-color:transparent;}
+.pill.fail{background:var(--fail-bg);color:var(--fail-c);border-color:transparent;}
+
+.connector{display:flex;flex-direction:column;align-items:center;width:100%;position:relative;}
+.vert{width:1px;height:14px;background:var(--bb);position:relative;}
+.vert:hover .junction-plus{opacity:1;}
+.junction-plus{opacity:0;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;background:var(--tb);border:0.5px solid var(--inp-b);color:var(--ts);font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .15s;}
+.junction-plus:hover{background:var(--info-bg);color:var(--info-c);border-color:var(--info-c);}
+
+.branch-wrap{display:flex;align-items:flex-start;width:90%;justify-content:center;position:relative;}
+.hline{height:1px;background:var(--bb);flex:1;margin-top:14px;}
+.branch-center{display:flex;flex-direction:column;align-items:center;flex-shrink:0;position:relative;}
+.branch-dot{width:6px;height:6px;border-radius:50%;background:var(--bb);margin-top:11px;}
+.branch-plus{opacity:0;position:absolute;top:3px;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;background:var(--tb);border:0.5px solid var(--inp-b);color:var(--ts);font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .15s;z-index:2;}
+.branch-wrap:hover .branch-plus{opacity:1;}
+.branch-plus:hover{background:var(--info-bg);color:var(--info-c);border-color:var(--info-c);}
+.par-label{font-size:9px;color:var(--tt);padding:1px 6px;border-radius:3px;background:var(--surf);border:0.5px solid var(--bb);margin:3px 0;white-space:nowrap;}
+.branch-legs{display:flex;justify-content:center;width:90%;gap:10px;}
+.branch-leg{display:flex;flex-direction:column;align-items:center;flex:1;max-width:220px;}
+.branch-vert{width:1px;height:14px;background:var(--bb);}
+
+.cfg-strip{display:flex;align-items:center;gap:10px;padding:6px 14px;background:var(--tb);border-top:0.5px solid var(--sb-b);flex-shrink:0;cursor:pointer;}
+.cfg-strip:hover{background:var(--surf);}
+.cfg-chip{font-size:10px;padding:2px 7px;border-radius:5px;background:var(--surf);border:0.5px solid var(--bb);color:var(--ts);}
+.cfg-label{font-size:11px;color:var(--ts);}
+.cfg-panel{background:var(--tb);border-top:0.5px solid var(--sb-b);padding:10px 14px;display:none;flex-shrink:0;}
+.cfg-panel.open{display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+.cfg-group{display:flex;align-items:center;gap:6px;}
+.cfg-glabel{font-size:11px;color:var(--ts);white-space:nowrap;}
+.cfg-input{font-size:11px;padding:3px 7px;border-radius:6px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);width:48px;}
+.cfg-sel{font-size:11px;padding:3px 7px;border-radius:6px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);}
+
+.result-bar{background:var(--tb);border-top:0.5px solid var(--sb-b);flex-shrink:0;}
+.rb-head{display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;}
+.rb-head:hover{background:var(--surf);}
+.rb-title{font-size:12px;font-weight:500;color:var(--ts);}
+.rb-oc{font-size:10px;font-weight:500;padding:2px 8px;border-radius:5px;}
+.rb-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.view-full-btn{font-size:11px;padding:3px 10px;border-radius:6px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;display:none;}
+.view-full-btn.show{display:inline-block;}
+.view-full-btn:hover{background:var(--surf);}
+.rb-body{display:none;padding:4px 14px 8px;overflow-x:auto;}
+.rb-body.open{display:block;}
+.rb-steps{display:flex;gap:6px;min-width:max-content;}
+.rbs{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;font-size:11px;cursor:pointer;border:0.5px solid transparent;}
+.rbs:hover{border-color:var(--inp-b);}
+.rbs.pass{background:var(--pass-bg);}
+.rbs.fail{background:var(--fail-bg);}
+.rbs.skip{background:var(--skip-bg);}
+.rbs.runng{background:var(--warn-bg);}
+.rbs.pass i{color:var(--pass-c);}
+.rbs.fail i{color:var(--fail-c);}
+.rbs.runng i{color:var(--warn-c);}
+.rbs-name{color:var(--tp);font-weight:500;}
+.rbs-time{font-size:10px;color:var(--ts);}
+.rbs-ass{font-size:10px;}
+.rbs.pass .rbs-ass{color:var(--pass-c);}
+.rbs.fail .rbs-ass{color:var(--fail-c);}
+
+.statusbar{height:22px;background:var(--tb);border-top:0.5px solid var(--sb-b);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;}
+.sdot{width:6px;height:6px;border-radius:50%;}
+.stxt{font-size:11px;color:var(--ts);}
+.sr{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.git-b{font-size:10px;color:var(--tt);cursor:pointer;display:flex;align-items:center;gap:3px;}
+.sver{font-size:11px;color:var(--tt);}
+
+.overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,0.3);z-index:20;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.popup{background:var(--tb);border-radius:12px;border:0.5px solid var(--sb-b);width:92%;max-width:560px;max-height:88%;display:flex;flex-direction:column;overflow:hidden;}
+.popup-head{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:0.5px solid var(--sb-b);flex-shrink:0;}
+.popup-title{font-size:13px;font-weight:500;color:var(--tp);flex:1;}
+.popup-oc{font-size:10px;font-weight:500;padding:2px 8px;border-radius:5px;}
+.popup-close{width:24px;height:24px;border-radius:6px;border:none;background:transparent;color:var(--tt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.popup-close:hover{background:var(--surf2);}
+.ptabs{display:flex;border-bottom:0.5px solid var(--sb-b);padding:0 12px;flex-shrink:0;overflow-x:auto;}
+.ptabs::-webkit-scrollbar{display:none;}
+.ptab{font-size:11px;padding:6px 9px;border:none;background:transparent;color:var(--ts);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;white-space:nowrap;}
+.ptab.active{color:var(--tp);border-bottom-color:var(--tp);}
+.ptab.sc{color:var(--sc);}
+.ptab.sc.active{color:var(--sc);border-bottom-color:var(--sc);}
+.ptab.result-tab{color:var(--pass-c);}
+.ptab.result-tab.fail-result{color:var(--fail-c);}
+.ptab.result-tab.active{border-bottom-color:currentColor;}
+.popup-body{flex:1;overflow-y:auto;padding:12px 14px;}
+.ppc{display:none;}
+.ppc.active{display:block;}
+
+.resp-meta{display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;}
+.chip{font-size:11px;padding:2px 8px;border-radius:6px;background:var(--surf);color:var(--ts);}
+.chip.ok{background:var(--pass-bg);color:var(--pass-c);}
+.chip.fail{background:var(--fail-bg);color:var(--fail-c);}
+.code-block{font-family:var(--font-mono);font-size:11px;color:var(--tp);background:var(--code);border-radius:8px;padding:10px;line-height:1.6;white-space:pre;overflow-x:auto;border:0.5px solid var(--bb);}
+.sec-title{font-size:10px;font-weight:500;color:var(--tt);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px;}
+.ar{display:flex;align-items:flex-start;gap:7px;padding:6px 8px;border-radius:7px;font-size:11px;margin-bottom:4px;}
+.ar.pass{background:var(--pass-bg);}
+.ar.fail{background:var(--fail-bg);}
+.ar i{font-size:13px;flex-shrink:0;margin-top:1px;}
+.ar.pass i{color:var(--pass-c);}
+.ar.fail i{color:var(--fail-c);}
+.ar-d{flex:1;color:var(--tp);line-height:1.5;}
+.ar-sub{font-size:10px;color:var(--ts);}
+.ar-expected{font-size:10px;margin-top:3px;padding:3px 6px;border-radius:4px;background:rgba(0,0,0,0.06);font-family:var(--font-mono);}
+.ar.fail .ar-expected{color:var(--fail-c);}
+.ex-r{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;background:var(--surf);margin-bottom:4px;font-size:11px;border:0.5px solid var(--bb);}
+.ex-var{font-family:var(--font-mono);color:var(--info-c);flex:1;}
+.ex-val{font-family:var(--font-mono);color:var(--tp);}
+.timing-segs{display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px;margin-bottom:5px;}
+.tleg-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.tleg{font-size:10px;color:var(--tt);display:flex;align-items:center;gap:3px;}
+.tleg-d{width:7px;height:7px;border-radius:2px;}
+.fl{display:flex;gap:7px;margin-bottom:7px;align-items:center;}
+.fl-l{font-size:11px;color:var(--ts);width:64px;flex-shrink:0;}
+.fl-i{flex:1;font-size:11px;padding:4px 7px;border-radius:6px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);font-family:var(--font-mono);}
+.fl-s{flex:1;font-size:11px;padding:4px 7px;border-radius:6px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);}
+.note{padding:7px 9px;background:var(--surf);border-radius:7px;font-size:11px;color:var(--ts);border:0.5px solid var(--bb);line-height:1.5;margin-top:8px;}
+
+.full-popup{background:var(--tb);border-radius:12px;border:0.5px solid var(--sb-b);width:94%;max-width:620px;max-height:90%;display:flex;flex-direction:column;overflow:hidden;}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px;}
+.metric{background:var(--surf);border-radius:8px;padding:10px;text-align:center;border:0.5px solid var(--bb);}
+.metric-label{font-size:10px;color:var(--tt);margin-bottom:4px;}
+.metric-val{font-size:15px;font-weight:500;color:var(--tp);}
+.metric-val.pass{color:var(--pass-c);}
+.metric-val.fail{color:var(--fail-c);}
+</style>
+
+<div class="root" id="root">
+  <div class="sidebar" id="sidebar">
+    <div class="sb-top">
+      <div class="tr">
+        <div class="dot" style="background:#ED6A5A;"></div>
+        <div class="dot" style="background:#F5B33A;"></div>
+        <div class="dot" style="background:#62C554;"></div>
+        <button class="hbtn" aria-label="Dashboard"><i class="ti ti-home" aria-hidden="true"></i></button>
+      </div>
+      <div class="tabs">
+        <button class="tab">Requests</button>
+        <button class="tab active">Workflows</button>
+        <button class="tab">Envs</button>
+      </div>
+    </div>
+    <div class="sb-scroll">
+      <div class="sba pri"><i class="ti ti-plus" aria-hidden="true"></i> New workflow</div>
+      <div class="sba"><i class="ti ti-folder-open" aria-hidden="true"></i> Open file</div>
+      <div class="grp"><i class="ti ti-chevron-down" aria-hidden="true"></i> traCtl native</div>
+      <div class="sbi active"><i class="ti ti-topology-star-3" aria-hidden="true"></i><span class="sbi-n">auth-flow</span><button class="ctx" aria-label="More">···</button></div>
+      <div class="sbi"><i class="ti ti-topology-star-3" aria-hidden="true"></i><span class="sbi-n">billing-validation</span><button class="ctx" aria-label="More">···</button></div>
+      <div class="grp"><i class="ti ti-chevron-down" aria-hidden="true"></i> OpenAPI</div>
+      <div class="sbi"><i class="ti ti-file-code" aria-hidden="true"></i><span class="sbi-n">payments-api.yaml</span><button class="ctx" aria-label="More">···</button></div>
+    </div>
+    <div class="sb-bot">
+      <div class="sba"><i class="ti ti-settings" aria-hidden="true"></i> Settings</div>
+    </div>
+  </div>
+
+  <div class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()">
+    <i class="ti ti-chevron-left" id="sb-icon" aria-hidden="true"></i>
+  </div>
+
+  <div class="main">
+    <div class="titlebar">
+      <span class="tlogo">traCtl</span>
+      <span class="ttag">alpha</span>
+      <div class="tr2">
+        <div class="envb"><div class="edot"></div> staging <i class="ti ti-chevron-down" style="font-size:10px;" aria-hidden="true"></i></div>
+        <button class="tbtn" onclick="toggleTheme()" aria-label="Toggle theme"><i class="ti ti-moon" id="th-icon" aria-hidden="true"></i></button>
+      </div>
+    </div>
+
+    <div class="wf-bar">
+      <div>
+        <div class="wf-name">auth-flow</div>
+        <div class="wf-sub">4 steps · 2 roots · parallel fan-out</div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <div class="view-toggle">
+          <button class="vt-btn active" id="vt-graph" onclick="switchView('graph')" title="Graph view" aria-label="Graph view"><i class="ti ti-topology-star-3" aria-hidden="true"></i></button>
+          <button class="vt-btn" id="vt-code" onclick="switchView('code')" title="Code view" aria-label="Code view"><i class="ti ti-code" aria-hidden="true"></i></button>
+        </div>
+        <span class="as-hint"><i class="ti ti-check" style="font-size:10px;color:#1D9E75;" aria-hidden="true"></i> Saved</span>
+        <button class="run-btn" id="run-btn" onclick="runWorkflow()"><i class="ti ti-player-play" style="font-size:12px;" aria-hidden="true"></i> Run workflow</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <span class="filter-label">Show</span>
+      <button class="filter-chip active" onclick="setFilter(this,'all')">All workflows</button>
+      <button class="filter-chip" onclick="setFilter(this,'auth')">auth-flow</button>
+      <button class="filter-chip" onclick="setFilter(this,'billing')">billing-validation</button>
+      <button class="filter-chip" onclick="setFilter(this,'payments')">payments-api</button>
+    </div>
+
+    <div class="body">
+      <div class="canvas-wrap">
+        <div class="canvas-scroll" id="canvas-scroll">
+          <div class="dag">
+
+            <div class="dag-roots">
+              <div class="dag-root-col">
+                <div class="step-card" id="card-login" onclick="openStep('login')">
+                  <div class="sc-head">
+                    <div class="sc-num">1</div>
+                    <span class="sc-id">login</span>
+                    <span class="mb m-post">POST</span>
+                    <span class="sc-oc oc-idle" id="oc-login">idle</span>
+                  </div>
+                  <div class="sc-url">${vars.baseUrl}/auth/login</div>
+                  <div class="sc-pills">
+                    <span class="pill has">Assertions: 1</span>
+                    <span class="pill ext">→ token</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="roots-sep">
+                <div class="roots-sep-line"></div>
+                <span class="roots-sep-label" style="writing-mode:vertical-rl;font-size:9px;color:var(--tt);">independent</span>
+                <div class="roots-sep-line"></div>
+              </div>
+
+              <div class="dag-root-col">
+                <div class="step-card" id="card-health" onclick="openStep('health')">
+                  <div class="sc-head">
+                    <div class="sc-num">2</div>
+                    <span class="sc-id">health-check</span>
+                    <span class="mb m-get">GET</span>
+                    <span class="sc-oc oc-idle" id="oc-health">idle</span>
+                  </div>
+                  <div class="sc-url">${vars.baseUrl}/health</div>
+                  <div class="sc-pills">
+                    <span class="pill has">Assertions: 1</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;width:100%;gap:24px;justify-content:center;">
+              <div style="flex:1;max-width:260px;display:flex;flex-direction:column;align-items:center;">
+                <div class="connector">
+                  <div class="vert" style="height:14px;"><button class="junction-plus" title="Add step here">+</button></div>
+                  <div class="branch-wrap">
+                    <div class="hline left"></div>
+                    <div class="branch-center">
+                      <div class="branch-dot"></div>
+                      <button class="branch-plus" title="Add parallel step here">+</button>
+                    </div>
+                    <div class="hline right"></div>
+                  </div>
+                  <div style="display:flex;justify-content:center;margin:3px 0;">
+                    <span class="par-label"><i class="ti ti-bolt" style="font-size:9px;" aria-hidden="true"></i> parallel</span>
+                  </div>
+                  <div class="branch-legs">
+                    <div class="branch-leg">
+                      <div class="branch-vert"></div>
+                    </div>
+                    <div class="branch-leg">
+                      <div class="branch-vert"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;gap:8px;width:100%;">
+                  <div class="step-card" id="card-profile" onclick="openStep('profile')" style="flex:1;">
+                    <div class="sc-head">
+                      <div class="sc-num">3</div>
+                      <span class="sc-id">fetch-profile</span>
+                      <span class="mb m-get">GET</span>
+                      <span class="sc-oc oc-idle" id="oc-profile">idle</span>
+                    </div>
+                    <div class="sc-url">${vars.baseUrl}/me</div>
+                    <div class="sc-pills">
+                      <span class="pill has" id="pill-profile-ass">Assertions: 2</span>
+                    </div>
+                  </div>
+                  <div class="step-card" id="card-billing" onclick="openStep('billing')" style="flex:1;">
+                    <div class="sc-head">
+                      <div class="sc-num">4</div>
+                      <span class="sc-id">check-billing</span>
+                      <span class="mb m-get">GET</span>
+                      <span class="sc-oc oc-idle" id="oc-billing">idle</span>
+                    </div>
+                    <div class="sc-url">${vars.baseUrl}/billing</div>
+                    <div class="sc-pills">
+                      <span class="pill has">Assertions: 1</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="flex:1;max-width:260px;display:flex;flex-direction:column;align-items:center;">
+                <div class="connector">
+                  <div class="vert" style="height:68px;"><button class="junction-plus" title="Add step here">+</button></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="code-view" id="code-view">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <button style="font-size:11px;padding:3px 10px;border-radius:6px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;display:flex;align-items:center;gap:5px;"><i class="ti ti-copy" style="font-size:12px;" aria-hidden="true"></i> Copy</button>
+          </div>
+          <div class="code-block">schemaVersion: 1
+capabilities:
+  - protocol.http
+  - scripting.js
+
+variables:
+  baseUrl: "https://api.staging.example.com"
+
+workflows:
+  - id: auth-flow
+    failurePolicy: resilient
+    concurrency: 4
+    steps:
+      - id: login
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/auth/login"
+          operation: POST
+          body:
+            encoding: json
+            content:
+              email: "${vars.email}"
+              password: "${secrets.staging.pwd}"
+        assertions:
+          - id: login-ok
+            kind: status
+            op: equals
+            expected: 200
+        extracts:
+          - id: token
+            source: body
+            path: $.token
+            scope: workflow
+
+      - id: health-check
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/health"
+          operation: GET
+        assertions:
+          - id: health-ok
+            kind: status
+            op: equals
+            expected: 200
+
+      - id: fetch-profile
+        kind: request
+        dependsOn:
+          - login
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/me"
+          operation: GET
+          headers:
+            Authorization: "Bearer ${steps.login.extracts.token}"
+        assertions:
+          - id: profile-ok
+            kind: status
+            op: equals
+            expected: 200
+          - id: profile-has-id
+            kind: body
+            op: exists
+            expected: "$.userId"
+            severity: warning
+
+      - id: check-billing
+        kind: request
+        dependsOn:
+          - login
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/billing/status"
+          operation: GET
+          headers:
+            Authorization: "Bearer ${steps.login.extracts.token}"
+        assertions:
+          - id: billing-ok
+            kind: status
+            op: equals
+            expected: 200</div>
+        </div>
+      </div>
+
+      <div class="cfg-strip" onclick="toggleCfg()">
+        <i class="ti ti-settings" style="font-size:13px;color:var(--tt);" aria-hidden="true"></i>
+        <span class="cfg-label">Workflow config</span>
+        <span class="cfg-chip">Concurrency: 4</span>
+        <span class="cfg-chip">Timeout: 30s</span>
+        <span class="cfg-chip">resilient</span>
+        <span class="cfg-chip">No hooks</span>
+        <i class="ti ti-chevron-up" id="cfg-icon" style="margin-left:auto;font-size:12px;color:var(--tt);" aria-hidden="true"></i>
+      </div>
+      <div class="cfg-panel" id="cfg-panel">
+        <div class="cfg-group"><span class="cfg-glabel">Concurrency</span><input class="cfg-input" value="4" type="number"></div>
+        <div class="cfg-group"><span class="cfg-glabel">Timeout</span><input class="cfg-input" value="30"><select class="cfg-sel"><option>seconds</option><option>minutes</option></select></div>
+        <div class="cfg-group"><span class="cfg-glabel">Failure policy</span><select class="cfg-sel"><option>resilient (default)</option><option>failFast</option></select></div>
+        <div class="cfg-group"><span class="cfg-glabel">Hooks</span><select class="cfg-sel"><option>None</option><option>beforeAll</option><option>afterAll</option><option>beforeAll + afterAll</option></select></div>
+        <div class="cfg-group"><span class="cfg-glabel">Overlay</span><select class="cfg-sel"><option>None</option><option>prod-overlay.yaml</option><option>+ Add…</option></select></div>
+      </div>
+
+      <div class="result-bar">
+        <div class="rb-head" onclick="toggleResults()">
+          <i class="ti ti-chevron-up" id="rb-icon" aria-hidden="true"></i>
+          <span class="rb-title">Workflow results</span>
+          <div class="rb-right">
+            <span class="rb-oc oc-idle" id="wf-oc">Not run</span>
+            <span style="font-size:11px;color:var(--tt);" id="wf-time"></span>
+            <button class="view-full-btn" id="vfb" onclick="openFull(event)">View full results</button>
+          </div>
+        </div>
+        <div class="rb-body" id="rb-body">
+          <div class="rb-steps" id="rb-steps">
+            <div class="rbs pass" id="rs-login" style="display:none;" onclick="openStep('login')">
+              <i class="ti ti-check" aria-hidden="true"></i>
+              <span class="rbs-name">login</span>
+              <span class="rbs-ass">1/1</span>
+              <span class="rbs-time">187ms</span>
+            </div>
+            <div class="rbs pass" id="rs-health" style="display:none;" onclick="openStep('health')">
+              <i class="ti ti-check" aria-hidden="true"></i>
+              <span class="rbs-name">health-check</span>
+              <span class="rbs-ass">1/1</span>
+              <span class="rbs-time">42ms</span>
+            </div>
+            <div class="rbs fail" id="rs-profile" style="display:none;" onclick="openStep('profile')">
+              <i class="ti ti-x" aria-hidden="true"></i>
+              <span class="rbs-name">fetch-profile</span>
+              <span class="rbs-ass">1/2 failed</span>
+              <span class="rbs-time">94ms</span>
+            </div>
+            <div class="rbs pass" id="rs-billing" style="display:none;" onclick="openStep('billing')">
+              <i class="ti ti-check" aria-hidden="true"></i>
+              <span class="rbs-name">check-billing</span>
+              <span class="rbs-ass">1/1</span>
+              <span class="rbs-time">102ms</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="statusbar">
+        <div class="sdot" id="sdot" style="background:#1D9E75;"></div>
+        <span class="stxt" id="stxt">Engine ready</span>
+        <div class="sr">
+          <span class="git-b"><i class="ti ti-git-branch" style="font-size:11px;" aria-hidden="true"></i> git: 1 uncommitted</span>
+          <span class="sver">Desktop · v0.1.0-alpha</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="step-overlay">
+    <div class="popup">
+      <div class="popup-head">
+        <span class="popup-title" id="popup-title">login</span>
+        <span class="popup-oc oc-idle" id="popup-oc" style="display:none;"></span>
+        <button class="popup-close" onclick="closeOverlay('step-overlay')" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
+      </div>
+      <div class="ptabs" id="ptabs">
+        <button class="ptab active" onclick="ppt(event,'pp-req')">Request</button>
+        <button class="ptab" onclick="ppt(event,'pp-dep')">Dependencies</button>
+        <button class="ptab sc" onclick="ppt(event,'pp-pre')">Pre-script</button>
+        <button class="ptab sc" onclick="ppt(event,'pp-post')">Post-script</button>
+        <button class="ptab" onclick="ppt(event,'pp-ass')">Assertions</button>
+        <button class="ptab" onclick="ppt(event,'pp-ext')">Extracts</button>
+        <button class="ptab result-tab" id="pp-result-tab" onclick="ppt(event,'pp-result')" style="display:none;">Result</button>
+      </div>
+      <div class="popup-body">
+        <div class="ppc active" id="pp-req">
+          <div class="fl"><span class="fl-l">Method</span><select class="fl-s" id="pp-method"><option>POST</option><option>GET</option></select></div>
+          <div class="fl"><span class="fl-l">URL</span><input class="fl-i" id="pp-url" value="${vars.baseUrl}/auth/login"></div>
+          <div class="fl"><span class="fl-l">Auth</span><select class="fl-s"><option>None</option><option>Bearer token</option></select></div>
+          <div class="fl"><span class="fl-l">Body</span><select class="fl-s" id="pp-body-sel"><option>JSON</option><option>None</option></select></div>
+          <div id="pp-body-block" style="font-family:var(--font-mono);font-size:11px;color:var(--tp);background:var(--code);border-radius:7px;padding:9px;line-height:1.6;border:0.5px solid var(--bb);margin-top:4px;">{"email":"${vars.email}","password":"${secrets.staging.pwd}"}</div>
+        </div>
+        <div class="ppc" id="pp-dep">
+          <div class="sec-title">Depends on</div>
+          <div id="dep-on-content">No dependencies — first step</div>
+          <div class="sec-title" style="margin-top:14px;">Required by</div>
+          <div id="dep-by-content" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          <div class="note" id="dep-note" style="display:none;"></div>
+        </div>
+        <div class="ppc" id="pp-pre">
+          <div style="font-size:11px;color:var(--ts);padding:5px 8px;background:var(--surf);border-radius:6px;border:0.5px solid var(--bb);margin-bottom:8px;">Runs <strong style="font-weight:500;">before</strong> this step · <span style="font-family:var(--font-mono);color:var(--sc);">hooks.beforeStep</span></div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--tp);background:var(--code);border-radius:7px;padding:9px;line-height:1.6;border:0.5px solid var(--bb);min-height:80px;" contenteditable="true">return { variables: { ts: tractl.now() } };</div>
+        </div>
+        <div class="ppc" id="pp-post">
+          <div style="font-size:11px;color:var(--ts);padding:5px 8px;background:var(--surf);border-radius:6px;border:0.5px solid var(--bb);margin-bottom:8px;">Runs <strong style="font-weight:500;">after</strong> the response · <span style="font-family:var(--font-mono);color:var(--sc);">hooks.afterStep</span></div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--tp);background:var(--code);border-radius:7px;padding:9px;line-height:1.6;border:0.5px solid var(--bb);min-height:80px;" contenteditable="true">return {};</div>
+        </div>
+        <div class="ppc" id="pp-ass">
+          <div style="display:flex;gap:5px;align-items:center;padding:5px 8px;border-radius:7px;border:0.5px solid var(--bb);margin-bottom:5px;background:var(--surf);">
+            <select style="font-size:11px;padding:3px 5px;border-radius:4px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);width:54px;"><option>status</option></select>
+            <select style="font-size:11px;padding:3px 5px;border-radius:4px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);width:56px;"><option>equals</option></select>
+            <input style="width:40px;font-size:11px;padding:3px 5px;border-radius:4px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);" value="200">
+            <span style="font-size:9px;padding:2px 5px;border-radius:3px;background:var(--fail-bg);color:var(--fail-c);">error</span>
+            <button style="font-size:12px;color:var(--tt);cursor:pointer;background:none;border:none;margin-left:auto;">×</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;padding:4px 5px;font-size:11px;color:var(--tt);cursor:pointer;"><i class="ti ti-plus" style="font-size:11px;" aria-hidden="true"></i> Add assertion</div>
+        </div>
+        <div class="ppc" id="pp-ext">
+          <div style="display:flex;gap:5px;align-items:center;padding:5px 8px;border-radius:7px;border:0.5px solid var(--bb);margin-bottom:5px;background:var(--surf);">
+            <select style="font-size:11px;padding:3px 5px;border-radius:4px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);width:52px;"><option>body</option></select>
+            <input style="width:70px;font-size:11px;padding:3px 5px;border-radius:4px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);font-family:var(--font-mono);" value="$.token">
+            <span style="font-size:12px;color:var(--tt);">→</span>
+            <input style="width:52px;font-size:11px;padding:3px 5px;border-radius:4px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);" value="token">
+            <select style="font-size:11px;padding:3px 5px;border-radius:4px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);width:66px;"><option>workflow</option></select>
+            <button style="font-size:12px;color:var(--tt);cursor:pointer;background:none;border:none;">×</button>
+          </div>
+          <div class="note">Available as <span style="font-family:var(--font-mono);color:var(--sc);">${steps.login.extracts.token}</span></div>
+        </div>
+        <div class="ppc" id="pp-result">
+          <div class="resp-meta" id="pp-resp-meta"></div>
+          <div style="margin-bottom:10px;">
+            <div style="font-size:10px;color:var(--tt);margin-bottom:4px;display:flex;justify-content:space-between;"><span>Timeline</span><span id="pp-ttime"></span></div>
+            <div class="timing-segs"><div style="background:#B5D4F4;flex:1;"></div><div style="background:#85B7EB;flex:2;"></div><div style="background:#378ADD;flex:3;"></div><div style="background:#185FA5;flex:10;"></div><div style="background:#0C447C;flex:1;"></div></div>
+            <div class="tleg-row"><span class="tleg"><span class="tleg-d" style="background:#B5D4F4;"></span>DNS 3ms</span><span class="tleg"><span class="tleg-d" style="background:#85B7EB;"></span>TCP 9ms</span><span class="tleg"><span class="tleg-d" style="background:#378ADD;"></span>TLS 18ms</span><span class="tleg"><span class="tleg-d" style="background:#185FA5;"></span>TTFB 60ms</span><span class="tleg"><span class="tleg-d" style="background:#0C447C;"></span>Transfer 4ms</span></div>
+          </div>
+          <div class="sec-title">Assertions</div>
+          <div id="pp-assertions-result"></div>
+          <div class="sec-title">Extracts</div>
+          <div id="pp-extracts-result"></div>
+          <div class="sec-title">Response body</div>
+          <div class="code-block" id="pp-body-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="full-overlay">
+    <div class="full-popup">
+      <div class="popup-head">
+        <span class="popup-title">Full results — auth-flow</span>
+        <button class="popup-close" onclick="closeOverlay('full-overlay')" aria-label="Close"><i class="ti ti-x" aria-hidden="true"></i></button>
+      </div>
+      <div class="popup-body">
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">outcome</div><div class="metric-val fail">1 failed</div></div>
+          <div class="metric"><div class="metric-label">total time</div><div class="metric-val">487ms</div></div>
+          <div class="metric"><div class="metric-label">steps</div><div class="metric-val">4/4 ran</div></div>
+          <div class="metric"><div class="metric-label">assertions</div><div class="metric-val fail">4/5 passed</div></div>
+        </div>
+        <div class="sec-title">Dependency waterfall</div>
+        <div class="code-block" style="margin-bottom:14px;">login         [████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 187ms
+health-check  [████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  42ms
+fetch-profile [░░░░░░░░░░░░░░░░█████████░░░░░░░░░░░░░░░░░░░░░]  94ms ← login
+check-billing [░░░░░░░░░░░░░░░░████████░░░░░░░░░░░░░░░░░░░░░░] 102ms ← login</div>
+        <div class="sec-title">Step outcomes</div>
+        <div class="ar pass" style="margin-bottom:4px;"><i class="ti ti-check" aria-hidden="true"></i><div class="ar-d">login · 200 OK · 187ms<div class="ar-sub">1/1 assertions passed · extracted: token</div></div></div>
+        <div class="ar pass" style="margin-bottom:4px;"><i class="ti ti-check" aria-hidden="true"></i><div class="ar-d">health-check · 200 OK · 42ms<div class="ar-sub">1/1 assertions passed</div></div></div>
+        <div class="ar fail" style="margin-bottom:4px;"><i class="ti ti-x" aria-hidden="true"></i><div class="ar-d">fetch-profile · 200 OK · 94ms<div class="ar-sub">1/2 assertions — 1 failed</div><div class="ar-expected">body $.userId exists · expected: present · received: missing</div></div></div>
+        <div class="ar pass" style="margin-bottom:4px;"><i class="ti ti-check" aria-hidden="true"></i><div class="ar-d">check-billing · 200 OK · 102ms<div class="ar-sub">1/1 assertions passed</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var dark=false,sbOpen=true,cfgOpen=false,rbOpen=false,ran=false;
+var stepData={
+  login:{method:'POST',url:'${vars.baseUrl}/auth/login',body:true,depOn:null,depBy:['fetch-profile','check-billing'],status:'200 OK',time:'187ms',assPass:true,assertions:[{pass:true,desc:'status equals 200',detail:'received 200 · error severity'}],extracts:[{v:'steps.login.extracts.token',val:'eyJhbGci…'}],body:'{\n  "token": "eyJhbGci…",\n  "userId": "usr_01HXYZ",\n  "expiresIn": 3600\n}'},
+  health:{method:'GET',url:'${vars.baseUrl}/health',body:false,depOn:null,depBy:[],status:'200 OK',time:'42ms',assPass:true,assertions:[{pass:true,desc:'status equals 200',detail:'received 200 · error severity'}],extracts:[],body:'{"status":"ok","version":"1.4.2"}'},
+  profile:{method:'GET',url:'${vars.baseUrl}/me',body:false,depOn:['login'],depBy:[],status:'200 OK',time:'94ms',assPass:false,assertions:[{pass:true,desc:'status equals 200',detail:'received 200 · error severity'},{pass:false,desc:'body $.userId exists',detail:'warning severity',expected:'expected: present · received: missing'}],extracts:[],body:'{\n  "email": "test@staging.example.com",\n  "role": "user"\n}'},
+  billing:{method:'GET',url:'${vars.baseUrl}/billing/status',body:false,depOn:['login'],depBy:[],status:'200 OK',time:'102ms',assPass:true,assertions:[{pass:true,desc:'status equals 200',detail:'received 200 · error severity'}],extracts:[],body:'{"plan":"pro","status":"active"}'},
+};
+
+function toggleTheme(){dark=!dark;document.getElementById('root').classList.toggle('dark',dark);document.getElementById('th-icon').className=dark?'ti ti-sun':'ti ti-moon';}
+function toggleSidebar(){sbOpen=!sbOpen;document.getElementById('sidebar').classList.toggle('collapsed',!sbOpen);document.getElementById('sb-icon').className=sbOpen?'ti ti-chevron-left':'ti ti-chevron-right';}
+function toggleCfg(){cfgOpen=!cfgOpen;document.getElementById('cfg-panel').classList.toggle('open',cfgOpen);document.getElementById('cfg-icon').className=cfgOpen?'ti ti-chevron-down':'ti ti-chevron-up';}
+function toggleResults(){rbOpen=!rbOpen;document.getElementById('rb-body').classList.toggle('open',rbOpen);document.getElementById('rb-icon').className=rbOpen?'ti ti-chevron-down':'ti ti-chevron-up';}
+function setFilter(el,v){document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');}
+function switchView(v){
+  var isGraph=v==='graph';
+  document.getElementById('canvas-scroll').classList.toggle('hidden',!isGraph);
+  document.getElementById('code-view').classList.toggle('active',!isGraph);
+  document.getElementById('vt-graph').classList.toggle('active',isGraph);
+  document.getElementById('vt-code').classList.toggle('active',!isGraph);
+}
+
+function openStep(id){
+  var d=stepData[id];
+  if(!d) return;
+  document.getElementById('popup-title').textContent=id==='profile'?'fetch-profile':id==='billing'?'check-billing':id==='health'?'health-check':id;
+  document.getElementById('pp-method').value=d.method;
+  document.getElementById('pp-url').value=d.url;
+  document.getElementById('pp-body-sel').value=d.body?'JSON':'None';
+  document.getElementById('pp-body-block').style.display=d.body?'block':'none';
+  var depOn=document.getElementById('dep-on-content');
+  if(d.depOn&&d.depOn.length>0){depOn.innerHTML=d.depOn.map(x=>`<span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--surf);border:0.5px solid var(--bb);color:var(--ts);margin-right:6px;">${x}</span>`).join('');}
+  else{depOn.innerHTML='<span style="font-size:11px;color:var(--tt);">No dependencies — root step</span>';}
+  var depBy=document.getElementById('dep-by-content');
+  if(d.depBy&&d.depBy.length>0){depBy.innerHTML=d.depBy.map(x=>`<span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--surf);border:0.5px solid var(--bb);color:var(--ts);">${x}</span>`).join(' ');}
+  else{depBy.innerHTML='<span style="font-size:11px;color:var(--tt);">Nothing depends on this step</span>';}
+  var dn=document.getElementById('dep-note');
+  if(d.depBy&&d.depBy.length>1){dn.style.display='block';dn.innerHTML=`<i class="ti ti-bolt" style="font-size:11px;"></i> ${d.depBy.join(' and ')} are parallel-eligible.`;}
+  else{dn.style.display='none';}
+  var rt=document.getElementById('pp-result-tab');
+  var poc=document.getElementById('popup-oc');
+  if(ran){
+    rt.style.display='inline-block';
+    rt.className=d.assPass?'ptab result-tab':'ptab result-tab fail-result';
+    rt.textContent=d.assPass?'Result ✓':'Result — 1 failed';
+    poc.style.display='inline-block';
+    poc.textContent=d.assPass?'passed':'1 assertion failed';
+    poc.className=d.assPass?'popup-oc oc-pass':'popup-oc oc-fail';
+    document.getElementById('pp-ttime').textContent=d.time;
+    document.getElementById('pp-resp-meta').innerHTML=`<span class="chip ok">${d.status}</span><span class="chip">${d.time}</span><span class="chip">application/json</span>`;
+    var assHtml=d.assertions.map(a=>`<div class="ar ${a.pass?'pass':'fail'}"><i class="ti ti-${a.pass?'check':'x'}" aria-hidden="true"></i><div class="ar-d">${a.desc}<div class="ar-sub">${a.detail}</div>${!a.pass&&a.expected?`<div class="ar-expected">${a.expected}</div>`:''}</div></div>`).join('');
+    document.getElementById('pp-assertions-result').innerHTML=assHtml;
+    var extHtml=d.extracts.length?d.extracts.map(e=>`<div class="ex-r"><span class="ex-var">${e.v}</span><span class="ex-val">${e.val}</span></div>`).join(''):'<span style="font-size:11px;color:var(--tt);">No extracts defined</span>';
+    document.getElementById('pp-extracts-result').innerHTML=extHtml;
+    document.getElementById('pp-body-result').textContent=d.body;
+    ppt({target:rt},'pp-result');
+  } else {
+    rt.style.display='none';
+    poc.style.display='none';
+    document.querySelectorAll('.ppc').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('#ptabs .ptab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('pp-req').classList.add('active');
+    document.querySelector('#ptabs .ptab').classList.add('active');
+  }
+  document.getElementById('step-overlay').classList.add('open');
+}
+
+function ppt(e,id){
+  document.querySelectorAll('.ppc').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#ptabs .ptab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  e.target.classList.add('active');
+}
+
+function openFull(e){e.stopPropagation();document.getElementById('full-overlay').classList.add('open');}
+function closeOverlay(id){document.getElementById(id).classList.remove('open');}
+
+function runWorkflow(){
+  var btn=document.getElementById('run-btn');
+  btn.innerHTML='<i class="ti ti-loader" style="font-size:12px;"></i> Running…';
+  btn.disabled=true;
+  document.getElementById('sdot').style.background='#EF9F27';
+  document.getElementById('stxt').textContent='Running workflow…';
+  document.getElementById('wf-oc').textContent='Running';
+  document.getElementById('wf-oc').className='rb-oc oc-run';
+  if(!rbOpen) toggleResults();
+
+  var steps=[
+    {cid:'login',ocid:'oc-login',rsid:'rs-login',pass:true,delay:400},
+    {cid:'health',ocid:'oc-health',rsid:'rs-health',pass:true,delay:350},
+    {cid:'profile',ocid:'oc-profile',rsid:'rs-profile',pass:false,delay:900},
+    {cid:'billing',ocid:'oc-billing',rsid:'rs-billing',pass:true,delay:950},
+  ];
+  steps.forEach(function(s){
+    setTimeout(function(){
+      var c=document.getElementById('card-'+s.cid);
+      var o=document.getElementById(s.ocid);
+      c.classList.add('running');o.textContent='running';o.className='sc-oc oc-run';
+      setTimeout(function(){
+        c.classList.remove('running');
+        if(s.pass){c.classList.add('passed');o.textContent='passed';o.className='sc-oc oc-pass';}
+        else{c.classList.add('failed');o.textContent='1/2 failed';o.className='sc-oc oc-fail';
+          var pill=document.getElementById('pill-profile-ass');
+          if(pill){pill.textContent='1/2 failed';pill.className='pill fail';}
+        }
+        document.getElementById(s.rsid).style.display='flex';
+      },450);
+    },s.delay);
+  });
+
+  setTimeout(function(){
+    btn.innerHTML='<i class="ti ti-player-play" style="font-size:12px;"></i> Run workflow';
+    btn.disabled=false;
+    document.getElementById('wf-oc').textContent='1 assertion failed';
+    document.getElementById('wf-oc').className='rb-oc oc-fail';
+    document.getElementById('wf-time').textContent='487ms';
+    document.getElementById('sdot').style.background='#E24B4A';
+    document.getElementById('stxt').textContent='Workflow complete · 1 assertion failed · fetch-profile · 487ms';
+    document.getElementById('vfb').classList.add('show');
+    ran=true;
+  },1600);
+}
+
+['step-overlay','full-overlay'].forEach(function(id){
+  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeOverlay(id);});
+});
+</script>

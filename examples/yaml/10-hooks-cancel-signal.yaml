@@ -1,0 +1,58 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-cancel-signal
+  description: |
+    Demonstrates workflow cancellation via a hook script.
+
+    A script that returns { cancel: true } causes the engine to treat
+    the hook as a hard stop. The workflow is marked failed and no
+    further steps or hooks execute.
+
+    Real-world use: beforeAll can check a feature flag, environment
+    variable, or derived condition and abort the entire workflow if
+    the precondition is not satisfied — rather than letting every
+    step fail individually.
+
+    In this example the beforeAll script evaluates a numeric threshold
+    using tractl.random() to simulate a condition check. When the
+    condition is not met it cancels. Because the seed is deterministic
+    (derived from the trace ID) the outcome is reproducible for the
+    same run identifier.
+
+    To observe a passing run, comment out the `cancel` branch and
+    return {} unconditionally.
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: hooks-cancel-signal-flow
+    hooks:
+      beforeAll:
+        language: js
+        source: |
+          // Simulate a gate check. Replace this condition with any
+          // real precondition (e.g. check ctx.workflow["env"] !== "prod").
+          var gateOpen = ctx.workflow["skip-cancel"] === "true";
+          if (!gateOpen) {
+            tractl.log("gate closed — cancelling workflow");
+            return { cancel: true };
+          }
+          tractl.log("gate open — proceeding");
+          return {};
+
+    steps:
+      - id: fetch-user
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1"
+          operation: GET
+        assertions:
+          - id: status-ok
+            kind: status
+            op: equals
+            expected: 200

@@ -1,0 +1,51 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-mutation-set
+  description: "Full MutationSet contract: variables, extracts, logs, assertions, cancel."
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: hooks-mutation-set-flow
+    hooks:
+      beforeAll:
+        language: js
+        source: |
+          var seed = tractl.random();
+          tractl.log("run-seed: " + seed);
+          return {
+            variables: {
+              "request-id": "req-" + Math.floor(seed * 100000),
+              "started-at": String(tractl.now())
+            },
+            logs: ["workflow starting"]
+          };
+
+      afterAll:
+        language: js
+        source: |
+          tractl.log("afterAll: injecting runtime assertion");
+          return {
+            assertions: [
+              { kind: "status", operator: "equals", expected: "200", severity: "warning" }
+            ],
+            extracts: { "workflow-completed": "true" },
+            logs:     ["afterAll done"]
+          };
+
+    steps:
+      - id: fetch-todo
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/todos/1"
+          operation: GET
+        assertions:
+          - id: status-ok
+            kind: status
+            op: equals
+            expected: 200

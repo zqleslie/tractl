@@ -1,0 +1,219 @@
+# =============================================================================
+# traCtl — .gitignore
+# Covers: Go, Node/npm, Vite, Wails, Task, OS, IDE, secrets, test outputs
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Go
+# -----------------------------------------------------------------------------
+/bin/
+/dist/
+
+# Compiled binaries
+tractl
+tractl.exe
+!cmd/tractl/
+
+# Test artifacts
+*.test
+*.out
+coverage.out
+coverage.html
+coverage.txt
+
+# Go workspace (if used locally — go.work is developer-local only)
+go.work
+go.work.sum
+
+# Build cache (should not be committed)
+/vendor/
+
+# -----------------------------------------------------------------------------
+# Node / npm (shared frontend)
+# -----------------------------------------------------------------------------
+node_modules/
+frontend/node_modules/
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# -----------------------------------------------------------------------------
+# Vite / UI build outputs
+# -----------------------------------------------------------------------------
+frontend/dist/
+frontend/.vite/
+frontend/test-results/
+frontend/playwright-report/
+frontend/.playwright/
+
+# Legacy paths (pre-frontend/ move)
+ui/dist/
+ui/.vite/
+ui/build/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# -----------------------------------------------------------------------------
+# Wails (cmd/desktop)
+# -----------------------------------------------------------------------------
+cmd/desktop/desktop
+cmd/desktop/desktop.exe
+cmd/desktop/build/
+cmd/desktop/frontend/dist/
+frontend/wailsjs/
+frontend/package.json.md5
+*.syso
+
+# Legacy paths
+desktop/build/
+desktop/frontend/dist/
+desktop/frontend/node_modules/
+
+# -----------------------------------------------------------------------------
+# Task (taskfile.dev)
+# -----------------------------------------------------------------------------
+.task/
+
+# -----------------------------------------------------------------------------
+# Test outputs
+# -----------------------------------------------------------------------------
+test/integration/output/
+test/e2e/output/
+test/e2e/screenshots/
+test/compliance/output/
+
+# -----------------------------------------------------------------------------
+# Secrets and environment files
+# Never commit secrets, credentials, or environment overrides
+# -----------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+secrets.json
+secrets.yaml
+secrets.yml
+
+# -----------------------------------------------------------------------------
+# OS generated files
+# -----------------------------------------------------------------------------
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.AppleDouble
+.LSOverride
+Icon?
+
+# Windows
+desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# -----------------------------------------------------------------------------
+# IDE and editors
+# -----------------------------------------------------------------------------
+
+# JetBrains (GoLand, WebStorm, Rider)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# VS Code — commit extensions.json and settings if team-shared, ignore the rest
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.code-workspace
+
+# Vim / Neovim
+*.swp
+*.swo
+*.swn
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+Session.vim
+.netrwhist
+tags
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+
+# Zed
+.zed/
+
+# -----------------------------------------------------------------------------
+# Profiling and debugging
+# -----------------------------------------------------------------------------
+*.prof
+*.pprof
+cpu.out
+mem.out
+trace.out
+__debug_bin
+__debug_bin*
+
+# -----------------------------------------------------------------------------
+# Misc
+# -----------------------------------------------------------------------------
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Air (Go live reload — developer local)
+tmp/
+.air.toml
+
+# WASM bootstrap (UI-0.1B) — run: make build-wasm
+frontend/public/tractl.wasm
+frontend/public/wasm_exec.js
+
+# Accidental WASM build at repo root
+/wasm
+dist

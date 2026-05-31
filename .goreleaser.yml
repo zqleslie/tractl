@@ -1,0 +1,233 @@
+# .goreleaser.yml
+#
+# Handles: CLI binary cross-platform builds, Homebrew cask,
+#          GitHub Releases, checksums, changelog.
+#
+# Does NOT handle:
+#   Desktop binary (Wails — built on macOS runner in GitHub Actions)
+#   Docker images  (built in GitHub Actions, see Prompt 6 Dockerfiles)
+#
+# Commands:
+#   make release-snapshot   builds all artifacts locally, nothing published
+#   make release            publishes to GitHub (needs GITHUB_TOKEN + git tag)
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - make build-wasm
+    - make build-server
+
+builds:
+  - id: tractl
+    binary: tractl
+    main: ./cmd/tractl
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      - goos: windows
+        goarch: arm64
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X 'github.com/tractl/tractl/internal/version.Version={{ .Version }}'
+      - -X 'github.com/tractl/tractl/internal/version.Commit={{ .ShortCommit }}'
+      - -X 'github.com/tractl/tractl/internal/version.Date={{ .Date }}'
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+  - id: tractl-server
+    binary: tractl-server
+    main: ./cmd/server
+    goos:   [linux]
+    goarch: [amd64, arm64]
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X 'github.com/tractl/tractl/internal/version.Version={{ .Version }}'
+      - -X 'github.com/tractl/tractl/internal/version.Commit={{ .ShortCommit }}'
+      - -X 'github.com/tractl/tractl/internal/version.Date={{ .Date }}'
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: tractl
+    ids: [tractl]
+    name_template: "tractl_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: zip
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "tractl_{{ .Version }}_checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: "^feat"
+    - title: Bug Fixes
+      regexp: "^fix"
+    - title: Performance
+      regexp: "^perf"
+
+dockers:
+  # Web server image — amd64
+  - id: web-amd64
+    ids: [tractl-server]
+    goos: linux
+    goarch: amd64
+    use: buildx
+    dockerfile: build/docker/Dockerfile.web
+    image_templates:
+      - "tractl/tractl:web-{{ .Tag }}-amd64"
+      - "tractl/tractl:web-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=VERSION={{ .Version }}"
+      - "--build-arg=COMMIT={{ .ShortCommit }}"
+
+  # Web server image — arm64
+  - id: web-arm64
+    ids: [tractl-server]
+    goos: linux
+    goarch: arm64
+    use: buildx
+    dockerfile: build/docker/Dockerfile.web
+    image_templates:
+      - "tractl/tractl:web-{{ .Tag }}-arm64"
+      - "tractl/tractl:web-arm64"
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--build-arg=VERSION={{ .Version }}"
+      - "--build-arg=COMMIT={{ .ShortCommit }}"
+
+  # CI runner image — amd64
+  - id: ci-amd64
+    ids: [tractl]
+    goos: linux
+    goarch: amd64
+    use: buildx
+    dockerfile: build/docker/Dockerfile.ci
+    image_templates:
+      - "tractl/tractl:ci-{{ .Tag }}-amd64"
+      - "tractl/tractl:ci-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=VERSION={{ .Version }}"
+      - "--build-arg=COMMIT={{ .ShortCommit }}"
+
+  # CI runner image — arm64
+  - id: ci-arm64
+    ids: [tractl]
+    goos: linux
+    goarch: arm64
+    use: buildx
+    dockerfile: build/docker/Dockerfile.ci
+    image_templates:
+      - "tractl/tractl:ci-{{ .Tag }}-arm64"
+      - "tractl/tractl:ci-arm64"
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--build-arg=VERSION={{ .Version }}"
+      - "--build-arg=COMMIT={{ .ShortCommit }}"
+
+docker_manifests:
+  - name_template: "tractl/tractl:web-{{ .Tag }}"
+    image_templates:
+      - "tractl/tractl:web-{{ .Tag }}-amd64"
+      - "tractl/tractl:web-{{ .Tag }}-arm64"
+
+  - name_template: "tractl/tractl:web"
+    skip_push: "{{ if .IsSnapshot }}true{{ else }}false{{ end }}"
+    image_templates:
+      - "tractl/tractl:web-amd64"
+      - "tractl/tractl:web-arm64"
+
+  - name_template: "tractl/tractl:ci-{{ .Tag }}"
+    image_templates:
+      - "tractl/tractl:ci-{{ .Tag }}-amd64"
+      - "tractl/tractl:ci-{{ .Tag }}-arm64"
+
+  - name_template: "tractl/tractl:ci"
+    skip_push: "{{ if .IsSnapshot }}true{{ else }}false{{ end }}"
+    image_templates:
+      - "tractl/tractl:ci-amd64"
+      - "tractl/tractl:ci-arm64"
+
+homebrew_casks:
+  - name: tractl
+    repository:
+      owner: tractl
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    commit_author:
+      name: tractl-bot
+      email: bot@softwits.com
+    homepage: "https://tractl.softwits.com"
+    description: "Backend validation platform CLI"
+    license: MIT
+    binaries:
+      - tractl
+
+release:
+  github:
+    owner: tractl
+    name: tractl
+  prerelease: auto
+  draft: true # Promote to Public Preview — set it to false
+  name_template: "traCtl {{ .Tag }}"
+  footer: |
+    ## Install
+
+    **macOS / Linux — curl installer**
+    ```bash
+    curl -fsSL https://install.tractl.softwits.com | sh
+    ```
+
+    **Homebrew — CLI only**
+    ```bash
+    brew install tractl/tap/tractl
+    ```
+
+    **Homebrew — Desktop app + CLI**
+    ```bash
+    brew install --cask tractl/tap/tractl-desktop
+    ```
+
+    **Web app**
+    ```bash
+    docker run -p 7428:7428 tractl/tractl:web
+    # then open http://localhost:7428
+    ```
+
+    **Windows** — download the `.zip` from the assets below, extract, add `tractl.exe` to PATH.
+
+    ---
+
+    > **macOS note:** the binary is unsigned in alpha.
+    > After extracting, run: `xattr -d com.apple.quarantine tractl`
+    > Or: System Settings → Privacy & Security → Allow Anyway.
+    >
+    > **Windows note:** SmartScreen will warn on the unsigned `.exe`.
+    > Click More info → Run anyway, or right-click → Properties → Unblock.
+
+snapshot:
+  version_template: "{{ .Version }}-SNAPSHOT-{{ .ShortCommit }}"

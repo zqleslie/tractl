@@ -1,0 +1,63 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-before-after-each
+  description: |
+    Demonstrates workflow-level beforeEach and afterEach hooks.
+
+    beforeEach runs once per step, before each step executes.
+    afterEach  runs once per step, after each step completes.
+
+    Use beforeEach to set per-step context (e.g. a request counter or
+    per-step label). Use afterEach to record per-step diagnostics.
+
+    This workflow has two steps. Each hook fires twice — once per step.
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: hooks-before-after-each-flow
+    hooks:
+      beforeEach:
+        language: js
+        source: |
+          // Fires before each step. Increment a counter variable.
+          tractl.log("beforeEach: about to run a step");
+          return {};
+
+      afterEach:
+        language: js
+        source: |
+          // Fires after each step completes.
+          tractl.log("afterEach: step finished");
+          return {};
+
+    steps:
+      - id: fetch-user
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1"
+          operation: GET
+        assertions:
+          - id: user-status
+            kind: status
+            op: equals
+            expected: 200
+
+      - id: fetch-post
+        kind: request
+        dependsOn:
+          - fetch-user
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/posts/1"
+          operation: GET
+        assertions:
+          - id: post-status
+            kind: status
+            op: equals
+            expected: 200

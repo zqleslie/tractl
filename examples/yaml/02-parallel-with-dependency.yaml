@@ -1,0 +1,76 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: parallel-with-dependency
+  description: |
+    Execution order:
+      Wave 1 (parallel): step-1, step-2, step-4   — no dependencies
+      Wave 2 (after wave 1): step-3               — depends on step-1
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: parallel-dep-flow
+    steps:
+      - id: step-1
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/todos/1"
+          operation: GET
+        assertions:
+          - id: step-1-status
+            kind: status
+            op: equals
+            expected: 200
+        extracts:
+          - id: step-1-title
+            source: body
+            path: title
+            as: title-from-step-1
+            scope: workflow
+
+      - id: step-2
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/todos/2"
+          operation: GET
+        assertions:
+          - id: step-2-status
+            kind: status
+            op: equals
+            expected: 200
+
+      - id: step-3
+        kind: request
+        dependsOn:
+          - step-1
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/todos/3"
+          operation: GET
+        assertions:
+          - id: step-3-status
+            kind: status
+            op: equals
+            expected: 200
+          - id: step-3-body-exists
+            kind: body
+            target: title
+            op: exists
+
+      - id: step-4
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/todos/4"
+          operation: GET
+        assertions:
+          - id: step-4-status
+            kind: status
+            op: inRange
+            expected: "200-299"

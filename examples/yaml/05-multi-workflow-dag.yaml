@@ -1,0 +1,126 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: multi-workflow-dag
+  description: |
+    Four workflows with cross-workflow dependencies.
+    workflowConcurrency: 3 caps parallel workflows at 3.
+
+    Execution waves:
+      Wave 1 (parallel, up to 3): auth-flow, catalog-flow
+      Wave 2 (after auth-flow):   user-flow  (depends on auth-flow)
+      Wave 3 (after user-flow):   order-flow (depends on user-flow)
+
+    auth-flow   ──┐
+                  ├──► user-flow ──► order-flow
+    catalog-flow  (independent, runs alongside auth-flow)
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflowConcurrency: 3
+
+workflows:
+  - id: auth-flow
+    description: "Simulates authentication — fetches a user record as an auth check"
+    steps:
+      - id: fetch-user
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1"
+          operation: GET
+        assertions:
+          - id: user-status
+            kind: status
+            op: equals
+            expected: 200
+          - id: user-has-email
+            kind: body
+            target: email
+            op: exists
+        extracts:
+          - id: user-id-extract
+            source: body
+            path: id
+            as: auth-user-id
+            scope: workflow
+
+  - id: catalog-flow
+    description: "Fetches catalog data — runs independently of auth-flow"
+    steps:
+      - id: fetch-posts
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/posts"
+          operation: GET
+        assertions:
+          - id: posts-status
+            kind: status
+            op: equals
+            expected: 200
+      - id: fetch-albums
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/albums"
+          operation: GET
+        assertions:
+          - id: albums-status
+            kind: status
+            op: equals
+            expected: 200
+
+  - id: user-flow
+    description: "Fetches user-specific data — must run after auth-flow completes"
+    dependsOn:
+      - auth-flow
+    steps:
+      - id: fetch-todos
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1/todos"
+          operation: GET
+        assertions:
+          - id: todos-status
+            kind: status
+            op: equals
+            expected: 200
+      - id: fetch-user-posts
+        kind: request
+        dependsOn:
+          - fetch-todos
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1/posts"
+          operation: GET
+        assertions:
+          - id: user-posts-status
+            kind: status
+            op: equals
+            expected: 200
+
+  - id: order-flow
+    description: "Fetches order/comment data — must run after user-flow completes"
+    dependsOn:
+      - user-flow
+    steps:
+      - id: fetch-comments
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/comments?postId=1"
+          operation: GET
+        assertions:
+          - id: comments-status
+            kind: status
+            op: equals
+            expected: 200
+          - id: comments-not-empty
+            kind: body
+            target: 0.id
+            op: exists

@@ -1,0 +1,70 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-mutation-set
+  description: |
+    Demonstrates the full MutationSet contract from a hook script.
+
+    A script may return any combination of:
+      variables   — written to the declared scope (workflow by default)
+      extracts    — written as extract bindings
+      logs        — appended to the step's log output
+      assertions  — additional assertions injected at runtime
+      cancel      — true to stop the workflow immediately
+
+    This example uses beforeAll to write variables that subsequent
+    steps can reference, and afterAll to add a runtime assertion and
+    emit a structured log entry.
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: hooks-mutation-set-flow
+    hooks:
+      beforeAll:
+        language: js
+        source: |
+          // Demonstrate variable writes and log output.
+          var seed = tractl.random();
+          tractl.log("run-seed: " + seed);
+          return {
+            variables: {
+              "request-id": "req-" + Math.floor(seed * 100000),
+              "started-at": String(tractl.now())
+            },
+            logs: ["workflow starting with request-id=req-" + Math.floor(seed * 100000)]
+          };
+
+      afterAll:
+        language: js
+        source: |
+          // Demonstrate runtime assertion injection and extract writes.
+          tractl.log("afterAll: workflow complete");
+          return {
+            assertions: [
+              {
+                kind:     "status",
+                operator: "equals",
+                expected: "200",
+                severity: "warning"
+              }
+            ],
+            extracts: { "workflow-completed": "true" },
+            logs:     ["afterAll assertions injected"]
+          };
+
+    steps:
+      - id: fetch-todo
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/todos/1"
+          operation: GET
+        assertions:
+          - id: status-ok
+            kind: status
+            op: equals
+            expected: 200

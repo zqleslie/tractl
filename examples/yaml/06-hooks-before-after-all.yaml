@@ -1,0 +1,58 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-before-after-all
+  description: |
+    Demonstrates workflow-level beforeAll and afterAll hooks.
+
+    beforeAll runs once before any step in the workflow executes.
+    afterAll  runs once after all steps in the workflow complete.
+
+    Both hooks receive the frozen execution context as `ctx` and may
+    return a MutationSet to write variables or signal cancellation.
+
+    Execution order:
+      1. beforeAll  — sets a workflow variable via MutationSet
+      2. fetch-post — the only step (reads ctx.workflow scope)
+      3. afterAll   — logs a completion message
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: hooks-before-after-all-flow
+    hooks:
+      beforeAll:
+        language: js
+        source: |
+          // Runs once before any step. Write a variable into the workflow scope.
+          tractl.log("beforeAll: workflow starting");
+          return {
+            variables: { "run-label": "phase9-demo" }
+          };
+
+      afterAll:
+        language: js
+        source: |
+          // Runs once after all steps. Good place for cleanup signals or final assertions.
+          tractl.log("afterAll: workflow finished, run-label=" + ctx.workflow["run-label"]);
+          return {};
+
+    steps:
+      - id: fetch-post
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/posts/1"
+          operation: GET
+        assertions:
+          - id: status-ok
+            kind: status
+            op: equals
+            expected: 200
+          - id: title-present
+            kind: body
+            target: title
+            op: exists

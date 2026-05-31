@@ -1,0 +1,126 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-all-locations
+  description: |
+    Reference example showing all seven hook locations active together.
+
+    Workflow-level hooks (fire relative to the whole workflow):
+      beforeAll   — once, before the first step
+      beforeEach  — once per step, before that step runs
+      afterEach   — once per step, after that step runs
+      afterAll    — once, after the last step
+
+    Step-level hooks (scoped to one specific step):
+      beforeStep  — before that step only
+      afterStep   — after that step only
+      transform   — after the step result is available; may post-process
+                    response data into variables
+
+    Hook dispatch order for each step:
+      beforeAll (once) → beforeEach → beforeStep → [step executes]
+        → afterStep → transform → afterEach → afterAll (once)
+
+    All hooks receive the frozen ctx and may return a MutationSet.
+    A { cancel: true } in any hook stops the workflow immediately.
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: hooks-all-locations-flow
+    hooks:
+      beforeAll:
+        language: js
+        source: |
+          tractl.log("beforeAll: workflow starting");
+          return { variables: { "wf-started": "true" } };
+
+      beforeEach:
+        language: js
+        source: |
+          tractl.log("beforeEach: step about to run");
+          return {};
+
+      afterEach:
+        language: js
+        source: |
+          tractl.log("afterEach: step done");
+          return {};
+
+      afterAll:
+        language: js
+        source: |
+          tractl.log("afterAll: workflow complete");
+          return {};
+
+    steps:
+      - id: fetch-post
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/posts/1"
+          operation: GET
+        assertions:
+          - id: post-status
+            kind: status
+            op: equals
+            expected: 200
+          - id: post-title
+            kind: body
+            target: title
+            op: exists
+        extracts:
+          - id: post-user-id
+            source: body
+            path: userId
+            as: post-user-id
+            scope: workflow
+        hooks:
+          beforeStep:
+            language: js
+            source: |
+              tractl.log("beforeStep(fetch-post): step-specific setup");
+              return {};
+
+          afterStep:
+            language: js
+            source: |
+              tractl.log("afterStep(fetch-post): step-specific teardown");
+              return {};
+
+          transform:
+            language: js
+            source: |
+              // Promote post metadata into workflow variables.
+              tractl.log("transform(fetch-post): writing derived variable");
+              return {
+                variables: { "post-fetched": "true" },
+                logs:      ["transform: post data processed"]
+              };
+
+      - id: fetch-author
+        kind: request
+        dependsOn:
+          - fetch-post
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1"
+          operation: GET
+        assertions:
+          - id: author-status
+            kind: status
+            op: equals
+            expected: 200
+          - id: author-name
+            kind: body
+            target: name
+            op: exists
+        hooks:
+          afterStep:
+            language: js
+            source: |
+              tractl.log("afterStep(fetch-author): author data available");
+              return { variables: { "author-fetched": "true" } };

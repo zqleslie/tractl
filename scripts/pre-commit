@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Run from repo root; use Makefile targets so GOWORK=off matches CI (make vet, PR build job).
+cd "$(git rev-parse --show-toplevel)"
+
+echo "→ go fmt check..."
+make fmt-check
+echo "  ✓ fmt"
+
+echo "→ go vet (GOWORK=off, matches CI)..."
+make vet
+echo "  ✓ vet"
+
+echo "→ golangci-lint..."
+if command -v golangci-lint >/dev/null 2>&1; then
+  make lint
+  echo "  ✓ lint"
+else
+  echo "  ⚠ golangci-lint not found — skipping (install: https://golangci-lint.run/usage/install/)"
+fi
+
+echo "→ govulncheck (stdlib + modules)..."
+make vuln
+echo "  ✓ vuln"
+
+echo "→ go build CLI (GOWORK=off, matches CI)..."
+make build-cli
+echo "  ✓ build"
+
+echo "→ go test (GOWORK=off)..."
+make test
+echo "  ✓ tests"
+
+echo "✓ All pre-commit checks passed."

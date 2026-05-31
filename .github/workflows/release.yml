@@ -1,0 +1,180 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+      - "v*.*.*-*"
+
+permissions:
+  contents: write   # create GitHub Releases + upload assets
+
+jobs:
+
+  # ── Job 1: CLI binaries + Homebrew formula via goreleaser ─────────────────
+  goreleaser:
+    name: CLI release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # goreleaser needs full history for changelog
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/package.json
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Run goreleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+  # ── Job 2: Desktop binary for macOS (arm64 + amd64) ──────────────────────
+  # Wails requires a macOS runner — Go cannot cross-compile a Wails app.
+  # Both arch variants run in parallel via matrix. Each uploads its DMG
+  # to the GitHub Release that goreleaser already created.
+  desktop-macos:
+    name: Desktop macOS ${{ matrix.arch }}
+    runs-on: macos-latest
+    needs: [goreleaser]
+    strategy:
+      matrix:
+        arch: [arm64, amd64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/package.json
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Build desktop (darwin/${{ matrix.arch }})
+        run: |
+          cd cmd/desktop
+          wails build \
+            -ldflags "-s -w \
+              -X 'github.com/tractl/tractl/internal/version.Version=${{ github.ref_name }}' \
+              -X 'github.com/tractl/tractl/internal/version.Commit=${{ github.sha }}'" \
+            -trimpath \
+            -platform darwin/${{ matrix.arch }}
+
+      - name: Package DMG
+        run: |
+          VERSION="${{ github.ref_name }}"
+          ARCH="${{ matrix.arch }}"
+          hdiutil create \
+            -volname "traCtl" \
+            -srcfolder "cmd/desktop/build/bin/traCtl.app" \
+            -ov -format UDZO \
+            "traCtl_${VERSION}_darwin_${ARCH}.dmg"
+
+      - name: Upload DMG to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.ref_name }}" \
+            "traCtl_${{ github.ref_name }}_darwin_${{ matrix.arch }}.dmg" \
+            --repo ${{ github.repository }} \
+            --clobber
+
+  # ── Job 3: Update Homebrew Cask with new DMG checksums ───────────────────
+  # Runs after both macOS DMGs are uploaded. Downloads them, computes SHA256,
+  # and commits the updated Cask to tractl/homebrew-tap.
+  update-cask:
+    name: Update Homebrew Cask
+    runs-on: ubuntu-latest
+    needs: [desktop-macos]
+    steps:
+      - name: Update Cask in homebrew-tap
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Download both DMGs to compute checksums
+          gh release download "${VERSION}" \
+            --pattern "*.dmg" \
+            --dir /tmp/dmgs \
+            --repo "${REPO}"
+
+          SHA_ARM64=$(sha256sum /tmp/dmgs/traCtl_${VERSION}_darwin_arm64.dmg | awk '{print $1}')
+          SHA_AMD64=$(sha256sum /tmp/dmgs/traCtl_${VERSION}_darwin_amd64.dmg | awk '{print $1}')
+          VER_CLEAN="${VERSION#v}"
+
+          git clone \
+            "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/tractl/homebrew-tap.git" \
+            /tmp/tap
+
+          mkdir -p /tmp/tap/Casks
+
+          cat > /tmp/tap/Casks/tractl-desktop.rb << CASK
+          cask "tractl-desktop" do
+            version "${VER_CLEAN}"
+
+            on_arm do
+              url "https://github.com/${REPO}/releases/download/${VERSION}/traCtl_${VERSION}_darwin_arm64.dmg"
+              sha256 "${SHA_ARM64}"
+            end
+
+            on_intel do
+              url "https://github.com/${REPO}/releases/download/${VERSION}/traCtl_${VERSION}_darwin_amd64.dmg"
+              sha256 "${SHA_AMD64}"
+            end
+
+            name "traCtl"
+            desc "Backend validation platform — desktop app + CLI"
+            homepage "https://tractl.softwits.com"
+
+            app "traCtl.app"
+
+            # Symlink the CLI binary bundled inside the .app to PATH.
+            # Same pattern as Docker Desktop installing the docker CLI.
+            binary "#{appdir}/traCtl.app/Contents/MacOS/tractl-cli",
+                   target: "tractl"
+          end
+          CASK
+
+          cd /tmp/tap
+          git config user.name "tractl-bot"
+          git config user.email "tractl@softwits.com"
+          git add Casks/tractl-desktop.rb
+          git commit -m "chore: update tractl-desktop cask to ${VERSION}"
+          git push

@@ -1,0 +1,52 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-before-after-each
+  description: "beforeEach fires before each step; afterEach fires after each step. Both run N times for N steps."
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: hooks-before-after-each-flow
+    hooks:
+      beforeEach:
+        language: js
+        source: |
+          tractl.log("beforeEach: step about to run");
+          return {};
+
+      afterEach:
+        language: js
+        source: |
+          tractl.log("afterEach: step done");
+          return {};
+
+    steps:
+      - id: fetch-user
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1"
+          operation: GET
+        assertions:
+          - id: user-status
+            kind: status
+            op: equals
+            expected: 200
+
+      - id: fetch-post
+        kind: request
+        dependsOn:
+          - fetch-user
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/posts/1"
+          operation: GET
+        assertions:
+          - id: post-status
+            kind: status
+            op: equals
+            expected: 200

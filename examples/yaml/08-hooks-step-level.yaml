@@ -1,0 +1,73 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-step-level
+  description: |
+    Demonstrates step-level beforeStep, afterStep, and transform hooks.
+
+    beforeStep  — runs before this specific step only.
+    afterStep   — runs after this specific step only.
+    transform   — runs after the step result is available; use it to
+                  post-process the response (e.g. promote a field into
+                  a workflow variable).
+
+    These three hooks are scoped to a single step and do not fire for
+    sibling steps. Use them when only one step needs pre/post logic.
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: hooks-step-level-flow
+    steps:
+      - id: fetch-comment
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/comments/1"
+          operation: GET
+        assertions:
+          - id: comment-status
+            kind: status
+            op: equals
+            expected: 200
+        hooks:
+          beforeStep:
+            language: js
+            source: |
+              // Runs only before this step. Useful for step-specific setup.
+              tractl.log("beforeStep: fetching comment");
+              return {};
+
+          afterStep:
+            language: js
+            source: |
+              // Runs only after this step. Useful for step-specific teardown.
+              tractl.log("afterStep: comment fetched");
+              return {};
+
+          transform:
+            language: js
+            source: |
+              // Runs after the step result is available. Promote a field into
+              // a workflow variable that subsequent steps can read.
+              tractl.log("transform: promoting postId to workflow scope");
+              return {
+                variables: { "comment-post-id": "1" }
+              };
+
+      - id: fetch-related-post
+        kind: request
+        dependsOn:
+          - fetch-comment
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/posts/1"
+          operation: GET
+        assertions:
+          - id: post-status
+            kind: status
+            op: equals
+            expected: 200

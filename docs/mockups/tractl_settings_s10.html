@@ -1,0 +1,461 @@
+
+<h2 class="sr-only">traCtl Settings screen — grouped preference sections for general, appearance, history, git, engine, and about</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+--sb:#fff;--sb-b:#e5e5e5;--bg:#f0f0ee;--tb:#fff;--tb-b:#e5e5e5;
+--tp:#1a1a1a;--ts:#6b6b6b;--tt:#a0a0a0;
+--inp:#fff;--inp-b:#d0d0d0;--surf:#f5f5f3;--surf2:#ebebeb;
+--bb:#e0e0e0;
+--info-bg:#E6F1FB;--info-c:#185FA5;
+--pass-bg:#EAF3DE;--pass-c:#3B6D11;
+--fail-bg:#FCEBEB;--fail-c:#A32D2D;
+--warn-bg:#FAEEDA;--warn-c:#854F0B;
+}
+.dark{
+--sb:#1a1a1a;--sb-b:#2e2e2e;--bg:#141414;--tb:#1a1a1a;--tb-b:#2e2e2e;
+--tp:#e8e8e8;--ts:#888;--tt:#555;
+--inp:#222;--inp-b:#333;--surf:#1e1e1e;--surf2:#252525;--bb:#333;
+--info-bg:#042C53;--info-c:#B5D4F4;
+--pass-bg:#173404;--pass-c:#C0DD97;
+--fail-bg:#501313;--fail-c:#F7C1C1;
+--warn-bg:#412402;--warn-c:#FAC775;
+}
+.root{display:flex;height:660px;font-family:var(--font-sans);background:var(--bg);border-radius:var(--border-radius-lg);overflow:hidden;border:0.5px solid var(--sb-b);}
+
+.sidebar{width:210px;background:var(--sb);border-right:0.5px solid var(--sb-b);display:flex;flex-direction:column;flex-shrink:0;}
+.sb-top{padding:10px 10px 0;flex-shrink:0;}
+.tr{display:flex;align-items:center;gap:6px;margin-bottom:11px;}
+.dot{width:11px;height:11px;border-radius:50%;}
+.hbtn{margin-left:7px;width:22px;height:22px;border-radius:6px;border:none;background:transparent;color:var(--tt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.hbtn:hover{background:var(--surf2);color:var(--tp);}
+.tabs{display:flex;background:var(--surf);border-radius:8px;padding:2px;gap:1px;margin-bottom:9px;}
+.tab{flex:1;font-size:11px;font-weight:500;padding:5px 2px;border-radius:6px;border:none;background:transparent;color:var(--ts);cursor:pointer;text-align:center;}
+.tab.active{background:var(--sb);color:var(--tp);border:0.5px solid var(--sb-b);}
+.sba{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:8px;font-size:12px;color:var(--ts);cursor:pointer;margin-bottom:1px;}
+.sba:hover{background:var(--surf);color:var(--tp);}
+.sba i{font-size:14px;width:16px;text-align:center;}
+.sb-scroll{flex:1;overflow-y:auto;padding:0 3px 8px;}
+.sbi{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:8px;font-size:12px;color:var(--tp);cursor:pointer;}
+.sbi:hover{background:var(--surf);}
+.sbi.active{background:var(--surf);}
+.sbi i{font-size:13px;color:var(--ts);width:15px;flex-shrink:0;}
+.sbi-n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-bot{padding:7px;border-top:0.5px solid var(--sb-b);flex-shrink:0;}
+
+.main{flex:1;display:flex;overflow:hidden;min-width:0;}
+
+.settings-nav{width:168px;border-right:0.5px solid var(--tb-b);background:var(--tb);display:flex;flex-direction:column;flex-shrink:0;padding:10px 6px;}
+.sn-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;font-size:12px;color:var(--ts);cursor:pointer;margin-bottom:1px;}
+.sn-item:hover{background:var(--surf);color:var(--tp);}
+.sn-item.active{background:var(--surf);color:var(--tp);font-weight:500;}
+.sn-item i{font-size:14px;width:16px;flex-shrink:0;}
+
+.settings-body{flex:1;overflow-y:auto;padding:20px 24px;}
+
+.s-section{margin-bottom:28px;}
+.s-section-title{font-size:13px;font-weight:500;color:var(--tp);margin-bottom:14px;padding-bottom:8px;border-bottom:0.5px solid var(--bb);}
+
+.s-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:0.5px solid var(--bg);}
+.s-row:last-child{border-bottom:none;}
+.s-row-info{flex:1;min-width:0;}
+.s-row-label{font-size:12px;font-weight:500;color:var(--tp);}
+.s-row-desc{font-size:11px;color:var(--ts);margin-top:2px;line-height:1.4;}
+.s-row-control{flex-shrink:0;display:flex;align-items:center;gap:8px;}
+
+.toggle{width:36px;height:20px;border-radius:10px;background:var(--bb);border:none;cursor:pointer;position:relative;transition:background .15s;flex-shrink:0;}
+.toggle.on{background:#185FA5;}
+.toggle::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left .15s;}
+.toggle.on::after{left:19px;}
+
+.s-sel{font-size:12px;padding:5px 8px;border-radius:7px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);}
+.s-input{font-size:12px;padding:5px 8px;border-radius:7px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);width:80px;font-family:var(--font-mono);}
+.s-input:focus,.s-sel:focus{outline:none;border-color:#378ADD;}
+
+.danger-btn{font-size:12px;padding:5px 12px;border-radius:7px;border:0.5px solid var(--fail-c);background:transparent;color:var(--fail-c);cursor:pointer;}
+.danger-btn:hover{background:var(--fail-bg);}
+.subtle-btn{font-size:12px;padding:5px 12px;border-radius:7px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;}
+.subtle-btn:hover{background:var(--surf);}
+
+.about-card{background:var(--surf);border-radius:10px;border:0.5px solid var(--bb);padding:16px;display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+.about-logo{width:40px;height:40px;border-radius:10px;background:var(--info-bg);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--info-c);flex-shrink:0;}
+.about-name{font-size:14px;font-weight:500;color:var(--tp);}
+.about-ver{font-size:11px;color:var(--ts);margin-top:2px;}
+.about-tag{font-size:10px;padding:2px 7px;border-radius:5px;background:var(--info-bg);color:var(--info-c);margin-left:6px;}
+
+.path-display{font-family:var(--font-mono);font-size:10px;color:var(--ts);padding:4px 8px;background:var(--surf);border-radius:6px;border:0.5px solid var(--bb);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+.statusbar{height:22px;background:var(--tb);border-top:0.5px solid var(--sb-b);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;}
+.sdot{width:6px;height:6px;border-radius:50%;}
+.stxt{font-size:11px;color:var(--ts);}
+.sr{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.git-b{font-size:10px;color:var(--tt);display:flex;align-items:center;gap:3px;}
+.sver{font-size:11px;color:var(--tt);}
+
+.titlebar{height:40px;background:var(--tb);border-bottom:0.5px solid var(--tb-b);display:flex;align-items:center;padding:0 13px;gap:8px;flex-shrink:0;}
+.tlogo{font-size:13px;font-weight:500;color:var(--tp);}
+.ttag{font-size:10px;padding:2px 6px;border-radius:6px;background:var(--info-bg);color:var(--info-c);}
+.tr2{margin-left:auto;display:flex;align-items:center;gap:7px;}
+.envb{font-size:11px;padding:3px 8px;border-radius:7px;border:0.5px solid var(--inp-b);color:var(--ts);cursor:pointer;display:flex;align-items:center;gap:5px;background:transparent;}
+.edot{width:6px;height:6px;border-radius:50%;background:#1D9E75;flex-shrink:0;}
+.tbtn{width:26px;height:26px;border-radius:6px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.tbtn:hover{background:var(--surf);}
+
+.main-col{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+</style>
+
+<div class="root" id="root">
+  <div class="sidebar">
+    <div class="sb-top">
+      <div class="tr">
+        <div class="dot" style="background:#ED6A5A;"></div>
+        <div class="dot" style="background:#F5B33A;"></div>
+        <div class="dot" style="background:#62C554;"></div>
+        <button class="hbtn" aria-label="Dashboard"><i class="ti ti-home" aria-hidden="true"></i></button>
+      </div>
+      <div class="tabs">
+        <button class="tab">Requests</button>
+        <button class="tab">Workflows</button>
+        <button class="tab">Envs</button>
+      </div>
+    </div>
+    <div class="sb-scroll">
+      <div class="sba"><i class="ti ti-plus" aria-hidden="true"></i> New request</div>
+      <div class="sbi"><i class="ti ti-topology-star-3" aria-hidden="true"></i><span class="sbi-n">auth-flow</span></div>
+      <div class="sbi"><i class="ti ti-bolt" aria-hidden="true"></i><span class="sbi-n">POST /users/register</span></div>
+    </div>
+    <div class="sb-bot">
+      <div class="sba active" style="background:var(--surf);color:var(--tp);font-weight:500;border-radius:8px;"><i class="ti ti-settings" aria-hidden="true"></i> Settings</div>
+    </div>
+  </div>
+
+  <div class="main-col">
+    <div class="titlebar">
+      <span class="tlogo">traCtl</span>
+      <span class="ttag">alpha</span>
+      <div class="tr2">
+        <div class="envb"><div class="edot"></div> staging <i class="ti ti-chevron-down" style="font-size:10px;" aria-hidden="true"></i></div>
+        <button class="tbtn" onclick="toggleTheme()" aria-label="Toggle theme"><i class="ti ti-moon" id="th-icon" aria-hidden="true"></i></button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="settings-nav">
+        <div class="sn-item active" onclick="showSection('general')"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i> General</div>
+        <div class="sn-item" onclick="showSection('appearance')"><i class="ti ti-palette" aria-hidden="true"></i> Appearance</div>
+        <div class="sn-item" onclick="showSection('history')"><i class="ti ti-history" aria-hidden="true"></i> History</div>
+        <div class="sn-item" onclick="showSection('engine')"><i class="ti ti-cpu" aria-hidden="true"></i> Engine</div>
+        <div class="sn-item" onclick="showSection('git')"><i class="ti ti-git-branch" aria-hidden="true"></i> Git</div>
+        <div class="sn-item" onclick="showSection('about')"><i class="ti ti-info-circle" aria-hidden="true"></i> About</div>
+      </div>
+
+      <div class="settings-body">
+
+        <div id="sec-general">
+          <div class="s-section">
+            <div class="s-section-title">Workspace</div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">App directory</div>
+                <div class="s-row-desc">Where requests, workflows, and overlays are auto-saved</div>
+              </div>
+              <div class="s-row-control" style="gap:6px;max-width:200px;">
+                <div class="path-display">~/Library/Application Support/tractl</div>
+                <button class="subtle-btn">Change</button>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Default export format</div>
+                <div class="s-row-desc">Format used when exporting via ··· menu</div>
+              </div>
+              <div class="s-row-control">
+                <select class="s-sel"><option>YAML</option><option>JSON</option><option>TOON</option></select>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Local API port</div>
+                <div class="s-row-desc">Port the local API listens on (requires restart)</div>
+              </div>
+              <div class="s-row-control">
+                <input class="s-input" value="7428">
+              </div>
+            </div>
+          </div>
+
+          <div class="s-section">
+            <div class="s-section-title">Execution defaults</div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Default timeout</div>
+                <div class="s-row-desc">Applied when no timeout is set on a request or workflow</div>
+              </div>
+              <div class="s-row-control" style="gap:6px;">
+                <input class="s-input" value="30">
+                <select class="s-sel"><option>seconds</option><option>minutes</option></select>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Default failure policy</div>
+                <div class="s-row-desc">How the engine handles step failures when not specified</div>
+              </div>
+              <div class="s-row-control">
+                <select class="s-sel"><option>resilient (default)</option><option>failFast</option></select>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Default concurrency</div>
+                <div class="s-row-desc">Max parallel steps when not set on a workflow</div>
+              </div>
+              <div class="s-row-control">
+                <input class="s-input" value="4" style="width:60px;">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="sec-appearance" style="display:none;">
+          <div class="s-section">
+            <div class="s-section-title">Theme</div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Colour scheme</div>
+                <div class="s-row-desc">Light, dark, or follow the system setting</div>
+              </div>
+              <div class="s-row-control">
+                <select class="s-sel" onchange="if(this.value==='dark'){document.getElementById('root').classList.add('dark');document.getElementById('th-icon').className='ti ti-sun';}else if(this.value==='light'){document.getElementById('root').classList.remove('dark');document.getElementById('th-icon').className='ti ti-moon';}">
+                  <option>System</option><option>Light</option><option>Dark</option>
+                </select>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Font size</div>
+                <div class="s-row-desc">Base UI font size</div>
+              </div>
+              <div class="s-row-control">
+                <select class="s-sel"><option>Small (11px)</option><option selected>Default (13px)</option><option>Large (15px)</option></select>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Code editor font</div>
+                <div class="s-row-desc">Font used in script editors and code blocks</div>
+              </div>
+              <div class="s-row-control">
+                <select class="s-sel"><option>JetBrains Mono</option><option>Fira Code</option><option>Menlo</option><option>System mono</option></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="sec-history" style="display:none;">
+          <div class="s-section">
+            <div class="s-section-title">Retention</div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Desktop retention limit</div>
+                <div class="s-row-desc">Oldest runs are pruned automatically when the limit is reached</div>
+              </div>
+              <div class="s-row-control">
+                <select class="s-sel"><option>50</option><option>200</option><option selected>1000</option><option>Unlimited</option></select>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Web retention limit</div>
+                <div class="s-row-desc">IndexedDB storage is limited — keep this low</div>
+              </div>
+              <div class="s-row-control">
+                <select class="s-sel"><option>10</option><option selected>25</option><option>50</option></select>
+              </div>
+            </div>
+          </div>
+          <div class="s-section">
+            <div class="s-section-title">Data</div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Clear all history</div>
+                <div class="s-row-desc">Permanently delete all run records on this device</div>
+              </div>
+              <div class="s-row-control">
+                <button class="danger-btn">Clear all history</button>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Export history</div>
+                <div class="s-row-desc">Export all run records as JSON</div>
+              </div>
+              <div class="s-row-control">
+                <button class="subtle-btn">Export JSON</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="sec-engine" style="display:none;">
+          <div class="s-section">
+            <div class="s-section-title">Script sandbox</div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Script timeout</div>
+                <div class="s-row-desc">Maximum time a pre/post script may run before cancellation</div>
+              </div>
+              <div class="s-row-control" style="gap:6px;">
+                <input class="s-input" value="5">
+                <select class="s-sel"><option>seconds</option><option>milliseconds</option></select>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Script log output</div>
+                <div class="s-row-desc">Show tractl.log() output in the results panel</div>
+              </div>
+              <div class="s-row-control">
+                <button class="toggle on" onclick="this.classList.toggle('on')" aria-label="Toggle script log output"></button>
+              </div>
+            </div>
+          </div>
+          <div class="s-section">
+            <div class="s-section-title">Diagnostics</div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Capture TLS details</div>
+                <div class="s-row-desc">Record TLS handshake timing in run results (Phase 7.5)</div>
+              </div>
+              <div class="s-row-control">
+                <button class="toggle" onclick="this.classList.toggle('on')" aria-label="Toggle TLS capture"></button>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Capture DNS details</div>
+                <div class="s-row-desc">Record DNS resolution timing in run results</div>
+              </div>
+              <div class="s-row-control">
+                <button class="toggle" onclick="this.classList.toggle('on')" aria-label="Toggle DNS capture"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="sec-git" style="display:none;">
+          <div class="s-section">
+            <div class="s-section-title">Git integration</div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Show git status</div>
+                <div class="s-row-desc">Display git status indicator in the status bar</div>
+              </div>
+              <div class="s-row-control">
+                <button class="toggle on" onclick="this.classList.toggle('on')" aria-label="Toggle git status"></button>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Warn when workspace is not a git repo</div>
+                <div class="s-row-desc">Show advisory when the app directory is not version-controlled</div>
+              </div>
+              <div class="s-row-control">
+                <button class="toggle on" onclick="this.classList.toggle('on')" aria-label="Toggle git warning"></button>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Git executable path</div>
+                <div class="s-row-desc">Path to the git binary (auto-detected if empty)</div>
+              </div>
+              <div class="s-row-control" style="gap:6px;">
+                <input class="s-input" placeholder="/usr/bin/git" style="width:140px;">
+                <button class="subtle-btn">Detect</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="sec-about" style="display:none;">
+          <div class="about-card">
+            <div class="about-logo"><i class="ti ti-topology-star-3" aria-hidden="true"></i></div>
+            <div>
+              <div class="about-name">traCtl <span class="about-tag">alpha</span></div>
+              <div class="about-ver">v0.1.0-alpha · Desktop · macOS arm64</div>
+            </div>
+          </div>
+          <div class="s-section">
+            <div class="s-section-title">Build info</div>
+            <div class="s-row">
+              <div class="s-row-info"><div class="s-row-label">Engine version</div></div>
+              <div class="s-row-control"><span style="font-size:12px;color:var(--ts);font-family:var(--font-mono);">v0.1.0-alpha</span></div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info"><div class="s-row-label">Wails runtime</div></div>
+              <div class="s-row-control"><span style="font-size:12px;color:var(--ts);font-family:var(--font-mono);">v2.9.1</span></div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info"><div class="s-row-label">Go version</div></div>
+              <div class="s-row-control"><span style="font-size:12px;color:var(--ts);font-family:var(--font-mono);">1.24.2</span></div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info"><div class="s-row-label">Schema version</div></div>
+              <div class="s-row-control"><span style="font-size:12px;color:var(--ts);font-family:var(--font-mono);">1</span></div>
+            </div>
+          </div>
+          <div class="s-section">
+            <div class="s-section-title">Data</div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">App directory</div>
+                <div class="s-row-desc">All workspace files and run history</div>
+              </div>
+              <div class="s-row-control" style="gap:6px;">
+                <div class="path-display" style="max-width:160px;">~/Library/Application Support/tractl</div>
+                <button class="subtle-btn">Open</button>
+              </div>
+            </div>
+            <div class="s-row">
+              <div class="s-row-info">
+                <div class="s-row-label">Reset all settings</div>
+                <div class="s-row-desc">Restore all preferences to defaults. Does not delete workspace files.</div>
+              </div>
+              <div class="s-row-control">
+                <button class="danger-btn">Reset</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <div class="sdot" style="background:#1D9E75;"></div>
+      <span class="stxt">Engine ready</span>
+      <div class="sr">
+        <span class="git-b"><i class="ti ti-git-branch" style="font-size:11px;" aria-hidden="true"></i> git: clean</span>
+        <span class="sver">Desktop · v0.1.0-alpha</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var dark=false;
+function toggleTheme(){
+  dark=!dark;
+  document.getElementById('root').classList.toggle('dark',dark);
+  document.getElementById('th-icon').className=dark?'ti ti-sun':'ti ti-moon';
+}
+function showSection(id){
+  ['general','appearance','history','engine','git','about'].forEach(function(s){
+    document.getElementById('sec-'+s).style.display=s===id?'block':'none';
+  });
+  document.querySelectorAll('.sn-item').forEach(function(el,i){
+    el.classList.remove('active');
+  });
+  event.currentTarget.classList.add('active');
+}
+</script>

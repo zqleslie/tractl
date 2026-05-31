@@ -1,0 +1,53 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - revive
+    - exhaustive
+    - noctx
+    - bodyclose
+  settings:
+    staticcheck:
+      # golangci-lint v2.12.2 does not expose gosimple as a separate linter;
+      # S* enables the equivalent simplification checks through staticcheck.
+      checks:
+        - S*
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+    exhaustive:
+      default-signifies-exhaustive: true
+  exclusions:
+    paths:
+      - frontend
+      - node_modules
+    rules:
+      - path: "_test\\.go"
+        linters:
+          - revive
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    paths:
+      - frontend
+      - node_modules
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/tractl/tractl
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

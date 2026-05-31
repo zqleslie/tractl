@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "capabilities": ["protocol.http"],
+  "metadata": {
+    "name": "diamond-dependency",
+    "description": "Wave 1: step-1. Wave 2 (parallel): step-2, step-3. Wave 3: step-4 (depends on step-2 AND step-3)."
+  },
+  "variables": {
+    "baseUrl": "https://jsonplaceholder.typicode.com"
+  },
+  "workflows": [
+    {
+      "id": "diamond-flow",
+      "steps": [
+        {
+          "id": "step-1",
+          "kind": "request",
+          "request": {
+            "protocol": "http",
+            "target": "${vars.baseUrl}/users/1",
+            "operation": "GET"
+          },
+          "assertions": [
+            {
+              "id": "step-1-status",
+              "kind": "status",
+              "op": "equals",
+              "expected": 200
+            }
+          ],
+          "extracts": [
+            {
+              "id": "step-1-id",
+              "source": "body",
+              "path": "id",
+              "as": "root-user-id",
+              "scope": "workflow"
+            }
+          ]
+        },
+        {
+          "id": "step-2",
+          "kind": "request",
+          "dependsOn": ["step-1"],
+          "request": {
+            "protocol": "http",
+            "target": "${vars.baseUrl}/users/1/posts",
+            "operation": "GET"
+          },
+          "assertions": [
+            {
+              "id": "step-2-status",
+              "kind": "status",
+              "op": "equals",
+              "expected": 200
+            }
+          ]
+        },
+        {
+          "id": "step-3",
+          "kind": "request",
+          "dependsOn": ["step-1"],
+          "request": {
+            "protocol": "http",
+            "target": "${vars.baseUrl}/users/1/todos",
+            "operation": "GET"
+          },
+          "assertions": [
+            {
+              "id": "step-3-status",
+              "kind": "status",
+              "op": "equals",
+              "expected": 200
+            }
+          ]
+        },
+        {
+          "id": "step-4",
+          "kind": "request",
+          "dependsOn": ["step-2", "step-3"],
+          "request": {
+            "protocol": "http",
+            "target": "${vars.baseUrl}/users/1/albums",
+            "operation": "GET"
+          },
+          "assertions": [
+            {
+              "id": "step-4-status",
+              "kind": "status",
+              "op": "equals",
+              "expected": 200
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

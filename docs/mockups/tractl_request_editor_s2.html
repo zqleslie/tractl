@@ -1,0 +1,509 @@
+
+<h2 class="sr-only">traCtl Request Editor v3 — minimal URL bar, auto-save, pre/post script tabs, light and dark theme toggle</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+--sb-bg:#ffffff;--sb-border:#e5e5e5;--main-bg:#f5f5f3;--tb-bg:#ffffff;--tb-border:#e5e5e5;
+--text-p:#1a1a1a;--text-s:#6b6b6b;--text-t:#a0a0a0;
+--input-bg:#ffffff;--input-border:#d0d0d0;--surface:#f5f5f3;--surface2:#ebebeb;
+--run-bg:#185FA5;--run-color:#E6F1FB;--run-hover:#0C447C;
+--code-bg:#f0f0ee;--badge-border:#e0e0e0;
+--pass-bg:#EAF3DE;--pass-color:#3B6D11;--fail-bg:#FCEBEB;--fail-color:#A32D2D;
+--warn-bg:#FAEEDA;--warn-color:#854F0B;--info-bg:#E6F1FB;--info-color:#185FA5;
+--seg1:#B5D4F4;--seg2:#85B7EB;--seg3:#378ADD;--seg4:#185FA5;--seg5:#0C447C;
+--script-color:#185FA5;--masked-color:#a0a0a0;
+}
+.dark{
+--sb-bg:#1a1a1a;--sb-border:#2e2e2e;--main-bg:#141414;--tb-bg:#1a1a1a;--tb-border:#2e2e2e;
+--text-p:#e8e8e8;--text-s:#888;--text-t:#555;
+--input-bg:#222;--input-border:#333;--surface:#1e1e1e;--surface2:#252525;
+--run-bg:#185FA5;--run-color:#E6F1FB;--run-hover:#0C447C;
+--code-bg:#1e1e1e;--badge-border:#333;
+--pass-bg:#173404;--pass-color:#C0DD97;--fail-bg:#501313;--fail-color:#F7C1C1;
+--warn-bg:#412402;--warn-color:#FAC775;--info-bg:#042C53;--info-color:#B5D4F4;
+--seg1:#0C447C;--seg2:#185FA5;--seg3:#378ADD;--seg4:#85B7EB;--seg5:#B5D4F4;
+--script-color:#85B7EB;--masked-color:#555;
+}
+.root{display:flex;height:640px;font-family:var(--font-sans);background:var(--main-bg);border-radius:var(--border-radius-lg);overflow:hidden;border:0.5px solid var(--sb-border);transition:background 0.2s,color 0.2s;}
+.sidebar{width:216px;background:var(--sb-bg);border-right:0.5px solid var(--sb-border);display:flex;flex-direction:column;flex-shrink:0;transition:background 0.2s;}
+.sb-top{padding:10px 10px 0;flex-shrink:0;}
+.traffic-row{display:flex;align-items:center;gap:6px;margin-bottom:11px;}
+.dot{width:11px;height:11px;border-radius:50%;}
+.home-btn{margin-left:7px;width:22px;height:22px;border-radius:6px;border:none;background:transparent;color:var(--text-t);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.home-btn:hover{background:var(--surface2);color:var(--text-p);}
+.tabs{display:flex;background:var(--surface);border-radius:8px;padding:2px;gap:1px;margin-bottom:9px;}
+.tab{flex:1;font-size:11px;font-weight:500;padding:5px 2px;border-radius:6px;border:none;background:transparent;color:var(--text-s);cursor:pointer;text-align:center;transition:background 0.15s,color 0.15s;}
+.tab.active{background:var(--sb-bg);color:var(--text-p);border:0.5px solid var(--sb-border);}
+.sb-action{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:8px;font-size:12px;color:var(--text-s);cursor:pointer;margin-bottom:1px;}
+.sb-action:hover{background:var(--surface);color:var(--text-p);}
+.sb-action.primary{color:var(--text-p);font-weight:500;}
+.sb-action i{font-size:14px;width:16px;text-align:center;}
+.sb-scroll{flex:1;overflow-y:auto;padding:0 3px 8px;}
+.sb-section{font-size:10px;font-weight:500;color:var(--text-t);text-transform:uppercase;letter-spacing:0.07em;padding:10px 7px 4px;}
+.sb-item{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:8px;font-size:12px;color:var(--text-p);cursor:pointer;position:relative;}
+.sb-item:hover{background:var(--surface);}
+.sb-item:hover .sb-ctx{opacity:1;}
+.sb-item.active{background:var(--surface);}
+.sb-item i{font-size:13px;color:var(--text-s);width:15px;flex-shrink:0;}
+.sb-item-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mb{font-size:9px;font-weight:500;padding:1px 4px;border-radius:3px;flex-shrink:0;}
+.mb-get{background:var(--info-bg);color:var(--info-color);}
+.mb-post{background:var(--pass-bg);color:var(--pass-color);}
+.mb-del{background:var(--fail-bg);color:var(--fail-color);}
+.sb-ctx{opacity:0;font-size:12px;color:var(--text-t);cursor:pointer;background:none;border:none;padding:2px 3px;position:absolute;right:4px;border-radius:4px;}
+.sb-ctx:hover{background:var(--surface2);color:var(--text-s);}
+.sb-bottom{padding:7px;border-top:0.5px solid var(--sb-border);flex-shrink:0;}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.titlebar{height:40px;background:var(--tb-bg);border-bottom:0.5px solid var(--tb-border);display:flex;align-items:center;padding:0 13px;gap:8px;flex-shrink:0;}
+.titlebar-logo{font-size:13px;font-weight:500;color:var(--text-p);letter-spacing:0.02em;}
+.titlebar-tag{font-size:10px;padding:2px 6px;border-radius:6px;background:var(--info-bg);color:var(--info-color);}
+.tbar-right{margin-left:auto;display:flex;align-items:center;gap:7px;}
+.env-badge{font-size:11px;padding:3px 8px;border-radius:7px;border:0.5px solid var(--input-border);color:var(--text-s);cursor:pointer;display:flex;align-items:center;gap:5px;background:transparent;}
+.env-badge:hover{background:var(--surface);}
+.env-dot{width:6px;height:6px;border-radius:50%;background:#1D9E75;flex-shrink:0;}
+.theme-btn{width:28px;height:28px;border-radius:7px;border:0.5px solid var(--input-border);background:transparent;color:var(--text-s);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.theme-btn:hover{background:var(--surface);color:var(--text-p);}
+.urlbar{display:flex;align-items:center;gap:7px;padding:8px 12px;background:var(--tb-bg);border-bottom:0.5px solid var(--tb-border);flex-shrink:0;}
+.method-sel{font-size:12px;font-weight:500;padding:5px 7px;border-radius:7px;border:0.5px solid var(--input-border);background:var(--surface);color:var(--text-p);cursor:pointer;min-width:74px;}
+.url-in{flex:1;font-size:12px;padding:5px 9px;border-radius:7px;border:0.5px solid var(--input-border);background:var(--input-bg);color:var(--text-p);font-family:var(--font-mono);min-width:0;}
+.url-in:focus{outline:none;border-color:#378ADD;}
+.run-btn{font-size:12px;font-weight:500;padding:5px 14px;border-radius:7px;border:none;background:var(--run-bg);color:var(--run-color);cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.run-btn:hover{background:var(--run-hover);}
+.autosave-hint{font-size:10px;color:var(--text-t);white-space:nowrap;flex-shrink:0;}
+.editor-body{flex:1;display:flex;overflow:hidden;min-width:0;}
+.config-panel{display:flex;flex-direction:column;overflow:hidden;min-width:0;flex:0 0 54%;}
+.config-panel.expanded{flex:1 1 100%;}
+.ptabs{display:flex;border-bottom:0.5px solid var(--sb-border);padding:0 10px;background:var(--tb-bg);flex-shrink:0;overflow-x:auto;}
+.ptabs::-webkit-scrollbar{display:none;}
+.ptab{font-size:11px;padding:7px 8px;border:none;background:transparent;color:var(--text-s);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;white-space:nowrap;flex-shrink:0;transition:color 0.15s;}
+.ptab.active{color:var(--text-p);border-bottom-color:var(--text-p);}
+.ptab.sc{color:var(--script-color);}
+.ptab.sc.active{color:var(--script-color);border-bottom-color:var(--script-color);}
+.ptab .cnt{font-size:9px;padding:1px 4px;border-radius:3px;background:var(--surface);color:var(--text-s);margin-left:3px;vertical-align:1px;}
+.panel-body{flex:1;overflow-y:auto;padding:10px 12px;background:var(--tb-bg);}
+.pc{display:none;}
+.pc.active{display:block;}
+.kv-table{width:100%;border-collapse:collapse;font-size:12px;}
+.kv-table th{font-size:10px;font-weight:500;color:var(--text-t);text-transform:uppercase;letter-spacing:0.05em;padding:3px 5px;text-align:left;border-bottom:0.5px solid var(--sb-border);}
+.kv-table td{padding:3px 5px;border-bottom:0.5px solid var(--sb-border);}
+.kv-in{width:100%;font-size:11px;padding:3px 5px;border:0.5px solid transparent;border-radius:4px;background:transparent;color:var(--text-p);font-family:var(--font-mono);}
+.kv-in:hover{border-color:var(--badge-border);}
+.kv-in:focus{border-color:var(--input-border);background:var(--input-bg);outline:none;}
+.add-row{display:flex;align-items:center;gap:5px;padding:5px 5px;font-size:11px;color:var(--text-t);cursor:pointer;}
+.add-row:hover{color:var(--text-s);}
+.fl{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
+.fl-label{font-size:11px;color:var(--text-s);width:80px;flex-shrink:0;}
+.fl-in{flex:1;font-size:12px;padding:4px 8px;border-radius:7px;border:0.5px solid var(--input-border);background:var(--input-bg);color:var(--text-p);}
+.fl-sel{flex:1;font-size:12px;padding:4px 8px;border-radius:7px;border:0.5px solid var(--input-border);background:var(--input-bg);color:var(--text-p);}
+.code-area{font-family:var(--font-mono);font-size:11px;color:var(--text-p);background:var(--code-bg);border-radius:8px;padding:10px;line-height:1.7;min-height:100px;border:0.5px solid var(--sb-border);}
+.script-hint{font-size:11px;color:var(--text-s);margin-bottom:8px;padding:6px 8px;background:var(--surface);border-radius:7px;line-height:1.5;border:0.5px solid var(--sb-border);}
+.ctx-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+.ctx-chip{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--surface);color:var(--text-s);font-family:var(--font-mono);border:0.5px solid var(--badge-border);}
+.a-item{display:flex;gap:5px;align-items:center;padding:5px 7px;border-radius:7px;border:0.5px solid var(--badge-border);margin-bottom:5px;background:var(--surface);}
+.a-item select,.a-item input{font-size:11px;padding:3px 5px;border-radius:4px;border:0.5px solid var(--input-border);background:var(--input-bg);color:var(--text-p);}
+.sev{font-size:9px;padding:2px 5px;border-radius:3px;flex-shrink:0;cursor:pointer;}
+.sev-e{background:var(--fail-bg);color:var(--fail-color);}
+.sev-w{background:var(--warn-bg);color:var(--warn-color);}
+.del-btn{font-size:13px;color:var(--text-t);cursor:pointer;background:none;border:none;flex-shrink:0;margin-left:auto;}
+.del-btn:hover{color:var(--fail-color);}
+.ex-item{display:flex;gap:5px;align-items:center;padding:5px 7px;border-radius:7px;border:0.5px solid var(--badge-border);margin-bottom:5px;background:var(--surface);}
+.ex-item select,.ex-item input{font-size:11px;padding:3px 5px;border-radius:4px;border:0.5px solid var(--input-border);background:var(--input-bg);color:var(--text-p);}
+.arr{font-size:12px;color:var(--text-t);flex-shrink:0;}
+.info-note{margin-top:8px;padding:6px 8px;background:var(--surface);border-radius:7px;font-size:11px;color:var(--text-s);line-height:1.5;border:0.5px solid var(--badge-border);}
+.divider{width:1px;background:var(--sb-border);position:relative;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.col-btn{width:18px;height:30px;border-radius:7px;border:0.5px solid var(--badge-border);background:var(--tb-bg);color:var(--text-t);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;position:absolute;}
+.col-btn:hover{color:var(--text-p);background:var(--surface);}
+.results-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;background:var(--tb-bg);}
+.results-panel.hidden{display:none;}
+.r-header{padding:6px 12px;border-bottom:0.5px solid var(--sb-border);display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.r-title{font-size:12px;font-weight:500;color:var(--text-s);}
+.ob{font-size:10px;font-weight:500;padding:2px 8px;border-radius:6px;}
+.ob-idle{background:var(--surface);color:var(--text-t);}
+.ob-pass{background:var(--pass-bg);color:var(--pass-color);}
+.ob-fail{background:var(--fail-bg);color:var(--fail-color);}
+.tw{padding:7px 12px;border-bottom:0.5px solid var(--sb-border);flex-shrink:0;}
+.tl{font-size:10px;color:var(--text-t);margin-bottom:4px;display:flex;justify-content:space-between;}
+.ts{display:flex;height:5px;border-radius:3px;overflow:hidden;gap:1px;}
+.tleg-row{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;}
+.tleg{font-size:10px;color:var(--text-t);display:flex;align-items:center;gap:3px;}
+.tleg-d{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
+.r-body{flex:1;overflow-y:auto;padding:8px 12px;}
+.rtabs{display:flex;border-bottom:0.5px solid var(--sb-border);margin-bottom:8px;}
+.rtab{font-size:11px;padding:5px 9px;border:none;background:transparent;color:var(--text-s);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;}
+.rtab.active{color:var(--text-p);border-bottom-color:var(--text-p);}
+.rp{display:none;}
+.rp.active{display:block;}
+.chips{display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap;}
+.chip{font-size:11px;padding:2px 7px;border-radius:6px;background:var(--surface);color:var(--text-s);}
+.chip.ok{background:var(--pass-bg);color:var(--pass-color);}
+.code-block{font-family:var(--font-mono);font-size:11px;color:var(--text-p);background:var(--code-bg);border-radius:7px;padding:8px;line-height:1.6;white-space:pre;overflow-x:auto;border:0.5px solid var(--sb-border);}
+.ar{display:flex;align-items:flex-start;gap:7px;padding:5px 7px;border-radius:7px;font-size:11px;margin-bottom:3px;}
+.ar.pass{background:var(--pass-bg);}
+.ar.fail{background:var(--fail-bg);}
+.ar i{font-size:13px;flex-shrink:0;margin-top:1px;}
+.ar.pass i{color:var(--pass-color);}
+.ar.fail i{color:var(--fail-color);}
+.ar-d{flex:1;color:var(--text-p);line-height:1.5;}
+.ar-sub{font-size:10px;color:var(--text-s);}
+.ex-r{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:7px;background:var(--surface);margin-bottom:3px;font-size:11px;border:0.5px solid var(--badge-border);}
+.ex-var{font-family:var(--font-mono);color:var(--info-color);flex:1;}
+.ex-val{font-family:var(--font-mono);color:var(--text-p);}
+.idle{display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;gap:6px;opacity:0.4;}
+.statusbar{height:22px;background:var(--tb-bg);border-top:0.5px solid var(--sb-border);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;}
+.sdot{width:6px;height:6px;border-radius:50%;}
+.stxt{font-size:11px;color:var(--text-s);}
+.sright{margin-left:auto;font-size:11px;color:var(--text-t);}
+</style>
+
+<div class="root" id="root">
+  <div class="sidebar">
+    <div class="sb-top">
+      <div class="traffic-row">
+        <div class="dot" style="background:#ED6A5A;"></div>
+        <div class="dot" style="background:#F5B33A;"></div>
+        <div class="dot" style="background:#62C554;"></div>
+        <button class="home-btn" aria-label="Dashboard"><i class="ti ti-home" aria-hidden="true"></i></button>
+      </div>
+      <div class="tabs">
+        <button class="tab active">Requests</button>
+        <button class="tab">Workflows</button>
+        <button class="tab">Envs</button>
+      </div>
+    </div>
+    <div class="sb-scroll">
+      <div class="sb-action primary"><i class="ti ti-plus" aria-hidden="true"></i> New request</div>
+      <div class="sb-section">Pinned</div>
+      <div class="sb-item">
+        <i class="ti ti-bolt" aria-hidden="true"></i>
+        <span class="sb-item-name">GET /health</span>
+        <span class="mb mb-get">GET</span>
+        <button class="sb-ctx" aria-label="More options">···</button>
+      </div>
+      <div class="sb-section">Recent</div>
+      <div class="sb-item active">
+        <i class="ti ti-bolt" aria-hidden="true"></i>
+        <span class="sb-item-name">POST /users/register</span>
+        <span class="mb mb-post">POST</span>
+        <button class="sb-ctx" aria-label="More options">···</button>
+      </div>
+      <div class="sb-item">
+        <i class="ti ti-bolt" aria-hidden="true"></i>
+        <span class="sb-item-name">GET /users/me</span>
+        <span class="mb mb-get">GET</span>
+        <button class="sb-ctx" aria-label="More options">···</button>
+      </div>
+      <div class="sb-item">
+        <i class="ti ti-bolt" aria-hidden="true"></i>
+        <span class="sb-item-name">DELETE /sessions/:id</span>
+        <span class="mb mb-del">DEL</span>
+        <button class="sb-ctx" aria-label="More options">···</button>
+      </div>
+    </div>
+    <div class="sb-bottom">
+      <div class="sb-action"><i class="ti ti-settings" aria-hidden="true"></i> Settings</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="titlebar">
+      <span class="titlebar-logo">traCtl</span>
+      <span class="titlebar-tag">alpha</span>
+      <div class="tbar-right">
+        <div class="env-badge"><div class="env-dot"></div> staging <i class="ti ti-chevron-down" style="font-size:10px;" aria-hidden="true"></i></div>
+        <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Toggle theme"><i class="ti ti-moon" id="theme-icon" aria-hidden="true"></i></button>
+      </div>
+    </div>
+
+    <div class="urlbar">
+      <select class="method-sel">
+        <option>POST</option><option>GET</option><option>PUT</option><option>PATCH</option><option>DELETE</option>
+      </select>
+      <input class="url-in" value="${vars.baseUrl}/users/register" />
+      <span class="autosave-hint"><i class="ti ti-check" style="font-size:10px;color:#1D9E75;" aria-hidden="true"></i> Saved</span>
+      <button class="run-btn" id="run-btn" onclick="runRequest()"><i class="ti ti-player-play" style="font-size:12px;" aria-hidden="true"></i> Run</button>
+    </div>
+
+    <div class="editor-body">
+      <div class="config-panel" id="config-panel">
+        <div class="ptabs">
+          <button class="ptab active" onclick="sp(event,'params')">Params</button>
+          <button class="ptab" onclick="sp(event,'headers')">Headers<span class="cnt">2</span></button>
+          <button class="ptab" onclick="sp(event,'body')">Body</button>
+          <button class="ptab" onclick="sp(event,'auth')">Auth</button>
+          <button class="ptab sc" onclick="sp(event,'pre')">Pre-script</button>
+          <button class="ptab sc" onclick="sp(event,'post')">Post-script</button>
+          <button class="ptab" onclick="sp(event,'assertions')">Assertions<span class="cnt">2</span></button>
+          <button class="ptab" onclick="sp(event,'extracts')">Extracts<span class="cnt">1</span></button>
+          <button class="ptab" onclick="sp(event,'settings')">Settings</button>
+        </div>
+        <div class="panel-body">
+
+          <div class="pc active" id="panel-params">
+            <table class="kv-table">
+              <thead><tr><th style="width:26px;"></th><th>Key</th><th>Value</th><th style="width:18px;"></th></tr></thead>
+              <tbody>
+                <tr><td><input type="checkbox" checked></td><td><input class="kv-in" value="source"></td><td><input class="kv-in" value="web"></td><td><button class="del-btn">×</button></td></tr>
+                <tr><td><input type="checkbox"></td><td><input class="kv-in" placeholder="key"></td><td><input class="kv-in" placeholder="value"></td><td><button class="del-btn">×</button></td></tr>
+              </tbody>
+            </table>
+            <div class="add-row"><i class="ti ti-plus" style="font-size:11px;" aria-hidden="true"></i> Add parameter</div>
+          </div>
+
+          <div class="pc" id="panel-headers">
+            <table class="kv-table">
+              <thead><tr><th style="width:26px;"></th><th>Key</th><th>Value</th><th style="width:18px;"></th></tr></thead>
+              <tbody>
+                <tr><td><input type="checkbox" checked></td><td><input class="kv-in" value="Content-Type"></td><td><input class="kv-in" value="application/json"></td><td><button class="del-btn">×</button></td></tr>
+                <tr><td><input type="checkbox" checked></td><td><input class="kv-in" value="X-Request-ID"></td><td><input class="kv-in" value="${runtime.traceId}"></td><td><button class="del-btn">×</button></td></tr>
+              </tbody>
+            </table>
+            <div class="add-row"><i class="ti ti-plus" style="font-size:11px;" aria-hidden="true"></i> Add header</div>
+          </div>
+
+          <div class="pc" id="panel-body">
+            <div class="fl" style="margin-bottom:8px;">
+              <span class="fl-label">Encoding</span>
+              <select class="fl-sel"><option>JSON</option><option>Form data</option><option>Raw</option><option>None</option></select>
+            </div>
+            <div class="code-area" contenteditable="true">{
+  "email": "${vars.testEmail}",
+  "password": "${secrets.staging.testPwd}",
+  "role": "user"
+}</div>
+          </div>
+
+          <div class="pc" id="panel-auth">
+            <div class="fl">
+              <span class="fl-label">Type</span>
+              <select class="fl-sel" id="auth-type" onchange="toggleAuth()">
+                <option>None</option><option>Bearer token</option><option>Basic auth</option><option>API key</option>
+              </select>
+            </div>
+            <div id="auth-fields" style="display:none;">
+              <div class="fl"><span class="fl-label">Token</span><input class="fl-in" placeholder="${secrets.staging.bearerToken}"></div>
+              <div class="info-note">Reference a secret: <span style="font-family:var(--font-mono);color:var(--info-color);">${secrets.env.name}</span></div>
+            </div>
+          </div>
+
+          <div class="pc" id="panel-pre">
+            <div class="script-hint">Runs <strong style="font-weight:500;">before</strong> the request · maps to <span style="font-family:var(--font-mono);color:var(--script-color);">hooks.beforeStep</span> · return a mutation set or <span style="font-family:var(--font-mono);">{ cancel: true }</span></div>
+            <div class="code-area" contenteditable="true"><span style="color:var(--script-color);">const</span> token = ctx.environment.vars.token;
+<span style="color:var(--script-color);">if</span> (!token) {
+  <span style="color:var(--script-color);">return</span> { cancel: <span style="color:#A32D2D;">true</span> };
+}
+<span style="color:var(--script-color);">return</span> {
+  variables: { requestTs: tractl.now() }
+};</div>
+            <div class="ctx-chips">
+              <span class="ctx-chip">ctx.spec</span><span class="ctx-chip">ctx.workflow</span><span class="ctx-chip">ctx.step</span><span class="ctx-chip">ctx.environment</span><span class="ctx-chip">ctx.runtime</span><span class="ctx-chip">tractl.now()</span><span class="ctx-chip">tractl.log()</span>
+            </div>
+          </div>
+
+          <div class="pc" id="panel-post">
+            <div class="script-hint">Runs <strong style="font-weight:500;">after</strong> the response · maps to <span style="font-family:var(--font-mono);color:var(--script-color);">hooks.afterStep</span> · <span style="font-family:var(--font-mono);">ctx.step.response</span> is available</div>
+            <div class="code-area" contenteditable="true"><span style="color:var(--script-color);">const</span> status = ctx.step.response.status;
+tractl.log(<span style="color:#3B6D11;">`Response: ${status}`</span>);
+<span style="color:var(--script-color);">return</span> {
+  variables: { lastStatus: String(status) }
+};</div>
+            <div class="ctx-chips">
+              <span class="ctx-chip">ctx.step.response</span><span class="ctx-chip">ctx.step.timing</span><span class="ctx-chip">ctx.step.extracts</span><span class="ctx-chip">tractl.log()</span>
+            </div>
+          </div>
+
+          <div class="pc" id="panel-assertions">
+            <div class="a-item">
+              <select style="width:58px;"><option>status</option><option>header</option><option>body</option></select>
+              <select style="width:62px;"><option>equals</option><option>contains</option><option>matches</option><option>exists</option><option>inRange</option></select>
+              <input style="width:42px;" value="201">
+              <span class="sev sev-e">error</span>
+              <button class="del-btn">×</button>
+            </div>
+            <div class="a-item">
+              <select style="width:58px;"><option>body</option><option>status</option><option>header</option></select>
+              <select style="width:62px;"><option>exists</option><option>equals</option><option>contains</option></select>
+              <input style="flex:1;min-width:0;" value="$.userId">
+              <span class="sev sev-w">warning</span>
+              <button class="del-btn">×</button>
+            </div>
+            <div class="add-row"><i class="ti ti-plus" style="font-size:11px;" aria-hidden="true"></i> Add assertion</div>
+          </div>
+
+          <div class="pc" id="panel-extracts">
+            <div class="ex-item">
+              <select style="width:62px;"><option>body</option><option>header</option><option>status</option><option>timing</option><option>metadata</option></select>
+              <input style="width:72px;" value="$.userId">
+              <span class="arr">→</span>
+              <input style="width:66px;" value="newUserId">
+              <select style="width:66px;"><option>workflow</option><option>spec</option><option>step</option></select>
+              <button class="del-btn" style="margin-left:0;">×</button>
+            </div>
+            <div class="add-row"><i class="ti ti-plus" style="font-size:11px;" aria-hidden="true"></i> Add extract</div>
+            <div class="info-note">Available downstream as <span style="font-family:var(--font-mono);color:var(--info-color);">${steps.this.extracts.newUserId}</span></div>
+          </div>
+
+          <div class="pc" id="panel-settings">
+            <div class="fl">
+              <span class="fl-label">Timeout</span>
+              <input class="fl-in" style="width:52px;flex:none;" value="30">
+              <select style="font-size:12px;padding:4px 6px;border-radius:7px;border:0.5px solid var(--input-border);background:var(--input-bg);color:var(--text-p);"><option>seconds</option><option>milliseconds</option><option>minutes</option></select>
+            </div>
+            <div class="fl">
+              <span class="fl-label">Retry</span>
+              <select class="fl-sel" id="retry-sel" onchange="toggleRetry()"><option>None</option><option>Fixed</option><option>Linear</option><option>Exponential</option></select>
+            </div>
+            <div id="retry-fields" style="display:none;">
+              <div class="fl"><span class="fl-label">Max attempts</span><input class="fl-in" style="width:52px;flex:none;" value="3"></div>
+              <div class="fl"><span class="fl-label">Delay</span><input class="fl-in" style="width:52px;flex:none;" value="1"><select style="font-size:12px;padding:4px 6px;border-radius:7px;border:0.5px solid var(--input-border);background:var(--input-bg);color:var(--text-p);margin-left:6px;"><option>seconds</option><option>ms</option></select></div>
+            </div>
+            <div class="fl">
+              <span class="fl-label">Failure policy</span>
+              <select class="fl-sel"><option>resilient (default)</option><option>failFast</option></select>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="divider" id="divider">
+        <button class="col-btn" id="col-btn" onclick="toggleResults()" aria-label="Toggle results panel">
+          <i class="ti ti-chevron-right" id="col-icon" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="results-panel" id="results-panel">
+        <div class="r-header">
+          <span class="r-title">Response</span>
+          <span class="ob ob-idle" id="ob">Not run</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--text-t);" id="run-time"></span>
+        </div>
+        <div id="timing-section" style="display:none;">
+          <div class="tw">
+            <div class="tl"><span>Request timeline</span><span id="total-ms"></span></div>
+            <div class="ts">
+              <div style="background:var(--seg1);flex:1;"></div>
+              <div style="background:var(--seg2);flex:2;"></div>
+              <div style="background:var(--seg3);flex:3;"></div>
+              <div style="background:var(--seg4);flex:12;"></div>
+              <div style="background:var(--seg5);flex:2;"></div>
+            </div>
+            <div class="tleg-row">
+              <span class="tleg"><span class="tleg-d" style="background:var(--seg1);"></span>DNS 4ms</span>
+              <span class="tleg"><span class="tleg-d" style="background:var(--seg2);"></span>TCP 12ms</span>
+              <span class="tleg"><span class="tleg-d" style="background:var(--seg3);"></span>TLS 23ms</span>
+              <span class="tleg"><span class="tleg-d" style="background:var(--seg4);"></span>TTFB 187ms</span>
+              <span class="tleg"><span class="tleg-d" style="background:var(--seg5);"></span>Transfer 8ms</span>
+            </div>
+          </div>
+        </div>
+        <div class="r-body">
+          <div class="idle" id="idle"><i class="ti ti-player-play" style="font-size:24px;color:var(--text-t);" aria-hidden="true"></i><span style="font-size:12px;color:var(--text-t);">Hit Run to execute</span></div>
+          <div id="results-state" style="display:none;">
+            <div class="rtabs">
+              <button class="rtab active" onclick="srt(event,'rbody')">Body</button>
+              <button class="rtab" onclick="srt(event,'rheaders')">Headers</button>
+              <button class="rtab" onclick="srt(event,'rassertions')">Assertions</button>
+              <button class="rtab" onclick="srt(event,'rextracts')">Extracts</button>
+            </div>
+            <div class="rp active" id="rbody">
+              <div class="chips"><span class="chip ok">201 Created</span><span class="chip">234ms</span><span class="chip">application/json</span></div>
+              <div class="code-block">{
+  "userId": "usr_01HXYZ9ABC",
+  "email": "test@staging.example.com",
+  "role": "user",
+  "createdAt": "2026-05-29T08:14:22Z"
+}</div>
+            </div>
+            <div class="rp" id="rheaders">
+              <table class="kv-table">
+                <thead><tr><th>Header</th><th>Value</th></tr></thead>
+                <tbody>
+                  <tr><td style="font-family:var(--font-mono);font-size:11px;color:var(--text-s);">content-type</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text-p);">application/json</td></tr>
+                  <tr><td style="font-family:var(--font-mono);font-size:11px;color:var(--text-s);">x-request-id</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text-p);">req_01HXYZ9XYZ</td></tr>
+                  <tr><td style="font-family:var(--font-mono);font-size:11px;color:var(--text-s);">authorization</td><td style="font-family:var(--font-mono);font-size:11px;color:var(--text-t);">[masked:bearer_token]</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="rp" id="rassertions">
+              <div class="ar pass"><i class="ti ti-check" aria-hidden="true"></i><div class="ar-d">status equals 201<div class="ar-sub">received 201 · error severity</div></div></div>
+              <div class="ar pass"><i class="ti ti-check" aria-hidden="true"></i><div class="ar-d">body $.userId exists<div class="ar-sub">path resolved · warning severity</div></div></div>
+            </div>
+            <div class="rp" id="rextracts">
+              <div class="ex-r"><span class="ex-var">steps.this.extracts.newUserId</span><span class="ex-val">usr_01HXYZ9ABC</span></div>
+              <div class="info-note">Written to workflow scope. Available in downstream steps.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <div class="sdot" id="sdot" style="background:#1D9E75;"></div>
+      <span class="stxt" id="stxt">Engine ready</span>
+      <span class="sright">Desktop · v0.1.0-alpha</span>
+    </div>
+  </div>
+</div>
+
+<script>
+var isDark=false, resultsVisible=true;
+
+function toggleTheme(){
+  isDark=!isDark;
+  document.getElementById('root').classList.toggle('dark',isDark);
+  document.getElementById('theme-icon').className=isDark?'ti ti-sun':'ti ti-moon';
+}
+
+function sp(e,id){
+  document.querySelectorAll('.pc').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  e.target.classList.add('active');
+}
+
+function srt(e,id){
+  document.querySelectorAll('.rp').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  e.target.classList.add('active');
+}
+
+function toggleAuth(){
+  document.getElementById('auth-fields').style.display=
+    document.getElementById('auth-type').value==='None'?'none':'block';
+}
+
+function toggleRetry(){
+  document.getElementById('retry-fields').style.display=
+    document.getElementById('retry-sel').value==='None'?'none':'block';
+}
+
+function toggleResults(){
+  resultsVisible=!resultsVisible;
+  document.getElementById('results-panel').classList.toggle('hidden',!resultsVisible);
+  document.getElementById('config-panel').classList.toggle('expanded',!resultsVisible);
+  document.getElementById('col-icon').className=resultsVisible?'ti ti-chevron-right':'ti ti-chevron-left';
+}
+
+function runRequest(){
+  var btn=document.getElementById('run-btn');
+  btn.innerHTML='<i class="ti ti-loader" style="font-size:12px;"></i> Running…';
+  btn.disabled=true;
+  document.getElementById('sdot').style.background='#EF9F27';
+  document.getElementById('stxt').textContent='Executing…';
+  document.getElementById('idle').style.display='none';
+  if(!resultsVisible) toggleResults();
+  setTimeout(function(){
+    btn.innerHTML='<i class="ti ti-player-play" style="font-size:12px;"></i> Run';
+    btn.disabled=false;
+    document.getElementById('ob').textContent='2/2 passed';
+    document.getElementById('ob').className='ob ob-pass';
+    document.getElementById('run-time').textContent='234ms';
+    document.getElementById('timing-section').style.display='block';
+    document.getElementById('total-ms').textContent='234ms total';
+    document.getElementById('results-state').style.display='block';
+    document.getElementById('sdot').style.background='#1D9E75';
+    document.getElementById('stxt').textContent='Last run: 201 Created · 234ms · 2/2 passed';
+  },1400);
+}
+</script>

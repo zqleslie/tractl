@@ -1,0 +1,32 @@
+# build/docker/Dockerfile.web
+#
+# Web server image — serves the traCtl web app on port 7428.
+#
+# Usage:
+#   docker run -p 7428:7428 tractl/tractl:web
+#   open http://localhost:7428
+#
+# goreleaser copies the pre-built tractl-server binary into this image.
+# The binary already embeds the React + WASM frontend (//go:embed dist/web).
+# No files need to be present at runtime — the binary is fully self-contained.
+
+FROM gcr.io/distroless/static:nonroot
+
+ARG VERSION=dev
+ARG COMMIT=unknown
+
+LABEL org.opencontainers.image.title="tractl-web" \
+      org.opencontainers.image.description="traCtl web app — open http://localhost:7428" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${COMMIT}" \
+      org.opencontainers.image.source="https://github.com/tractl/tractl"
+
+# goreleaser places the binary here before docker build runs.
+# The name matches the binary field in the goreleaser builds config.
+COPY tractl-server /usr/local/bin/tractl-server
+
+USER nonroot:nonroot
+
+EXPOSE 7428
+
+ENTRYPOINT ["/usr/local/bin/tractl-server"]

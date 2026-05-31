@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "capabilities": ["protocol.http"],
+  "metadata": {
+    "name": "minimal",
+    "description": "Single step, no assertions. Passes if the HTTP request succeeds."
+  },
+  "workflows": [
+    {
+      "id": "minimal-flow",
+      "steps": [
+        {
+          "id": "ping",
+          "kind": "request",
+          "request": {
+            "protocol": "http",
+            "target": "https://jsonplaceholder.typicode.com/todos/1",
+            "operation": "GET"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: diamond-dependency
+  description: |
+    Diamond DAG pattern:
+      Wave 1: step-1                         — root
+      Wave 2 (parallel): step-2, step-3     — both depend on step-1
+      Wave 3: step-4                         — depends on step-3 explicitly
+                                                and step-2 implicitly via extract
+
+    step-1 → step-2 ↘
+                      step-4
+    step-1 → step-3 ↗
+
+variables:
+  baseUrl: "https://httpbin.org"
+
+workflows:
+  - id: diamond-flow
+    steps:
+      - id: step-1
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/status/200"
+          operation: GET
+        assertions:
+          - id: step-1-status
+            kind: status
+            op: equals
+            expected: 200
+
+      - id: step-2
+        kind: request
+        dependsOn:
+          - step-1
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/get?source=step-2"
+          operation: GET
+        assertions:
+          - id: step-2-status
+            kind: status
+            op: equals
+            expected: 200
+          - id: step-2-url-present
+            kind: body
+            target: url
+            op: contains
+            expected: "source=step-2"
+        extracts:
+          - id: branch-url
+            source: body
+            path: url
+            as: branch-url
+            scope: workflow
+
+      - id: step-3
+        kind: request
+        dependsOn:
+          - step-1
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/headers"
+          operation: GET
+        assertions:
+          - id: step-3-status
+            kind: status
+            op: equals
+            expected: 200
+          - id: step-3-headers-present
+            kind: body
+            target: headers
+            op: exists
+
+      - id: step-4
+        kind: request
+        dependsOn:
+          - step-3
+        request:
+          protocol: http
+          target: "${steps.step-2.extracts.branch-url}"
+          operation: GET
+        assertions:
+          - id: step-4-status
+            kind: status
+            op: equals
+            expected: 200
+          - id: step-4-used-step-2-url
+            kind: body
+            target: url
+            op: contains
+            expected: "source=step-2"

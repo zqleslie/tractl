@@ -1,0 +1,501 @@
+
+<h2 class="sr-only">traCtl Overlay Editor — patch list, target selector, action picker, merge strategy, and live preview</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+--sb:#fff;--sb-b:#e5e5e5;--bg:#f0f0ee;--tb:#fff;--tb-b:#e5e5e5;
+--tp:#1a1a1a;--ts:#6b6b6b;--tt:#a0a0a0;
+--inp:#fff;--inp-b:#d0d0d0;--surf:#f5f5f3;--surf2:#ebebeb;
+--run:#185FA5;--runc:#E6F1FB;--runh:#0C447C;
+--code:#f0f0ee;--bb:#e0e0e0;
+--pass-bg:#EAF3DE;--pass-c:#3B6D11;
+--fail-bg:#FCEBEB;--fail-c:#A32D2D;
+--warn-bg:#FAEEDA;--warn-c:#854F0B;
+--info-bg:#E6F1FB;--info-c:#185FA5;
+--add-bg:#EAF3DE;--add-c:#3B6D11;
+--rem-bg:#FCEBEB;--rem-c:#A32D2D;
+--rep-bg:#E6F1FB;--rep-c:#185FA5;
+--mrg-bg:#FAEEDA;--mrg-c:#854F0B;
+}
+.dark{
+--sb:#1a1a1a;--sb-b:#2e2e2e;--bg:#141414;--tb:#1a1a1a;--tb-b:#2e2e2e;
+--tp:#e8e8e8;--ts:#888;--tt:#555;
+--inp:#222;--inp-b:#333;--surf:#1e1e1e;--surf2:#252525;
+--code:#1e1e1e;--bb:#333;
+--pass-bg:#173404;--pass-c:#C0DD97;
+--fail-bg:#501313;--fail-c:#F7C1C1;
+--warn-bg:#412402;--warn-c:#FAC775;
+--info-bg:#042C53;--info-c:#B5D4F4;
+--add-bg:#173404;--add-c:#C0DD97;
+--rem-bg:#501313;--rem-c:#F7C1C1;
+--rep-bg:#042C53;--rep-c:#B5D4F4;
+--mrg-bg:#412402;--mrg-c:#FAC775;
+}
+.root{display:flex;height:680px;font-family:var(--font-sans);background:var(--bg);border-radius:var(--border-radius-lg);overflow:hidden;border:0.5px solid var(--sb-b);position:relative;}
+
+.sidebar{width:210px;background:var(--sb);border-right:0.5px solid var(--sb-b);display:flex;flex-direction:column;flex-shrink:0;}
+.sb-top{padding:10px 10px 0;flex-shrink:0;}
+.tr{display:flex;align-items:center;gap:6px;margin-bottom:11px;}
+.dot{width:11px;height:11px;border-radius:50%;}
+.hbtn{margin-left:7px;width:22px;height:22px;border-radius:6px;border:none;background:transparent;color:var(--tt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.hbtn:hover{background:var(--surf2);color:var(--tp);}
+.tabs{display:flex;background:var(--surf);border-radius:8px;padding:2px;gap:1px;margin-bottom:9px;}
+.tab{flex:1;font-size:11px;font-weight:500;padding:5px 2px;border-radius:6px;border:none;background:transparent;color:var(--ts);cursor:pointer;text-align:center;}
+.tab.active{background:var(--sb);color:var(--tp);border:0.5px solid var(--sb-b);}
+.sba{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:8px;font-size:12px;color:var(--ts);cursor:pointer;margin-bottom:1px;white-space:nowrap;}
+.sba:hover{background:var(--surf);color:var(--tp);}
+.sba.pri{color:var(--tp);font-weight:500;}
+.sba i{font-size:14px;width:16px;text-align:center;}
+.sb-scroll{flex:1;overflow-y:auto;padding:0 3px 8px;}
+.sbs{font-size:10px;font-weight:500;color:var(--tt);text-transform:uppercase;letter-spacing:.07em;padding:10px 7px 4px;}
+.sbi{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:8px;font-size:12px;color:var(--tp);cursor:pointer;position:relative;}
+.sbi:hover{background:var(--surf);}
+.sbi:hover .ctx{opacity:1;}
+.sbi.active{background:var(--surf);}
+.sbi i{font-size:13px;color:var(--ts);width:15px;flex-shrink:0;}
+.sbi-n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ctx{opacity:0;font-size:12px;color:var(--tt);cursor:pointer;background:none;border:none;padding:2px 3px;position:absolute;right:4px;border-radius:4px;}
+.sb-bot{padding:7px;border-top:0.5px solid var(--sb-b);flex-shrink:0;}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.titlebar{height:40px;background:var(--tb);border-bottom:0.5px solid var(--tb-b);display:flex;align-items:center;padding:0 13px;gap:8px;flex-shrink:0;}
+.tlogo{font-size:13px;font-weight:500;color:var(--tp);}
+.ttag{font-size:10px;padding:2px 6px;border-radius:6px;background:var(--info-bg);color:var(--info-c);}
+.tr2{margin-left:auto;display:flex;align-items:center;gap:7px;}
+.envb{font-size:11px;padding:3px 8px;border-radius:7px;border:0.5px solid var(--inp-b);color:var(--ts);cursor:pointer;display:flex;align-items:center;gap:5px;background:transparent;}
+.edot{width:6px;height:6px;border-radius:50%;background:#1D9E75;flex-shrink:0;}
+.tbtn{width:26px;height:26px;border-radius:6px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.tbtn:hover{background:var(--surf);}
+
+.page-bar{display:flex;align-items:center;gap:10px;padding:7px 14px;background:var(--tb);border-bottom:0.5px solid var(--tb-b);flex-shrink:0;}
+.page-name{font-size:13px;font-weight:500;color:var(--tp);}
+.page-sub{font-size:11px;color:var(--ts);}
+.as-hint{font-size:10px;color:var(--tt);display:flex;align-items:center;gap:3px;white-space:nowrap;}
+.apply-btn{font-size:12px;font-weight:500;padding:5px 14px;border-radius:7px;border:none;background:var(--run);color:var(--runc);cursor:pointer;display:flex;align-items:center;gap:5px;}
+.apply-btn:hover{background:var(--runh);}
+
+.body{flex:1;display:flex;overflow:hidden;min-width:0;}
+
+.patch-list-panel{width:220px;border-right:0.5px solid var(--tb-b);display:flex;flex-direction:column;background:var(--tb);flex-shrink:0;}
+.pl-header{padding:8px 10px;border-bottom:0.5px solid var(--bb);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.pl-title{font-size:11px;font-weight:500;color:var(--ts);flex:1;}
+.add-patch-btn{font-size:11px;padding:3px 8px;border-radius:6px;border:0.5px solid var(--inp-b);background:transparent;color:var(--ts);cursor:pointer;display:flex;align-items:center;gap:4px;}
+.add-patch-btn:hover{background:var(--surf);}
+.pl-scroll{flex:1;overflow-y:auto;padding:4px;}
+
+.patch-item{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:8px;cursor:pointer;margin-bottom:2px;}
+.patch-item:hover{background:var(--surf);}
+.patch-item.selected{background:var(--surf);border:0.5px solid var(--inp-b);}
+.pi-action{font-size:9px;font-weight:500;padding:2px 5px;border-radius:3px;flex-shrink:0;width:44px;text-align:center;}
+.pa-add{background:var(--add-bg);color:var(--add-c);}
+.pa-replace{background:var(--rep-bg);color:var(--rep-c);}
+.pa-remove{background:var(--rem-bg);color:var(--rem-c);}
+.pa-merge{background:var(--mrg-bg);color:var(--mrg-c);}
+.pi-info{flex:1;min-width:0;}
+.pi-name{font-size:11px;font-weight:500;color:var(--tp);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pi-target{font-size:10px;color:var(--tt);font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pi-del{opacity:0;font-size:13px;color:var(--tt);cursor:pointer;background:none;border:none;flex-shrink:0;}
+.patch-item:hover .pi-del{opacity:1;}
+
+.editor-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;border-right:0.5px solid var(--tb-b);}
+.ep-header{padding:8px 12px;border-bottom:0.5px solid var(--bb);flex-shrink:0;background:var(--tb);}
+.ep-title{font-size:12px;font-weight:500;color:var(--tp);margin-bottom:1px;}
+.ep-sub{font-size:11px;color:var(--tt);}
+.ep-body{flex:1;overflow-y:auto;padding:12px;}
+
+.field-group{margin-bottom:14px;}
+.fg-label{font-size:10px;font-weight:500;color:var(--tt);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.fg-row{display:flex;gap:7px;align-items:center;margin-bottom:6px;}
+.fg-l{font-size:11px;color:var(--ts);width:76px;flex-shrink:0;}
+.fg-i{flex:1;font-size:11px;padding:4px 8px;border-radius:6px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);font-family:var(--font-mono);}
+.fg-s{flex:1;font-size:11px;padding:4px 8px;border-radius:6px;border:0.5px solid var(--inp-b);background:var(--inp);color:var(--tp);}
+.fg-i:focus,.fg-s:focus{outline:none;border-color:#378ADD;}
+
+.action-picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:14px;}
+.ap-opt{padding:8px 6px;border-radius:8px;border:0.5px solid var(--bb);background:var(--surf);cursor:pointer;text-align:center;transition:border-color .1s;}
+.ap-opt:hover{border-color:var(--inp-b);}
+.ap-opt.sel-add{background:var(--add-bg);border-color:var(--add-c);}
+.ap-opt.sel-replace{background:var(--rep-bg);border-color:var(--rep-c);}
+.ap-opt.sel-remove{background:var(--rem-bg);border-color:var(--rem-c);}
+.ap-opt.sel-merge{background:var(--mrg-bg);border-color:var(--mrg-c);}
+.ap-icon{font-size:16px;margin-bottom:3px;}
+.ap-opt.sel-add .ap-icon{color:var(--add-c);}
+.ap-opt.sel-replace .ap-icon{color:var(--rep-c);}
+.ap-opt.sel-remove .ap-icon{color:var(--rem-c);}
+.ap-opt.sel-merge .ap-icon{color:var(--mrg-c);}
+.ap-label{font-size:10px;font-weight:500;color:var(--ts);}
+.ap-opt.sel-add .ap-label{color:var(--add-c);}
+.ap-opt.sel-replace .ap-label{color:var(--rep-c);}
+.ap-opt.sel-remove .ap-label{color:var(--rem-c);}
+.ap-opt.sel-merge .ap-label{color:var(--mrg-c);}
+.ap-desc{font-size:9px;color:var(--tt);margin-top:2px;line-height:1.3;}
+
+.target-mode-row{display:flex;gap:6px;margin-bottom:8px;}
+.tm-btn{flex:1;padding:5px 8px;border-radius:7px;border:0.5px solid var(--bb);background:transparent;color:var(--ts);font-size:11px;cursor:pointer;text-align:center;}
+.tm-btn.active{background:var(--info-bg);color:var(--info-c);border-color:var(--info-c);}
+.tm-btn:hover:not(.active){background:var(--surf);}
+
+.data-section{display:none;}
+.data-section.visible{display:block;}
+
+.note{padding:6px 8px;background:var(--surf);border-radius:7px;font-size:11px;color:var(--ts);border:0.5px solid var(--bb);line-height:1.5;margin-top:6px;}
+.note code{font-family:var(--font-mono);font-size:10px;color:var(--info-c);}
+
+.preview-panel{width:260px;display:flex;flex-direction:column;background:var(--tb);flex-shrink:0;overflow:hidden;}
+.pv-header{padding:8px 12px;border-bottom:0.5px solid var(--bb);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.pv-title{font-size:11px;font-weight:500;color:var(--ts);flex:1;}
+.pv-toggle{display:flex;border:0.5px solid var(--inp-b);border-radius:6px;overflow:hidden;}
+.pvt{font-size:10px;padding:2px 7px;border:none;background:transparent;color:var(--ts);cursor:pointer;}
+.pvt.active{background:var(--surf);color:var(--tp);}
+.pv-body{flex:1;overflow-y:auto;padding:10px 12px;}
+.diff-line{font-family:var(--font-mono);font-size:10px;line-height:1.7;white-space:pre;}
+.diff-add{color:var(--add-c);background:var(--add-bg);display:block;padding:0 4px;border-radius:2px;margin-bottom:1px;}
+.diff-rem{color:var(--rem-c);background:var(--rem-bg);display:block;padding:0 4px;border-radius:2px;margin-bottom:1px;text-decoration:line-through;}
+.diff-ctx{color:var(--tt);display:block;padding:0 4px;margin-bottom:1px;}
+.diff-hdr{color:var(--info-c);display:block;padding:0 4px;margin-bottom:3px;font-weight:500;}
+
+.statusbar{height:22px;background:var(--tb);border-top:0.5px solid var(--sb-b);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;}
+.sdot{width:6px;height:6px;border-radius:50%;}
+.stxt{font-size:11px;color:var(--ts);}
+.sr{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.git-b{font-size:10px;color:var(--tt);display:flex;align-items:center;gap:3px;}
+.sver{font-size:11px;color:var(--tt);}
+</style>
+
+<div class="root" id="root">
+  <div class="sidebar">
+    <div class="sb-top">
+      <div class="tr">
+        <div class="dot" style="background:#ED6A5A;"></div>
+        <div class="dot" style="background:#F5B33A;"></div>
+        <div class="dot" style="background:#62C554;"></div>
+        <button class="hbtn" aria-label="Dashboard"><i class="ti ti-home" aria-hidden="true"></i></button>
+      </div>
+      <div class="tabs">
+        <button class="tab">Requests</button>
+        <button class="tab">Workflows</button>
+        <button class="tab">Envs</button>
+      </div>
+    </div>
+    <div class="sb-scroll">
+      <div class="sba pri"><i class="ti ti-plus" aria-hidden="true"></i> New overlay</div>
+      <div class="sbs">Overlays</div>
+      <div class="sbi active"><i class="ti ti-stack-2" aria-hidden="true"></i><span class="sbi-n">prod-overlay</span><button class="ctx" aria-label="More">···</button></div>
+      <div class="sbi"><i class="ti ti-stack-2" aria-hidden="true"></i><span class="sbi-n">staging-auth</span><button class="ctx" aria-label="More">···</button></div>
+      <div class="sbi"><i class="ti ti-stack-2" aria-hidden="true"></i><span class="sbi-n">perf-test-overlay</span><button class="ctx" aria-label="More">···</button></div>
+    </div>
+    <div class="sb-bot">
+      <div class="sba"><i class="ti ti-settings" aria-hidden="true"></i> Settings</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="titlebar">
+      <span class="tlogo">traCtl</span>
+      <span class="ttag">alpha</span>
+      <div class="tr2">
+        <div class="envb"><div class="edot"></div> staging <i class="ti ti-chevron-down" style="font-size:10px;" aria-hidden="true"></i></div>
+        <button class="tbtn" onclick="toggleTheme()" aria-label="Toggle theme"><i class="ti ti-moon" id="th-icon" aria-hidden="true"></i></button>
+      </div>
+    </div>
+
+    <div class="page-bar">
+      <div>
+        <div class="page-name">prod-overlay</div>
+        <div class="page-sub">3 patches · applied to auth-flow, payments-api</div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <span class="as-hint"><i class="ti ti-check" style="font-size:10px;color:#1D9E75;" aria-hidden="true"></i> Saved</span>
+        <button class="apply-btn"><i class="ti ti-player-play" style="font-size:12px;" aria-hidden="true"></i> Preview apply</button>
+      </div>
+    </div>
+
+    <div class="body">
+
+      <div class="patch-list-panel">
+        <div class="pl-header">
+          <span class="pl-title">Patches</span>
+          <button class="add-patch-btn" onclick="addPatch()"><i class="ti ti-plus" style="font-size:12px;" aria-hidden="true"></i> Add</button>
+        </div>
+        <div class="pl-scroll">
+          <div class="patch-item selected" onclick="selectPatch('base-url')">
+            <span class="pi-action pa-replace">replace</span>
+            <div class="pi-info">
+              <div class="pi-name">Override base URL</div>
+              <div class="pi-target">$.info.servers[0].url</div>
+            </div>
+            <button class="pi-del" aria-label="Delete">×</button>
+          </div>
+          <div class="patch-item" onclick="selectPatch('add-header')">
+            <span class="pi-action pa-add">add</span>
+            <div class="pi-info">
+              <div class="pi-name">Add trace header</div>
+              <div class="pi-target">steps[*].headers</div>
+            </div>
+            <button class="pi-del" aria-label="Delete">×</button>
+          </div>
+          <div class="patch-item" onclick="selectPatch('remove-step')">
+            <span class="pi-action pa-remove">remove</span>
+            <div class="pi-info">
+              <div class="pi-name">Remove sandbox step</div>
+              <div class="pi-target">steps[id=sandbox]</div>
+            </div>
+            <button class="pi-del" aria-label="Delete">×</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;padding:6px 8px;font-size:11px;color:var(--tt);cursor:pointer;border-radius:8px;margin-top:4px;" onclick="addPatch()">
+            <i class="ti ti-plus" style="font-size:12px;" aria-hidden="true"></i> Add patch
+          </div>
+        </div>
+      </div>
+
+      <div class="editor-panel">
+        <div class="ep-header">
+          <div class="ep-title" id="ep-title">Override base URL</div>
+          <div class="ep-sub" id="ep-sub">replace · path target</div>
+        </div>
+        <div class="ep-body">
+
+          <div class="field-group">
+            <div class="fg-label">Patch name</div>
+            <input class="fg-i" style="width:100%;" value="Override base URL" id="patch-name">
+          </div>
+
+          <div class="field-group">
+            <div class="fg-label">Action</div>
+            <div class="action-picker">
+              <div class="ap-opt sel-replace" onclick="setAction('replace',this)">
+                <div class="ap-icon"><i class="ti ti-refresh" aria-hidden="true"></i></div>
+                <div class="ap-label">replace</div>
+                <div class="ap-desc">Overwrite existing value</div>
+              </div>
+              <div class="ap-opt" onclick="setAction('add',this)">
+                <div class="ap-icon"><i class="ti ti-plus" aria-hidden="true"></i></div>
+                <div class="ap-label">add</div>
+                <div class="ap-desc">Insert new value or key</div>
+              </div>
+              <div class="ap-opt" onclick="setAction('remove',this)">
+                <div class="ap-icon"><i class="ti ti-trash" aria-hidden="true"></i></div>
+                <div class="ap-label">remove</div>
+                <div class="ap-desc">Delete key or element</div>
+              </div>
+              <div class="ap-opt" onclick="setAction('merge',this)">
+                <div class="ap-icon"><i class="ti ti-git-merge" aria-hidden="true"></i></div>
+                <div class="ap-label">merge</div>
+                <div class="ap-desc">Deep-merge objects</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="fg-label">Target</div>
+            <div class="target-mode-row">
+              <button class="tm-btn active" id="tm-path" onclick="setTargetMode('path')">Path</button>
+              <button class="tm-btn" id="tm-match" onclick="setTargetMode('match')">Match</button>
+            </div>
+            <div id="target-path-fields">
+              <div class="fg-row">
+                <span class="fg-l">JSONPath</span>
+                <input class="fg-i" value="$.info.servers[0].url" id="target-path-input">
+              </div>
+              <div class="note">Targets a specific node by path. Supports JSONPath expressions. Example: <code>steps[id=login].request.target</code></div>
+            </div>
+            <div id="target-match-fields" style="display:none;">
+              <div class="fg-row">
+                <span class="fg-l">Field</span>
+                <select class="fg-s">
+                  <option>id</option><option>kind</option><option>tag</option><option>method</option>
+                </select>
+              </div>
+              <div class="fg-row">
+                <span class="fg-l">Operator</span>
+                <select class="fg-s">
+                  <option>equals</option><option>contains</option><option>startsWith</option><option>regex</option>
+                </select>
+              </div>
+              <div class="fg-row">
+                <span class="fg-l">Value</span>
+                <input class="fg-i" placeholder="e.g. login">
+              </div>
+              <div class="note">Targets all nodes where the field matches. Useful for applying patches across multiple steps. Example: all steps with <code>kind=request</code></div>
+            </div>
+          </div>
+
+          <div class="data-section visible" id="data-section">
+            <div class="field-group">
+              <div class="fg-label">Patch data</div>
+              <div class="fg-row">
+                <span class="fg-l">Value</span>
+                <input class="fg-i" value="https://api.production.example.com" id="patch-value">
+              </div>
+            </div>
+
+            <div class="field-group">
+              <div class="fg-label">Merge strategy</div>
+              <div class="fg-row">
+                <span class="fg-l">Strategy</span>
+                <select class="fg-s" id="merge-strat">
+                  <option>replace (default)</option>
+                  <option>deep-merge</option>
+                  <option>array-append</option>
+                  <option>array-prepend</option>
+                </select>
+              </div>
+              <div class="note" id="strat-note">The existing value is fully replaced with the patch value.</div>
+            </div>
+
+            <div class="field-group">
+              <div class="fg-label">Scope</div>
+              <div class="fg-row">
+                <span class="fg-l">Apply to</span>
+                <select class="fg-s">
+                  <option>all workflows</option>
+                  <option>selected workflows…</option>
+                  <option>named spec only</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="preview-panel">
+        <div class="pv-header">
+          <span class="pv-title">Preview</span>
+          <div class="pv-toggle">
+            <button class="pvt active" id="pvt-diff" onclick="setPvMode('diff')">Diff</button>
+            <button class="pvt" id="pvt-result" onclick="setPvMode('result')">Result</button>
+          </div>
+        </div>
+        <div class="pv-body" id="pv-body">
+          <div id="pv-diff">
+            <span class="diff-hdr">@@ $.info.servers[0].url @@</span>
+            <span class="diff-rem">  url: https://api.staging.example.com</span>
+            <span class="diff-add">  url: https://api.production.example.com</span>
+            <span class="diff-ctx"> </span>
+            <span class="diff-hdr">@@ steps[*].headers @@</span>
+            <span class="diff-ctx">  Content-Type: application/json</span>
+            <span class="diff-add">  X-Trace-ID: ${runtime.traceId}</span>
+            <span class="diff-ctx"> </span>
+            <span class="diff-hdr">@@ steps[id=sandbox] @@</span>
+            <span class="diff-rem">  - id: sandbox</span>
+            <span class="diff-rem">    kind: request</span>
+            <span class="diff-rem">    request: …</span>
+          </div>
+          <div id="pv-result" style="display:none;">
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--tp);line-height:1.7;">
+              <span style="color:var(--tt);">schemaVersion: 1</span><br>
+              <span style="color:var(--tt);">info:</span><br>
+              <span style="color:var(--tt);">  servers:</span><br>
+              <span style="color:var(--add-c);">  - url: https://api.production.example.com</span><br>
+              <span style="color:var(--tt);">workflows:</span><br>
+              <span style="color:var(--tt);">  - id: auth-flow</span><br>
+              <span style="color:var(--tt);">    steps:</span><br>
+              <span style="color:var(--tt);">      - id: login</span><br>
+              <span style="color:var(--tt);">        headers:</span><br>
+              <span style="color:var(--add-c);">          X-Trace-ID: ${runtime.traceId}</span><br>
+              <span style="color:var(--tt);">      - id: fetch-profile</span><br>
+              <span style="color:var(--tt);">        headers:</span><br>
+              <span style="color:var(--add-c);">          X-Trace-ID: ${runtime.traceId}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="statusbar">
+      <div class="sdot" style="background:#1D9E75;"></div>
+      <span class="stxt">3 patches · 0 conflicts</span>
+      <div class="sr">
+        <span class="git-b"><i class="ti ti-git-branch" style="font-size:11px;" aria-hidden="true"></i> git: 1 uncommitted</span>
+        <span class="sver">Desktop · v0.1.0-alpha</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var dark=false;
+
+function toggleTheme(){
+  dark=!dark;
+  document.getElementById('root').classList.toggle('dark',dark);
+  document.getElementById('th-icon').className=dark?'ti ti-sun':'ti ti-moon';
+}
+
+var patches={
+  'base-url':{name:'Override base URL',action:'replace',targetMode:'path',sub:'replace · path target',
+    path:'$.info.servers[0].url',value:'https://api.production.example.com',showData:true},
+  'add-header':{name:'Add trace header',action:'add',targetMode:'match',sub:'add · match target',
+    path:'steps[*].headers',value:'${runtime.traceId}',showData:true},
+  'remove-step':{name:'Remove sandbox step',action:'remove',targetMode:'match',sub:'remove · match target',
+    path:'steps[id=sandbox]',value:'',showData:false},
+};
+
+function selectPatch(id){
+  document.querySelectorAll('.patch-item').forEach(p=>p.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  var p=patches[id];
+  if(!p) return;
+  document.getElementById('ep-title').textContent=p.name;
+  document.getElementById('ep-sub').textContent=p.sub;
+  document.getElementById('patch-name').value=p.name;
+  document.getElementById('target-path-input').value=p.path;
+  if(p.value) document.getElementById('patch-value').value=p.value;
+  document.getElementById('data-section').classList.toggle('visible',p.showData);
+  setTargetMode(p.targetMode);
+  document.querySelectorAll('.ap-opt').forEach(function(o){
+    o.className='ap-opt';
+    if(o.querySelector('.ap-label')&&o.querySelector('.ap-label').textContent===p.action){
+      o.classList.add('sel-'+p.action);
+    }
+  });
+}
+
+function setAction(action,el){
+  document.querySelectorAll('.ap-opt').forEach(function(o){
+    o.className='ap-opt';
+  });
+  el.classList.add('sel-'+action);
+  var showData=action!=='remove';
+  document.getElementById('data-section').classList.toggle('visible',showData);
+  var notes={
+    replace:'The existing value is fully replaced with the patch value.',
+    add:'A new key or array element is inserted at the target location.',
+    remove:'The target node is deleted from the document.',
+    merge:'Objects are deep-merged recursively. Arrays follow the merge strategy below.'
+  };
+  var n=document.getElementById('strat-note');
+  if(n) n.textContent=notes[action]||'';
+}
+
+function setTargetMode(mode){
+  document.getElementById('tm-path').classList.toggle('active',mode==='path');
+  document.getElementById('tm-match').classList.toggle('active',mode==='match');
+  document.getElementById('target-path-fields').style.display=mode==='path'?'block':'none';
+  document.getElementById('target-match-fields').style.display=mode==='match'?'block':'none';
+}
+
+function setPvMode(mode){
+  document.getElementById('pvt-diff').classList.toggle('active',mode==='diff');
+  document.getElementById('pvt-result').classList.toggle('active',mode==='result');
+  document.getElementById('pv-diff').style.display=mode==='diff'?'block':'none';
+  document.getElementById('pv-result').style.display=mode==='result'?'block':'none';
+}
+
+function addPatch(){
+  alert('Add patch — in production this inserts a new empty patch and selects it for editing.');
+}
+
+document.getElementById('merge-strat').addEventListener('change',function(){
+  var notes={
+    'replace (default)':'The existing value is fully replaced with the patch value.',
+    'deep-merge':'Objects are merged recursively. Nested keys are preserved unless overridden.',
+    'array-append':'Patch values are appended to the end of the existing array.',
+    'array-prepend':'Patch values are prepended to the start of the existing array.'
+  };
+  var n=document.getElementById('strat-note');
+  if(n) n.textContent=notes[this.value]||'';
+});
+</script>

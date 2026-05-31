@@ -1,0 +1,97 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-all-locations
+  description: "All seven hook locations active: beforeAll, beforeEach, beforeStep, afterStep, transform, afterEach, afterAll."
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: hooks-all-locations-flow
+    hooks:
+      beforeAll:
+        language: js
+        source: |
+          tractl.log("beforeAll");
+          return { variables: { "wf-started": "true" } };
+
+      beforeEach:
+        language: js
+        source: |
+          tractl.log("beforeEach");
+          return {};
+
+      afterEach:
+        language: js
+        source: |
+          tractl.log("afterEach");
+          return {};
+
+      afterAll:
+        language: js
+        source: |
+          tractl.log("afterAll");
+          return {};
+
+    steps:
+      - id: fetch-post
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/posts/1"
+          operation: GET
+        assertions:
+          - id: post-status
+            kind: status
+            op: equals
+            expected: 200
+        extracts:
+          - id: post-user-id
+            source: body
+            path: userId
+            as: post-user-id
+            scope: workflow
+        hooks:
+          beforeStep:
+            language: js
+            source: |
+              tractl.log("beforeStep(fetch-post)");
+              return {};
+
+          afterStep:
+            language: js
+            source: |
+              tractl.log("afterStep(fetch-post)");
+              return {};
+
+          transform:
+            language: js
+            source: |
+              tractl.log("transform(fetch-post)");
+              return {
+                variables: { "post-fetched": "true" },
+                logs:      ["transform: post processed"]
+              };
+
+      - id: fetch-author
+        kind: request
+        dependsOn:
+          - fetch-post
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/users/1"
+          operation: GET
+        assertions:
+          - id: author-status
+            kind: status
+            op: equals
+            expected: 200
+        hooks:
+          afterStep:
+            language: js
+            source: |
+              tractl.log("afterStep(fetch-author)");
+              return { variables: { "author-fetched": "true" } };

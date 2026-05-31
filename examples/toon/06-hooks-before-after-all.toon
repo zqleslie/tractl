@@ -1,0 +1,38 @@
+schemaVersion: 1
+capabilities:
+  - protocol.http
+
+metadata:
+  name: hooks-before-after-all
+  description: "beforeAll runs once before any step; afterAll runs once after all steps complete."
+
+variables:
+  baseUrl: "https://jsonplaceholder.typicode.com"
+
+workflows:
+  - id: hooks-before-after-all-flow
+    hooks:
+      beforeAll:
+        language: js
+        source: |
+          tractl.log("beforeAll: workflow starting");
+          return { variables: { "run-label": "phase9-demo" } };
+
+      afterAll:
+        language: js
+        source: |
+          tractl.log("afterAll: finished, run-label=" + ctx.workflow["run-label"]);
+          return {};
+
+    steps:
+      - id: fetch-post
+        kind: request
+        request:
+          protocol: http
+          target: "${vars.baseUrl}/posts/1"
+          operation: GET
+        assertions:
+          - id: status-ok
+            kind: status
+            op: equals
+            expected: 200
