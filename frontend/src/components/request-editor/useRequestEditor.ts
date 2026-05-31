@@ -27,10 +27,11 @@ import type {
   ResultTab,
 } from '@/components/request-editor/types'
 import type { HttpMethod } from '@/components/primitives'
-import { getRequestExecutionRunner } from '@/platform/requestExecution/getRequestExecutionRunner'
-import { LocalApiUnavailableError } from '@/platform/localApi/client'
+import { LocalApiUnavailableError, ensureApiAvailable, saveRequestFile } from '@/platform/localApi/client'
+import { engine } from '@/platform/engine'
+import { detectSurface } from '@/platform'
 import type { RunResult as PlatformRunResult } from '@/platform/types'
-import { WasmRuntimeUnavailableError } from '@/platform/web/requestExecutionRunner'
+import { draftToRequestDef } from '@/lib/requestEditor/draftToRequestDef'
 import { useEnvironmentStore } from '@/stores/environmentStore'
 import { requestRunResultToExecutionResult } from '@/lib/execution/mapRunResults'
 import { syncContentTypeHeader } from '@/lib/requestEditor/contentTypeHeader'
@@ -42,9 +43,6 @@ import { recordRunHistoryEntry } from '@/lib/runHistory/recordRunHistoryEntry'
 import { useExecutionStore } from '@/stores/executionStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
-import type { RequestDef } from '@/types/requestDef'
-
-const requestRunner = getRequestExecutionRunner()
 
 function requestTabTitleFromUrl(url: string): string {
   const trimmed = url.trim()
@@ -173,10 +171,9 @@ export function useRequestEditor() {
   }, [requestId])
 
   useEffect(() => {
-    if (!requestRunner.supportsPersistence) return
+    if (detectSurface() !== 'desktop') return
 
-    requestRunner
-      .checkAvailable()
+    ensureApiAvailable()
       .then(() => setApiAvailable(true))
       .catch(() => setApiAvailable(false))
   }, [])
@@ -185,7 +182,7 @@ export function useRequestEditor() {
     const generation = ++saveGeneration.current
     const request = draftToRequestState(requestId, requestName, method, url, draft)
 
-    if (!requestRunner.supportsPersistence) {
+    if (detectSurface() !== 'desktop') {
       return null
     }
 
@@ -193,11 +190,11 @@ export function useRequestEditor() {
     setSaveError(null)
 
     try {
-      await requestRunner.checkAvailable()
-      const saved = await requestRunner.saveRequest({
+      await ensureApiAvailable()
+      const saved = await saveRequestFile({
         id: fileId,
         name: requestName,
-        request: request as unknown as RequestDef,
+        request,
       })
 
       if (generation !== saveGeneration.current) return saved
@@ -312,29 +309,16 @@ export function useRequestEditor() {
         return
       }
 
-      const request = draftToRequestState(
-        requestId,
-        requestName,
-        method,
-        url,
-        draft,
-      )
-
-      if (requestRunner.supportsPersistence) {
-        await requestRunner.checkAvailable()
-        const saved = await requestRunner.saveRequest({
-          id: fileId,
-          name: requestName,
-          request: request as unknown as RequestDef,
-        })
+      if (detectSurface() === 'desktop') {
+        await ensureApiAvailable()
+        const request = draftToRequestState(requestId, requestName, method, url, draft)
+        const saved = await saveRequestFile({ id: fileId, name: requestName, request })
         if (saved?.path) setFileId(saved.path)
         updateActiveRequestTab({ isDirty: false })
       }
-      const result = await requestRunner.runRequest({
-        request: request as unknown as RequestDef,
-        fileId,
-        name: requestName,
-      })
+
+      const def = draftToRequestDef(method, url, draft, activeEnvironment?.variables)
+      const result = await engine.runRequest(def)
       const executionResult = requestRunResultToExecutionResult(result)
       setRunResult(result)
       setExecutionResult(executionResult)
@@ -348,9 +332,7 @@ export function useRequestEditor() {
       const message =
         error instanceof LocalApiUnavailableError
           ? 'Desktop API unavailable — start traCtl Desktop on port 7428'
-          : error instanceof WasmRuntimeUnavailableError
-            ? 'WASM runtime is not ready — reload the page'
-            : error instanceof Error
+          : error instanceof Error
               ? error.message
               : 'Run failed'
       console.error('[tractl:request-run] Run failed', error)
