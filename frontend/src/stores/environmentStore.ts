@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { makeEnvironmentId, normalizeVariableKey } from '@/lib/environment/mergeEnvironmentVariable'
 
 export type EnvironmentVariables = Record<string, string>
 
@@ -20,22 +21,6 @@ type EnvironmentState = {
   deleteVariable: (environmentId: string, key: string) => void
 }
 
-function environmentIdFromName(name: string, existingIds: Set<string>): string {
-  const base =
-    name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'environment'
-
-  let candidate = `env-${base}`
-  let index = 2
-  while (existingIds.has(candidate)) {
-    candidate = `env-${base}-${index}`
-    index += 1
-  }
-  return candidate
-}
 
 function cleanedName(name: string): string {
   return name.trim() || 'Untitled environment'
@@ -56,9 +41,6 @@ export function isDuplicateEnvironmentName(
   )
 }
 
-function cleanedVariableKey(key: string): string {
-  return key.trim()
-}
 
 export const useEnvironmentStore = create<EnvironmentState>()(
   persist(
@@ -72,7 +54,7 @@ export const useEnvironmentStore = create<EnvironmentState>()(
         )
         if (existing) return existing.id
 
-        const id = environmentIdFromName(
+        const id = makeEnvironmentId(
           name,
           new Set(current.map((environment) => environment.id)),
         )
@@ -126,7 +108,7 @@ export const useEnvironmentStore = create<EnvironmentState>()(
         })),
       setVariable: (environmentId, key, value) =>
         set((state) => {
-          const variableKey = cleanedVariableKey(key)
+          const variableKey = normalizeVariableKey(key)
           if (!variableKey) return state
 
           return {

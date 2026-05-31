@@ -1,11 +1,8 @@
 import { create } from 'zustand'
 import type { StatusTone } from '@/components/primitives'
-import { toHistorySourceFormat } from '@/lib/tractlDocument/inferDocumentFormat'
-import { parseAndValidateDocument } from '@/lib/tractlDocument/parseValidateDocument'
 import { buildLastRunStatusLabel } from '@/lib/workflowCanvas/lastRunStatusLabel'
-import { workflowDocumentToCanvasWorkflow } from '@/lib/workflowCanvas/workflowDocumentToCanvasWorkflow'
+import { renameStep as renameStepFn } from '@/lib/workflowCanvas/renameStep'
 import type { CanvasRunOutcome } from '@/platform/web/workflowRunAdapter'
-import type { TractlWasmParseFormat } from '@/platform/web/wasm/loadTractlWasmRuntime'
 import type { WorkflowLayoutResponse } from '@/platform/types'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkflowWorkspaceStore } from '@/stores/workflowWorkspaceStore'
@@ -142,7 +139,6 @@ interface WorkflowCanvasState {
 
   setLayout: (layout: WorkflowLayoutResponse | null) => void
   setWorkflow: (workflow: Workflow) => void
-  loadWorkflow: (document: string, id?: string, format?: TractlWasmParseFormat) => void
   loadCanvasWorkflow: (workflow: Workflow) => void
   clearWorkflow: () => void
   setView: (view: CanvasView) => void
@@ -192,33 +188,6 @@ export const useWorkflowCanvasStore = create<WorkflowCanvasState>((set) => ({
     set({ workflow })
   },
 
-  loadWorkflow: (document, id, format = 'yaml') => {
-    void parseAndValidateDocument(document, format)
-      .then((result) => {
-        if (!result.ok) {
-          console.warn('[tractl:workflow-load] could not parse workflow document', result.message)
-          return
-        }
-
-        const workflow = workflowDocumentToCanvasWorkflow(result.spec, {
-          raw: document,
-        })
-        const clientWorkflowId = id ?? `wf-${crypto.randomUUID().slice(0, 8)}`
-        const loadedWorkflow = { ...workflow, id: clientWorkflowId, yaml: document }
-
-        useWorkflowWorkspaceStore.getState().upsertWorkflow(loadedWorkflow, {
-          sourceName: loadedWorkflow.name,
-          sourceFormat: toHistorySourceFormat(format),
-        })
-        set((previous) => applyLoadCanvasWorkflow(previous, loadedWorkflow))
-      })
-      .catch((error) => {
-        console.warn(
-          '[tractl:workflow-load] could not load workflow document',
-          error instanceof Error ? error.message : error,
-        )
-      })
-  },
   loadCanvasWorkflow: (workflow) =>
     set((previous) => applyLoadCanvasWorkflow(previous, workflow)),
   clearWorkflow: () =>
@@ -274,28 +243,12 @@ export const useWorkflowCanvasStore = create<WorkflowCanvasState>((set) => ({
   renameStep: (oldId, newId) =>
     set((state) => {
       if (!state.workflow) return {}
-
       const trimmed = newId.trim()
       if (!trimmed || trimmed === oldId) return {}
       if (state.workflow.steps.some((step) => step.id === trimmed)) return {}
-
-      const steps = state.workflow.steps.map((step) => {
-        if (step.id === oldId) {
-          return { ...step, id: trimmed }
-        }
-        return {
-          ...step,
-          dependsOn: step.dependsOn.map((dependency) =>
-            dependency === oldId ? trimmed : dependency,
-          ),
-          implicitDependsOn: step.implicitDependsOn?.map((dependency) =>
-            dependency === oldId ? trimmed : dependency,
-          ),
-        }
-      })
+      const steps = renameStepFn(state.workflow.steps, oldId, trimmed)
       const workflow = withoutStaleYaml({ ...state.workflow, steps })
       persistCanvasWorkflow(workflow)
-
       return {
         workflow,
         openStepId: state.openStepId === oldId ? trimmed : state.openStepId,
@@ -322,15 +275,8 @@ export const useWorkflowCanvasStore = create<WorkflowCanvasState>((set) => ({
         }
       })
 
-      const assertionsTotal = steps.reduce(
-        (sum, step) => sum + (step.result?.assertions.length ?? 0),
-        0,
-      )
-      const assertionsPassed = steps.reduce(
-        (sum, step) =>
-          sum + (step.result?.assertions.filter((assertion) => assertion.passed).length ?? 0),
-        0,
-      )
+      const assertionsTotal = steps.reduce((s, step) => s + (step.result?.assertions.length ?? 0), 0)
+      const assertionsPassed = steps.reduce((s, step) => s + (step.result?.assertions.filter((a) => a.passed).length ?? 0), 0)
       const failedSteps = steps.filter((step) => step.result?.outcome === 'failed').length
 
       const status = buildLastRunStatusLabel({
