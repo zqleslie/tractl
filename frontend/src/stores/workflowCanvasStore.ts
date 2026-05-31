@@ -7,6 +7,7 @@ import { workflowDocumentToCanvasWorkflow } from '@/lib/workflowCanvas/workflowD
 import { serializeWorkflow } from '@/platform/web/workflowSerializer'
 import type { CanvasRunOutcome } from '@/platform/web/workflowRunAdapter'
 import type { TractlWasmParseFormat } from '@/platform/web/wasm/loadTractlWasmRuntime'
+import type { WorkflowLayoutResponse } from '@/platform/types'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkflowWorkspaceStore } from '@/stores/workflowWorkspaceStore'
 import type {
@@ -41,6 +42,7 @@ export interface OpenStepOptions {
 }
 
 const READY_STATUS = {
+  layout: null,
   runState: 'idle' as RunState,
   runOutcome: null,
   runDuration: 0,
@@ -128,6 +130,7 @@ function applyLoadCanvasWorkflow(
 
 interface WorkflowCanvasState {
   workflow: Workflow | null
+  layout: WorkflowLayoutResponse | null
   view: CanvasView
   activeFilterId: string | null
   runState: RunState
@@ -143,6 +146,7 @@ interface WorkflowCanvasState {
   isResultBarExpanded: boolean
   isFullResultsOpen: boolean
 
+  setLayout: (layout: WorkflowLayoutResponse | null) => void
   setWorkflow: (workflow: Workflow) => void
   loadWorkflow: (document: string, id?: string, format?: TractlWasmParseFormat) => void
   loadCanvasWorkflow: (workflow: Workflow) => void
@@ -171,6 +175,7 @@ interface WorkflowCanvasState {
 
 export const useWorkflowCanvasStore = create<WorkflowCanvasState>((set) => ({
   workflow: null,
+  layout: null,
   view: 'graph',
   activeFilterId: null,
   runState: 'idle',
@@ -185,6 +190,8 @@ export const useWorkflowCanvasStore = create<WorkflowCanvasState>((set) => ({
   isConfigExpanded: false,
   isResultBarExpanded: false,
   isFullResultsOpen: false,
+
+  setLayout: (layout) => set({ layout }),
 
   setWorkflow: (workflow) => {
     persistCanvasWorkflow(workflow)

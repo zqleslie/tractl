@@ -1,21 +1,30 @@
-import { computeDagLayout } from './dagLayout';
-import type { LayoutStep } from './dagLayout';
+import { computeDagLayout } from './dagLayout'
+import type { WorkflowLayoutResponse } from '@/platform/types'
 
-const CARD_W = 260;
-const CARD_H = 110;
+const CARD_W = 260
+const CARD_H = 110
 
-const MOCK_WORKFLOW: LayoutStep[] = [
-  { id: 'step-auth', dependsOn: [] },
-  { id: 'step-billing', dependsOn: ['step-auth'] },
-  { id: 'step-health', dependsOn: ['step-auth'] },
-  { id: 'step-metrics', dependsOn: ['step-billing', 'step-health'] },
-];
+const MOCK_LAYOUT: WorkflowLayoutResponse = {
+  rows: [
+    { rowIndex: 0, stepIds: ['step-auth'] },
+    { rowIndex: 1, stepIds: ['step-billing', 'step-health'] },
+    { rowIndex: 2, stepIds: ['step-metrics'] },
+  ],
+  edges: [
+    { from: 'step-auth', to: 'step-billing', kind: 'fanout', implicit: false },
+    { from: 'step-auth', to: 'step-health', kind: 'fanout', implicit: false },
+    { from: 'step-billing', to: 'step-metrics', kind: 'merge', implicit: false },
+    { from: 'step-health', to: 'step-metrics', kind: 'merge', implicit: false },
+  ],
+  groups: [{ groupIndex: 0, rootStepId: 'step-auth', stepIds: ['step-auth', 'step-billing', 'step-health', 'step-metrics'] }],
+  topologySummary: '1 root · 1 fan-out · 1 merge',
+}
 
 const EDGE_STROKE: Record<string, string> = {
   sequential: 'var(--color-border)',
   fanout: 'var(--color-primary)',
   merge: 'var(--color-info-fg)',
-};
+}
 
 /**
  * Standalone visual harness for {@link computeDagLayout}. Renders the layout of a
@@ -24,12 +33,12 @@ const EDGE_STROKE: Record<string, string> = {
  * only and has no dependency on app state.
  */
 export function DagLayoutPreview() {
-  const layout = computeDagLayout(MOCK_WORKFLOW);
+  const layout = computeDagLayout(MOCK_LAYOUT)
 
   const centreOf = (stepId: string) => {
-    const node = layout.nodes.find((n) => n.stepId === stepId)!;
-    return { cx: node.x + CARD_W / 2, cy: node.y + CARD_H / 2 };
-  };
+    const node = layout.nodes.find((n) => n.stepId === stepId)!
+    return { cx: node.x + CARD_W / 2, cy: node.y + CARD_H / 2 }
+  }
 
   return (
     <div style={{ padding: 24, background: 'var(--color-surface-elevated)', overflow: 'auto' }}>
@@ -63,8 +72,8 @@ export function DagLayoutPreview() {
           ))}
 
           {layout.edges.map((edge) => {
-            const from = centreOf(edge.fromId);
-            const to = centreOf(edge.toId);
+            const from = centreOf(edge.fromId)
+            const to = centreOf(edge.toId)
             return (
               <line
                 key={`edge-${edge.fromId}-${edge.toId}`}
@@ -75,7 +84,7 @@ export function DagLayoutPreview() {
                 stroke={EDGE_STROKE[edge.edgeType] ?? 'var(--color-border)'}
                 strokeWidth={2}
               />
-            );
+            )
           })}
 
           {layout.branchBars.map((bar) => (
@@ -116,5 +125,5 @@ export function DagLayoutPreview() {
         ))}
       </div>
     </div>
-  );
+  )
 }

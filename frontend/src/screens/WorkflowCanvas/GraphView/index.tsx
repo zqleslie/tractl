@@ -2,12 +2,12 @@ import { useMemo } from 'react'
 import { IconPlus } from '@tabler/icons-react'
 import { useWorkflowCanvasStore } from '@/stores/workflowCanvasStore'
 import { computeDagLayout } from './dagLayout'
-import type { LayoutStep } from './dagLayout'
 import { DagCanvas } from './DagCanvas'
 
 export function GraphView() {
   const workflow = useWorkflowCanvasStore((s) => s.workflow)
   const activeFilterId = useWorkflowCanvasStore((s) => s.activeFilterId)
+  const engineLayout = useWorkflowCanvasStore((s) => s.layout)
   const openStep = useWorkflowCanvasStore((s) => s.openStep)
   const insertStepAfter = useWorkflowCanvasStore((s) => s.insertStepAfter)
   const insertStepBetween = useWorkflowCanvasStore((s) => s.insertStepBetween)
@@ -22,13 +22,9 @@ export function GraphView() {
   }, [workflow, activeFilterId])
 
   const layout = useMemo(() => {
-    const layoutSteps: LayoutStep[] = visibleSteps.map((step) => ({
-      id: step.id,
-      dependsOn: step.dependsOn,
-      implicitDependsOn: step.implicitDependsOn,
-    }))
-    return computeDagLayout(layoutSteps)
-  }, [visibleSteps])
+    if (!engineLayout) return null
+    return computeDagLayout(engineLayout)
+  }, [engineLayout])
 
   if (visibleSteps.length === 0) {
     return (
@@ -45,6 +41,10 @@ export function GraphView() {
         </button>
       </div>
     )
+  }
+
+  if (!layout) {
+    return <div className="flex h-full w-full bg-surface" />
   }
 
   return (

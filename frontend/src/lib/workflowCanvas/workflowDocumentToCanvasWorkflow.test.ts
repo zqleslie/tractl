@@ -159,8 +159,7 @@ describe('workflowDocumentToCanvasWorkflow', () => {
 
     const workflow = workflowDocumentToCanvasWorkflow(diamond)
     expect(workflow.steps.find((step) => step.id === 'step-4')?.dependsOn).toEqual(['step-3'])
-    expect(workflow.steps.find((step) => step.id === 'step-4')?.implicitDependsOn).toEqual([
-      'step-2',
-    ])
+    // implicit deps are now inferred by engine.inferDeps() — not the frontend
+    expect(workflow.steps.find((step) => step.id === 'step-4')?.implicitDependsOn).toBeUndefined()
   })
 })

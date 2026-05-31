@@ -3,7 +3,6 @@ import type {
   TraCtlStep,
   TraCtlWorkflow,
 } from '@/components/request-editor/tractlSpecDocument'
-import { inferImplicitDependsOn } from '@/lib/workflowCanvas/inferImplicitDependsOn'
 import { stripAuthoringSystemFields } from '@/lib/workflowCanvas/stripAuthoringSystemFields'
 import { getEngineDefaults } from '@/stores/engineDefaultsStore'
 import type {
@@ -55,16 +54,14 @@ function hasPreScript(step: TraCtlStep): boolean {
   return Boolean(step.hooks?.beforeStep?.source.trim())
 }
 
-function toWorkflowStep(step: TraCtlStep, workflowStepIds: Set<string>): WorkflowStep {
+function toWorkflowStep(step: TraCtlStep, _workflowStepIds: Set<string>): WorkflowStep {
   const dependsOn = step.dependsOn ?? []
-  const implicitDependsOn = inferImplicitDependsOn(step, workflowStepIds)
 
   return {
     id: step.id,
     method: normalizeMethod(step.request.operation),
     url: step.request.target,
     dependsOn,
-    implicitDependsOn: implicitDependsOn.length > 0 ? implicitDependsOn : undefined,
     hasAuth: hasAuth(step),
     assertionCount: step.assertions?.length ?? 0,
     hasPreScript: hasPreScript(step),

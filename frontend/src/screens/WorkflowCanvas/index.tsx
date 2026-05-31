@@ -20,52 +20,11 @@ import { StepDetailPopup } from './StepDetailPopup'
 import { ResultBar } from './ResultBar'
 import { FullResultsPopup } from './FullResultsPopup'
 
-function buildTopologySummary(steps: WorkflowStep[]): string {
-  const roots = steps.filter((step) => step.dependsOn.length === 0).length
-  const merges = steps.filter((step) => step.dependsOn.length > 1).length
-  const childCount = new Map<string, number>()
-  for (const step of steps) {
-    for (const dep of step.dependsOn) {
-      childCount.set(dep, (childCount.get(dep) ?? 0) + 1)
-    }
-  }
-  let fanOuts = 0
-  for (const count of childCount.values()) {
-    if (count > 1) fanOuts += 1
-  }
-  const parts = [`${roots} root${roots === 1 ? '' : 's'}`]
-  if (fanOuts > 0) parts.push(`${fanOuts} fan-out${fanOuts === 1 ? '' : 's'}`)
-  if (merges > 0) parts.push(`${merges} merge${merges === 1 ? '' : 's'}`)
-  return parts.join(' · ')
-}
-
-function computeStepStartTimes(steps: WorkflowStep[]): Map<string, number> {
-  const startTimes = new Map<string, number>()
-
-  for (const step of steps) {
-    if (step.dependsOn.length === 0) {
-      startTimes.set(step.id, 0)
-    } else {
-      const depEndTimes = step.dependsOn.map((depId) => {
-        const depStart = startTimes.get(depId) ?? 0
-        const depStep = steps.find((s) => s.id === depId)
-        return depStart + (depStep?.result?.durationMs ?? 0)
-      })
-      startTimes.set(step.id, Math.max(...depEndTimes))
-    }
-  }
-
-  return startTimes
-}
-
 function resolveStepStartTimes(steps: WorkflowStep[]): Map<string, number> {
-  const computed = computeStepStartTimes(steps)
   const resolved = new Map<string, number>()
-
   for (const step of steps) {
-    resolved.set(step.id, step.result?.startMs ?? computed.get(step.id) ?? 0)
+    resolved.set(step.id, step.result?.startMs ?? 0)
   }
-
   return resolved
 }
 
@@ -138,6 +97,8 @@ export function WorkflowCanvasScreen() {
   const isResultBarExpanded = useWorkflowCanvasStore((s) => s.isResultBarExpanded)
   const isFullResultsOpen = useWorkflowCanvasStore((s) => s.isFullResultsOpen)
 
+  const engineLayout = useWorkflowCanvasStore((s) => s.layout)
+  const setLayout = useWorkflowCanvasStore((s) => s.setLayout)
   const setView = useWorkflowCanvasStore((s) => s.setView)
   const setActiveFilter = useWorkflowCanvasStore((s) => s.setActiveFilter)
   const runOutcome = useWorkflowCanvasStore((s) => s.runOutcome)
@@ -240,6 +201,18 @@ export function WorkflowCanvasScreen() {
   }, [])
 
   const steps = useMemo(() => workflow?.steps ?? [], [workflow])
+
+  const stepStructureKey = JSON.stringify(
+    steps.map((s) => ({ id: s.id, d: s.dependsOn ?? [] }))
+  )
+  useEffect(() => {
+    if (steps.length === 0) { setLayout(null); return }
+    const refs = steps.map((s) => ({ id: s.id, dependsOn: s.dependsOn ?? [] }))
+    engine.computeLayout(refs)
+      .then(setLayout)
+      .catch(console.error)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepStructureKey])
   const summary = useMemo(
     () => deriveRunSummary(steps, runOutcome, runDuration, runErrorMessage),
     [steps, runOutcome, runDuration, runErrorMessage],
@@ -286,7 +259,7 @@ export function WorkflowCanvasScreen() {
       <WorkflowBar
         workflowName={workflow.name}
         stepCount={steps.length}
-        topologySummary={buildTopologySummary(steps)}
+        topologySummary={engineLayout?.topologySummary ?? ''}
         view={view}
         onViewChange={setView}
         onRun={handleRun}
