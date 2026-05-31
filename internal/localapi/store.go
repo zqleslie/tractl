@@ -75,12 +75,20 @@ func (s *Store) resolvePath(rel string) (string, error) {
 // commitPath stages and commits a single file. Silently no-ops if the workspace
 // is not a git repository — never errors.
 func (s *Store) commitPath(absPath, message string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := exec.CommandContext(ctx, "git", "-C", s.rootDir, "rev-parse", "--git-dir").Run(); err != nil {
+	gitCtx := func() (context.Context, context.CancelFunc) {
+		return context.WithTimeout(context.Background(), 10*time.Second)
+	}
+	ctx, cancel := gitCtx()
+	err := exec.CommandContext(ctx, "git", "-C", s.rootDir, "rev-parse", "--git-dir").Run()
+	cancel()
+	if err != nil {
 		return
 	}
+	ctx, cancel = gitCtx()
 	_ = exec.CommandContext(ctx, "git", "-C", s.rootDir, "add", absPath).Run()
+	cancel()
+	ctx, cancel = gitCtx()
 	_ = exec.CommandContext(ctx, "git", "-C", s.rootDir, "commit", "-m", message,
 		"--author=traCtl Agent <tractl@local>").Run()
+	cancel()
 }

@@ -217,11 +217,10 @@ func ComputeWorkflowLayout(steps []StepRef) WorkflowLayoutResponse {
 	for _, s := range steps {
 		for _, dep := range s.DependsOn {
 			kind := "sequential"
-			if childCount[dep] > 1 {
-				kind = "fanout"
-			}
 			if parentCount[s.ID] > 1 {
 				kind = "merge"
+			} else if childCount[dep] > 1 {
+				kind = "fanout"
 			}
 			edges = append(edges, LayoutEdge{From: dep, To: s.ID, Kind: kind})
 		}
@@ -294,29 +293,20 @@ func ComputeWorkflowLayout(steps []StepRef) WorkflowLayoutResponse {
 		}
 	}
 	summary := fmt.Sprintf("%d steps", len(steps))
-	switch rootCount {
-	case 1:
+	if rootCount == 1 {
 		summary += " · 1 root"
-	default:
-		if rootCount > 1 {
-			summary += fmt.Sprintf(" · %d roots", rootCount)
-		}
+	} else if rootCount > 1 {
+		summary += fmt.Sprintf(" · %d roots", rootCount)
 	}
-	switch fanoutCount {
-	case 1:
+	if fanoutCount == 1 {
 		summary += " · 1 fan-out"
-	default:
-		if fanoutCount > 1 {
-			summary += fmt.Sprintf(" · %d fan-outs", fanoutCount)
-		}
+	} else if fanoutCount > 1 {
+		summary += fmt.Sprintf(" · %d fan-outs", fanoutCount)
 	}
-	switch mergeCount {
-	case 1:
+	if mergeCount == 1 {
 		summary += " · 1 merge"
-	default:
-		if mergeCount > 1 {
-			summary += fmt.Sprintf(" · %d merges", mergeCount)
-		}
+	} else if mergeCount > 1 {
+		summary += fmt.Sprintf(" · %d merges", mergeCount)
 	}
 
 	return WorkflowLayoutResponse{

@@ -1,0 +1,901 @@
+openapi: "3.1.0"
+info:
+  title: traCtl Local API
+  version: "1.0.0"
+  description: |
+    Localhost API served by the traCtl desktop and CLI processes on 127.0.0.1:7428.
+    All endpoints return JSON. CORS is allowed for localhost, 127.0.0.1, ::1, and wails://wails.localhost.
+servers:
+  - url: http://127.0.0.1:7428
+    description: Local API server
+
+paths:
+  /api/v1/status:
+    get:
+      operationId: getStatus
+      summary: Server health check
+      responses:
+        "200":
+          description: Server is running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+
+  /api/v1/engine/defaults:
+    get:
+      operationId: getEngineDefaults
+      summary: Canonical engine default values
+      description: Returns the single source-of-truth for all engine defaults. Frontend must not hardcode any of these values.
+      responses:
+        "200":
+          description: Engine defaults
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EngineDefaults"
+
+  /api/v1/run:
+    post:
+      operationId: runRequest
+      summary: Execute a single HTTP request
+      description: |
+        Accepts a RequestDef, executes it through the engine, and returns a
+        unified RunResult. Expression resolution ({{VAR}}, ${vars.x}) is applied
+        to URL/headers/body using the optional `env` map before execution.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestDef"
+      responses:
+        "200":
+          description: Execution result (includes failures — HTTP 200 even when assertions fail)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResult"
+        "400":
+          description: Invalid request body or missing URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Engine execution error (parse/validation/plan failure)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/workflows/run:
+    post:
+      operationId: runWorkflowDocument
+      summary: Execute a full workflow document
+      description: |
+        Accepts a serialized traCtlSpec document (YAML or JSON) and runs it
+        through the full engine pipeline. Returns the raw engine RunResult
+        including all workflow/step outcomes and diagnostics.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowRunRequest"
+      responses:
+        "200":
+          description: Engine RunResult (always HTTP 200; check Passed/ParseError fields)
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Raw engine.RunResult — field names are capitalized Go struct names.
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/workflow/layout:
+    post:
+      operationId: computeWorkflowLayout
+      summary: Compute DAG layout for a set of steps
+      description: |
+        Returns topological rows (execution tiers), directed edges (classified as
+        sequential/fanout/merge), connected-component groups, and a human-readable
+        topology summary. Uses Kahn's algorithm with lexicographic tie-breaking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/StepRef"
+      responses:
+        "200":
+          description: Workflow layout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowLayoutResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/workflow/infer-deps:
+    post:
+      operationId: inferWorkflowDeps
+      summary: Infer implicit step dependencies from ${steps.x} expressions
+      description: |
+        Scans URL, headers, body, preScript, and postScript fields of each step
+        for ${steps.<id>} references and returns each step annotated with both
+        its explicit dependsOn and any inferred implicitDependsOn.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/StepScanDef"
+      responses:
+        "200":
+          description: Steps with implicit dependencies resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InferDepsResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/workflow/export:
+    post:
+      operationId: exportWorkflow
+      summary: Serialize a canvas workflow state to YAML
+      description: |
+        Builds the canonical traCtlSpec from the provided workflow state and
+        serializes it to YAML. Go owns this serialization — frontend must not
+        emit YAML directly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkflowExportRequest"
+      responses:
+        "200":
+          description: YAML string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowExportResponse"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: YAML serialization error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/workspace/status:
+    get:
+      operationId: getWorkspaceStatus
+      summary: Workspace git status
+      description: Reports whether the workspace root is a git repository, the current branch, and dirty file count.
+      responses:
+        "200":
+          description: Workspace status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceStatus"
+
+  /api/v1/files:
+    get:
+      operationId: listFiles
+      summary: List workspace YAML files
+      parameters:
+        - name: prefix
+          in: query
+          description: Optional path prefix filter (e.g. "requests/")
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File listing
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FileEntry"
+        "500":
+          description: Filesystem error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/files/{path}:
+    parameters:
+      - name: path
+        in: path
+        required: true
+        description: Relative path within the workspace (e.g. "requests/ping.yaml")
+        schema:
+          type: string
+
+    get:
+      operationId: readFile
+      summary: Read a workspace file
+      responses:
+        "200":
+          description: File content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileReadResponse"
+        "400":
+          description: Invalid path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      operationId: writeFile
+      summary: Write a workspace file
+      description: |
+        Content must be valid YAML. If the workspace is a git repository,
+        the file is automatically staged and committed with message
+        "tractl: save request <name>" or "tractl: save workflow <name>".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FileWriteRequest"
+      responses:
+        "200":
+          description: File written
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileWriteResponse"
+        "400":
+          description: Invalid path or invalid YAML content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Filesystem error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteFile
+      summary: Delete a workspace file
+      responses:
+        "204":
+          description: File deleted
+        "400":
+          description: Invalid path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Filesystem error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    StatusResponse:
+      type: object
+      required: [ok, version]
+      properties:
+        ok:
+          type: boolean
+          example: true
+        version:
+          type: string
+          example: "0.1.0-alpha"
+
+    EngineDefaults:
+      type: object
+      required: [failurePolicy, timeoutMs, concurrency, httpSuccessMin, httpSuccessMax, retry]
+      properties:
+        failurePolicy:
+          type: string
+          enum: [resilient, fail-fast]
+          example: resilient
+        timeoutMs:
+          type: integer
+          example: 30000
+        concurrency:
+          type: integer
+          example: 4
+        httpSuccessMin:
+          type: integer
+          example: 200
+        httpSuccessMax:
+          type: integer
+          example: 399
+        retry:
+          $ref: "#/components/schemas/EngineRetryDefaults"
+
+    EngineRetryDefaults:
+      type: object
+      required: [maxAttempts, backoffFactor, strategies]
+      properties:
+        maxAttempts:
+          type: integer
+          example: 3
+        backoffFactor:
+          type: number
+          format: double
+          example: 2.0
+        strategies:
+          type: array
+          items:
+            type: string
+          example: [none, fixed, linear, exponential]
+
+    RequestDef:
+      type: object
+      required: [method, url]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        method:
+          type: string
+          example: GET
+        url:
+          type: string
+          example: "https://api.example.com/todos/1"
+        params:
+          type: array
+          items:
+            $ref: "#/components/schemas/KVRow"
+        headers:
+          type: array
+          items:
+            $ref: "#/components/schemas/KVRow"
+        body:
+          $ref: "#/components/schemas/BodyDef"
+        auth:
+          $ref: "#/components/schemas/AuthDef"
+        preScript:
+          type: string
+        postScript:
+          type: string
+        assertions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssertionDef"
+        extracts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtractDef"
+        settings:
+          $ref: "#/components/schemas/RequestSettings"
+        env:
+          type: object
+          additionalProperties:
+            type: string
+          description: Variable map for {{VAR}} and ${vars.x} expression resolution
+
+    KVRow:
+      type: object
+      required: [enabled, key, value]
+      properties:
+        enabled:
+          type: boolean
+        key:
+          type: string
+        value:
+          type: string
+
+    BodyDef:
+      type: object
+      required: [encoding]
+      properties:
+        encoding:
+          type: string
+          enum: [none, json, text, form, multipart]
+        content:
+          type: string
+        rawContentType:
+          type: string
+
+    AuthDef:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [none, bearer, basic, apiKey]
+        token:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        keyName:
+          type: string
+        keyValue:
+          type: string
+        placement:
+          type: string
+          enum: [header, query]
+
+    AssertionDef:
+      type: object
+      required: [id, kind, op, expected, severity]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          example: status
+        op:
+          type: string
+          example: equals
+        expected:
+          type: string
+          example: "200"
+        severity:
+          type: string
+          enum: [error, warning]
+
+    ExtractDef:
+      type: object
+      required: [id, source, path, variableName]
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+          enum: [body, header, status]
+        path:
+          type: string
+          example: "$.id"
+        variableName:
+          type: string
+        scope:
+          type: string
+          enum: [workflow, global]
+
+    RequestSettings:
+      type: object
+      properties:
+        timeoutMs:
+          type: integer
+          example: 30000
+        failurePolicy:
+          type: string
+          enum: [resilient, fail-fast]
+        retry:
+          $ref: "#/components/schemas/RetryDef"
+
+    RetryDef:
+      type: object
+      properties:
+        strategy:
+          type: string
+          enum: [none, fixed, linear, exponential]
+        maxAttempts:
+          type: integer
+        delayMs:
+          type: integer
+        backoffFactor:
+          type: number
+          format: double
+
+    RunResult:
+      type: object
+      required: [statusCode, statusText, durationMs, body, headers, timing,
+                 assertionResults, extractResults, assertionsPassed, assertionsTotal, passed]
+      properties:
+        statusCode:
+          type: integer
+          example: 200
+        statusText:
+          type: string
+          example: "200 OK"
+        durationMs:
+          type: integer
+          format: int64
+          example: 133
+        body:
+          type: string
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        timing:
+          $ref: "#/components/schemas/TimingResult"
+        assertionResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssertionResult"
+        extractResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtractResult"
+        assertionsPassed:
+          type: integer
+        assertionsTotal:
+          type: integer
+        passed:
+          type: boolean
+        error:
+          type: string
+
+    TimingResult:
+      type: object
+      required: [dns, tcp, tls, ttfb, transfer, total, unit]
+      properties:
+        dns:
+          type: integer
+          format: int64
+        tcp:
+          type: integer
+          format: int64
+        tls:
+          type: integer
+          format: int64
+        ttfb:
+          type: integer
+          format: int64
+        transfer:
+          type: integer
+          format: int64
+        total:
+          type: integer
+          format: int64
+        unit:
+          type: string
+          enum: [ms]
+
+    AssertionResult:
+      type: object
+      required: [id, kind, op, expected, received, passed, severity]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+        op:
+          type: string
+        expected:
+          type: string
+          description: Expected value parsed from engine message (empty for passing assertions)
+        received:
+          type: string
+          description: Actual value received (or full engine message for passing assertions)
+        passed:
+          type: boolean
+        severity:
+          type: string
+          enum: [error, warning]
+
+    ExtractResult:
+      type: object
+      required: [id, variableName, scope, resolvedValue]
+      properties:
+        id:
+          type: string
+        variableName:
+          type: string
+        scope:
+          type: string
+        resolvedValue:
+          type: string
+        error:
+          type: string
+
+    WorkflowRunRequest:
+      type: object
+      required: [document]
+      properties:
+        document:
+          type: string
+          description: Full traCtlSpec document (YAML or JSON)
+        format:
+          type: string
+          enum: [yaml, json, toon]
+          default: yaml
+        env:
+          type: string
+          description: Environment overlay name
+
+    StepRef:
+      type: object
+      required: [id, dependsOn]
+      properties:
+        id:
+          type: string
+        dependsOn:
+          type: array
+          items:
+            type: string
+
+    WorkflowLayoutResponse:
+      type: object
+      required: [rows, edges, groups, topologySummary]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/LayoutRow"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/LayoutEdge"
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/LayoutGroup"
+        topologySummary:
+          type: string
+          example: "4 steps · 1 root · 1 fan-out · 1 merge"
+        error:
+          type: string
+          description: Set when a cycle is detected; other fields will be empty
+
+    LayoutRow:
+      type: object
+      required: [rowIndex, stepIds]
+      properties:
+        rowIndex:
+          type: integer
+        stepIds:
+          type: array
+          items:
+            type: string
+
+    LayoutEdge:
+      type: object
+      required: [from, to, kind, implicit]
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        kind:
+          type: string
+          enum: [sequential, fanout, merge]
+          description: |
+            merge — destination step has multiple parents.
+            fanout — source step has multiple children (and destination has only one parent).
+            sequential — one-to-one edge.
+        implicit:
+          type: boolean
+
+    LayoutGroup:
+      type: object
+      required: [groupIndex, rootStepId, stepIds]
+      properties:
+        groupIndex:
+          type: integer
+        rootStepId:
+          type: string
+        stepIds:
+          type: array
+          items:
+            type: string
+
+    StepScanDef:
+      type: object
+      required: [id, dependsOn]
+      properties:
+        id:
+          type: string
+        dependsOn:
+          type: array
+          items:
+            type: string
+        url:
+          type: string
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        body:
+          type: string
+        preScript:
+          type: string
+        postScript:
+          type: string
+
+    StepWithImplicitDeps:
+      type: object
+      required: [id, dependsOn, implicitDependsOn]
+      properties:
+        id:
+          type: string
+        dependsOn:
+          type: array
+          items:
+            type: string
+        implicitDependsOn:
+          type: array
+          items:
+            type: string
+          description: Step IDs inferred from ${steps.x} references in field content
+
+    InferDepsResponse:
+      type: object
+      required: [steps]
+      properties:
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/StepWithImplicitDeps"
+
+    WorkflowExportRequest:
+      type: object
+      required: [id, steps]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        variables:
+          type: object
+          additionalProperties:
+            type: string
+        concurrency:
+          type: integer
+        failurePolicy:
+          type: string
+          enum: [resilient, fail-fast]
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkflowExportStep"
+
+    WorkflowExportStep:
+      type: object
+      required: [id, url, method]
+      properties:
+        id:
+          type: string
+        dependsOn:
+          type: array
+          items:
+            type: string
+        url:
+          type: string
+        method:
+          type: string
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        body:
+          $ref: "#/components/schemas/BodyDef"
+        assertions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssertionDef"
+        extracts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtractDef"
+        preScript:
+          type: string
+        postScript:
+          type: string
+
+    WorkflowExportResponse:
+      type: object
+      required: [yaml]
+      properties:
+        yaml:
+          type: string
+          description: Canonical traCtlSpec serialized as YAML
+        error:
+          type: string
+
+    WorkspaceStatus:
+      type: object
+      required: [rootDir, isGitRepo, dirtyFiles]
+      properties:
+        rootDir:
+          type: string
+        isGitRepo:
+          type: boolean
+        branch:
+          type: string
+          description: Current branch name (absent when isGitRepo is false)
+        dirtyFiles:
+          type: integer
+
+    FileEntry:
+      type: object
+      required: [path, name, modifiedAt, size]
+      properties:
+        path:
+          type: string
+          description: Relative path from workspace root (slash-separated)
+        name:
+          type: string
+        modifiedAt:
+          type: string
+          format: date-time
+        size:
+          type: integer
+          format: int64
+
+    FileReadResponse:
+      type: object
+      required: [path, content]
+      properties:
+        path:
+          type: string
+        content:
+          type: string
+
+    FileWriteRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          description: YAML content — validated before write
+
+    FileWriteResponse:
+      type: object
+      required: [path, modifiedAt]
+      properties:
+        path:
+          type: string
+        modifiedAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          type: string
