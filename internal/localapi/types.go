@@ -2,19 +2,20 @@ package localapi
 
 // RequestDef is the single representation of a request.
 type RequestDef struct {
-	ID         string          `json:"id" yaml:"id"`
-	Name       string          `json:"name" yaml:"name"`
-	Method     string          `json:"method" yaml:"method"`
-	URL        string          `json:"url" yaml:"url"`
-	Params     []KVRow         `json:"params" yaml:"params,omitempty"`
-	Headers    []KVRow         `json:"headers" yaml:"headers,omitempty"`
-	Body       *BodyDef        `json:"body" yaml:"body,omitempty"`
-	Auth       *AuthDef        `json:"auth" yaml:"auth,omitempty"`
-	PreScript  string          `json:"preScript" yaml:"preScript,omitempty"`
-	PostScript string          `json:"postScript" yaml:"postScript,omitempty"`
-	Assertions []AssertionDef  `json:"assertions" yaml:"assertions,omitempty"`
-	Extracts   []ExtractDef    `json:"extracts" yaml:"extracts,omitempty"`
-	Settings   RequestSettings `json:"settings" yaml:"settings,omitempty"`
+	ID         string            `json:"id" yaml:"id"`
+	Name       string            `json:"name" yaml:"name"`
+	Method     string            `json:"method" yaml:"method"`
+	URL        string            `json:"url" yaml:"url"`
+	Params     []KVRow           `json:"params" yaml:"params,omitempty"`
+	Headers    []KVRow           `json:"headers" yaml:"headers,omitempty"`
+	Body       *BodyDef          `json:"body" yaml:"body,omitempty"`
+	Auth       *AuthDef          `json:"auth" yaml:"auth,omitempty"`
+	PreScript  string            `json:"preScript" yaml:"preScript,omitempty"`
+	PostScript string            `json:"postScript" yaml:"postScript,omitempty"`
+	Assertions []AssertionDef    `json:"assertions" yaml:"assertions,omitempty"`
+	Extracts   []ExtractDef      `json:"extracts" yaml:"extracts,omitempty"`
+	Settings   RequestSettings   `json:"settings" yaml:"settings,omitempty"`
+	Env        map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 }
 
 // KVRow is one enabled key-value row in params or headers.
@@ -103,6 +104,7 @@ type RunResult struct {
 	ExtractResults   []ExtractResult   `json:"extractResults"`
 	AssertionsPassed int               `json:"assertionsPassed"`
 	AssertionsTotal  int               `json:"assertionsTotal"`
+	Passed           bool              `json:"passed"`
 	Error            string            `json:"error,omitempty"`
 }
 
@@ -173,4 +175,118 @@ type FileWriteResponse struct {
 type ErrorResponse struct {
 	Error   string `json:"error"`
 	Details string `json:"details,omitempty"`
+}
+
+// StepRef is a lightweight step reference for DAG computation.
+type StepRef struct {
+	ID        string   `json:"id"`
+	DependsOn []string `json:"dependsOn"`
+}
+
+// LayoutRow is one execution tier in a workflow DAG layout.
+type LayoutRow struct {
+	RowIndex int      `json:"rowIndex"`
+	StepIDs  []string `json:"stepIds"`
+}
+
+// LayoutEdge is one directed edge in the workflow DAG.
+type LayoutEdge struct {
+	From     string `json:"from"`
+	To       string `json:"to"`
+	Kind     string `json:"kind"` // "sequential" | "fanout" | "merge"
+	Implicit bool   `json:"implicit"`
+}
+
+// LayoutGroup is one independent sub-DAG (connected component).
+type LayoutGroup struct {
+	GroupIndex int      `json:"groupIndex"`
+	RootStepID string   `json:"rootStepId"`
+	StepIDs    []string `json:"stepIds"`
+}
+
+// WorkflowLayoutResponse is returned by POST /api/v1/workflow/layout.
+type WorkflowLayoutResponse struct {
+	Rows            []LayoutRow   `json:"rows"`
+	Edges           []LayoutEdge  `json:"edges"`
+	Groups          []LayoutGroup `json:"groups"`
+	TopologySummary string        `json:"topologySummary"`
+	Error           string        `json:"error,omitempty"`
+}
+
+// StepScanDef carries step field content to scan for implicit dependencies.
+type StepScanDef struct {
+	ID         string            `json:"id"`
+	DependsOn  []string          `json:"dependsOn"`
+	URL        string            `json:"url,omitempty"`
+	Headers    map[string]string `json:"headers,omitempty"`
+	Body       string            `json:"body,omitempty"`
+	PreScript  string            `json:"preScript,omitempty"`
+	PostScript string            `json:"postScript,omitempty"`
+}
+
+// StepWithImplicitDeps extends StepRef with inferred implicit dependencies.
+type StepWithImplicitDeps struct {
+	ID                string   `json:"id"`
+	DependsOn         []string `json:"dependsOn"`
+	ImplicitDependsOn []string `json:"implicitDependsOn"`
+}
+
+// InferDepsResponse is returned by POST /api/v1/workflow/infer-deps.
+type InferDepsResponse struct {
+	Steps []StepWithImplicitDeps `json:"steps"`
+}
+
+// WorkflowExportStep is one step in a workflow export request.
+type WorkflowExportStep struct {
+	ID         string            `json:"id"`
+	DependsOn  []string          `json:"dependsOn,omitempty"`
+	URL        string            `json:"url"`
+	Method     string            `json:"method"`
+	Headers    map[string]string `json:"headers,omitempty"`
+	Body       *BodyDef          `json:"body,omitempty"`
+	Assertions []AssertionDef    `json:"assertions,omitempty"`
+	Extracts   []ExtractDef      `json:"extracts,omitempty"`
+	PreScript  string            `json:"preScript,omitempty"`
+	PostScript string            `json:"postScript,omitempty"`
+}
+
+// WorkflowExportRequest is the POST /api/v1/workflow/export body.
+type WorkflowExportRequest struct {
+	ID            string               `json:"id"`
+	Name          string               `json:"name,omitempty"`
+	Variables     map[string]string    `json:"variables,omitempty"`
+	Concurrency   int                  `json:"concurrency,omitempty"`
+	FailurePolicy string               `json:"failurePolicy,omitempty"`
+	Steps         []WorkflowExportStep `json:"steps"`
+}
+
+// WorkflowExportResponse is returned by POST /api/v1/workflow/export.
+type WorkflowExportResponse struct {
+	YAML  string `json:"yaml"`
+	Error string `json:"error,omitempty"`
+}
+
+// EngineRetryDefaults holds the default retry configuration values.
+type EngineRetryDefaults struct {
+	MaxAttempts   int      `json:"maxAttempts"`
+	BackoffFactor float64  `json:"backoffFactor"`
+	Strategies    []string `json:"strategies"`
+}
+
+// EngineDefaults holds the canonical engine default values.
+type EngineDefaults struct {
+	FailurePolicy  string              `json:"failurePolicy"`
+	TimeoutMs      int                 `json:"timeoutMs"`
+	Concurrency    int                 `json:"concurrency"`
+	HTTPSuccessMin int                 `json:"httpSuccessMin"`
+	HTTPSuccessMax int                 `json:"httpSuccessMax"`
+	Retry          EngineRetryDefaults `json:"retry"`
+}
+
+// WorkspaceStatus is returned by GET /api/v1/workspace/status.
+type WorkspaceStatus struct {
+	RootDir    string `json:"rootDir"`
+	IsGitRepo  bool   `json:"isGitRepo"`
+	Branch     string `json:"branch,omitempty"`
+	DirtyFiles int    `json:"dirtyFiles"`
 }

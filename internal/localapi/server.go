@@ -27,6 +27,11 @@ func NewServer(addr string, store *Store) *Server {
 	mux.HandleFunc("/api/v1/files/{path...}", s.handleFilePath)
 	mux.HandleFunc("/api/v1/run", s.handleRun)
 	mux.HandleFunc("/api/v1/workflows/run", s.handleWorkflowRun)
+	mux.HandleFunc("/api/v1/workflow/layout", s.handleWorkflowLayout)
+	mux.HandleFunc("/api/v1/workflow/infer-deps", s.handleWorkflowInferDeps)
+	mux.HandleFunc("/api/v1/workflow/export", s.handleWorkflowExport)
+	mux.HandleFunc("/api/v1/engine/defaults", s.handleEngineDefaults)
+	mux.HandleFunc("/api/v1/workspace/status", s.handleWorkspaceStatus)
 	s.handler = withCORS(mux)
 	s.server = &http.Server{
 		Addr:              addr,

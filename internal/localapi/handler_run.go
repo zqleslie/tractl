@@ -18,32 +18,12 @@ func (s *Server) handleRun(w http.ResponseWriter, r *http.Request) {
 		httpError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
-	document, err := requestDefToDocument(req)
-	if err != nil {
-		httpError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	raw, err := json.Marshal(document)
-	if err != nil {
-		httpError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	result := engine.New().RunDocument(engine.DocumentConfig{
-		Document:  string(raw),
-		Format:    "json",
-		SourceRef: "local-api-request",
-		Quiet:     true,
-		Verbose:   true,
-	})
-	mapped, err := mapRunResult(result)
+	result, err := RunRequestDef(req)
 	if err != nil {
 		httpError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	if len(mapped.ExtractResults) == 0 && len(req.Extracts) > 0 {
-		mapped.ExtractResults = requestExtractResults(req.Extracts, mapped.Body)
-	}
-	jsonResponse(w, http.StatusOK, mapped)
+	jsonResponse(w, http.StatusOK, result)
 }
 
 func (s *Server) handleWorkflowRun(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +44,7 @@ func (s *Server) handleWorkflowRun(w http.ResponseWriter, r *http.Request) {
 	if format == "" {
 		format = "yaml"
 	}
+
 	result := engine.New().RunDocument(engine.DocumentConfig{
 		Document:  req.Document,
 		Format:    format,
@@ -73,6 +54,58 @@ func (s *Server) handleWorkflowRun(w http.ResponseWriter, r *http.Request) {
 		Verbose:   true,
 	})
 	jsonResponse(w, http.StatusOK, result)
+}
+
+func (s *Server) handleWorkflowLayout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		httpError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var steps []StepRef
+	if err := json.NewDecoder(r.Body).Decode(&steps); err != nil {
+		httpError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
+	jsonResponse(w, http.StatusOK, ComputeWorkflowLayout(steps))
+}
+
+func (s *Server) handleWorkflowInferDeps(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		httpError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var steps []StepScanDef
+	if err := json.NewDecoder(r.Body).Decode(&steps); err != nil {
+		httpError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
+	jsonResponse(w, http.StatusOK, InferImplicitDeps(steps))
+}
+
+func (s *Server) handleWorkflowExport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		httpError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var req WorkflowExportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		return
+	}
+	result, err := ExportWorkflow(req)
+	if err != nil {
+		httpError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	jsonResponse(w, http.StatusOK, result)
+}
+
+func (s *Server) handleEngineDefaults(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		httpError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	jsonResponse(w, http.StatusOK, DefaultEngineSettings)
 }
 
 func requestExtractResults(extracts []ExtractDef, body string) []ExtractResult {

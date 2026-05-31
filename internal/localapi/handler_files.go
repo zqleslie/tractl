@@ -78,6 +78,12 @@ func (s *Server) handleFileWrite(w http.ResponseWriter, r *http.Request, rel str
 		httpError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	name := strings.TrimSuffix(filepath.Base(rel), filepath.Ext(rel))
+	if strings.HasPrefix(filepath.ToSlash(rel), "requests/") {
+		s.store.commitPath(path, "tractl: save request "+name)
+	} else if strings.HasPrefix(filepath.ToSlash(rel), "workflows/") {
+		s.store.commitPath(path, "tractl: save workflow "+name)
+	}
 	stat, err := os.Stat(path)
 	if err != nil {
 		httpError(w, http.StatusInternalServerError, err.Error())

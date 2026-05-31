@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/tractl/tractl/internal/engine"
+	"github.com/tractl/tractl/internal/localapi"
 	"github.com/tractl/tractl/internal/validation"
 	"github.com/tractl/tractl/internal/version"
 )
@@ -38,18 +39,17 @@ func executionError(message string) map[string]any {
 	return bridgeError("TRACTL_EXECUTION_ERROR", message)
 }
 
-// runResultPayload converts an engine RunResult into a JS-safe map with surface metadata.
+// runResultPayload maps an engine.RunResult to the unified localapi.RunResult shape
+// and returns a JS-safe map. Output field names match POST /api/v1/run exactly.
 func runResultPayload(result *engine.RunResult) (map[string]any, error) {
-	bytes, err := json.Marshal(result)
+	mapped, err := localapi.MapRunResult(result)
+	if err != nil {
+		return nil, err
+	}
+	payload, err := jsonSafeObject(mapped)
 	if err != nil {
 		return nil, fmt.Errorf("marshal run result: %w", err)
 	}
-
-	var payload map[string]any
-	if err := json.Unmarshal(bytes, &payload); err != nil {
-		return nil, fmt.Errorf("unmarshal run result: %w", err)
-	}
-
 	payload["surface"] = surfaceName
 	payload["executionMode"] = executionMode
 	payload["networkProvider"] = networkProvider
@@ -67,14 +67,11 @@ func requireSupportedFormat(format string) map[string]any {
 }
 
 // parseDocument dispatches to the correct parser based on format.
-// Delegates to engine.ParseByFormat — the single authoritative format-dispatch
-// switch — so adding a new format only requires updating internal/engine/parse.go.
 func parseDocument(document string, format string) (any, error) {
 	return engine.ParseByFormat([]byte(document), format, wasmSourceRef)
 }
 
 // validateDocument parses and validates a document, returning any schema errors.
-// Delegates parsing to engine.ParseByFormat to avoid duplicating format dispatch.
 func validateDocument(document string, format string) ([]validation.ValidationError, error) {
 	spec, err := engine.ParseByFormat([]byte(document), format, wasmSourceRef)
 	if err != nil {
@@ -147,6 +144,5 @@ func projectVersion() string {
 		}
 	}
 
-	// Stream D: update internal/localapi to use version.FallbackVersion too.
 	return version.FallbackVersion
 }

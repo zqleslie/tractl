@@ -41,7 +41,24 @@ func TestExecutionError(t *testing.T) {
 }
 
 func TestRunResultPayload_AddsSurfaceMetadata(t *testing.T) {
-	payload, err := runResultPayload(&engine.RunResult{Passed: true})
+	result := &engine.RunResult{
+		Passed: true,
+		Workflows: []engine.WorkflowOutcome{
+			{
+				WorkflowID: "wf-1",
+				Passed:     true,
+				Steps: []engine.StepOutcome{
+					{
+						StepID:          "step-1",
+						ResponseStatus:  200,
+						ResponseHeaders: map[string]string{"content-type": "application/json"},
+						ResponseBody:    `{"ok":true}`,
+					},
+				},
+			},
+		},
+	}
+	payload, err := runResultPayload(result)
 	if err != nil {
 		t.Fatalf("runResultPayload: unexpected error: %v", err)
 	}
@@ -53,6 +70,13 @@ func TestRunResultPayload_AddsSurfaceMetadata(t *testing.T) {
 	}
 	if payload["networkProvider"] != networkProvider {
 		t.Errorf("runResultPayload: networkProvider = %v, want %q", payload["networkProvider"], networkProvider)
+	}
+	// Verify output uses lowercase keys (not raw engine capitalized names).
+	if _, hasWorkflows := payload["Workflows"]; hasWorkflows {
+		t.Error("runResultPayload: output contains raw 'Workflows' key — should use localapi RunResult shape")
+	}
+	if _, hasStatusCode := payload["statusCode"]; !hasStatusCode {
+		t.Error("runResultPayload: output missing 'statusCode' key from localapi.RunResult")
 	}
 }
 
