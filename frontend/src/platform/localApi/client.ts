@@ -28,7 +28,7 @@ type WorkflowRunDocumentInput = {
   env?: string
 }
 
-type EngineWorkflowRunResult = Record<string, unknown>
+type WorkflowRunRecord = Record<string, unknown>
 
 type ApiErrorBody = {
   error: string
@@ -121,8 +121,8 @@ export async function runRequestFile(
 
 export async function runWorkflowDocument(
   input: WorkflowRunDocumentInput,
-): Promise<EngineWorkflowRunResult> {
-  return requestJson<EngineWorkflowRunResult>('/api/v1/workflows/run', {
+): Promise<WorkflowRunRecord> {
+  return requestJson<WorkflowRunRecord>('/api/v1/workflows/run', {
     method: 'POST',
     body: JSON.stringify(input),
   })

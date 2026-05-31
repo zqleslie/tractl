@@ -24,14 +24,14 @@ type WasmWorkflowOutcome = {
 
 type WasmStepOutcome = {
   StepID?: string
-  AssertionResults?: WasmAssertionOutcome[]
+  AssertionResults?: WasmAssertionRecord[]
   ResponseStatus?: number
   ResponseHeaders?: Record<string, string>
   ResponseBody?: string
   Error?: string
 }
 
-type WasmAssertionOutcome = {
+type WasmAssertionRecord = {
   AssertionID?: string
   Kind?: string
   Outcome?: string
