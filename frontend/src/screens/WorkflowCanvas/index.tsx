@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { detectSurface } from '@/platform'
-import { getWorkflowRunRunner } from '@/platform/workflowRun/getWorkflowRunRunner'
+import { engine } from '@/platform/engine'
 import { serializeWorkflow } from '@/platform/web/workflowSerializer'
 import { mapRunResult } from '@/platform/web/workflowRunAdapter'
 import { buildWorkflowRunPayload } from '@/lib/workflowCanvas/buildWorkflowRunPayload'
@@ -251,9 +251,6 @@ export function WorkflowCanvasScreen() {
     setResultBarExpanded(true)
 
     try {
-      const runner = getWorkflowRunRunner()
-      await runner.checkAvailable()
-
       const entry = useWorkflowWorkspaceStore.getState().getWorkflowEntry(workflow.id)
       const { document, format, source } = buildWorkflowRunPayload(workflow, {
         sourceFormat: entry?.sourceFormat,
@@ -265,8 +262,8 @@ export function WorkflowCanvasScreen() {
         surface: detectSurface(),
         document,
       })
-      const engineResult = await runner.runWorkflow({ document, format })
-      const outcome = mapRunResult(engineResult, workflow.id)
+      const engineResult = await engine.runWorkflow(document, format)
+      const outcome = mapRunResult(engineResult as Parameters<typeof mapRunResult>[0], workflow.id)
       applyRunResult(outcome)
       setRunState(outcome.workflowOutcome === 'error' ? 'error' : 'complete')
     } catch (error) {
