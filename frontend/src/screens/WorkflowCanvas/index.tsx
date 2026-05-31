@@ -1,9 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { detectSurface } from '@/platform'
 import { engine } from '@/platform/engine'
-import { serializeWorkflow } from '@/platform/web/workflowSerializer'
 import { mapRunResult } from '@/platform/web/workflowRunAdapter'
+import { workflowToExportRequest } from '@/lib/workflowCanvas/workflowToExportRequest'
 import { buildWorkflowRunPayload } from '@/lib/workflowCanvas/buildWorkflowRunPayload'
 import { createEmptyWorkflow } from '@/lib/workflowCanvas/createEmptyWorkflow'
 import { loadWorkflowIntoCanvas } from '@/lib/workflowCanvas/loadWorkflowIntoCanvas'
@@ -97,6 +97,7 @@ export function WorkflowCanvasScreen() {
   const isResultBarExpanded = useWorkflowCanvasStore((s) => s.isResultBarExpanded)
   const isFullResultsOpen = useWorkflowCanvasStore((s) => s.isFullResultsOpen)
 
+  const [codeViewYaml, setCodeViewYaml] = useState('')
   const engineLayout = useWorkflowCanvasStore((s) => s.layout)
   const setLayout = useWorkflowCanvasStore((s) => s.setLayout)
   const setView = useWorkflowCanvasStore((s) => s.setView)
@@ -213,6 +214,15 @@ export function WorkflowCanvasScreen() {
       .catch(console.error)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepStructureKey])
+
+  useEffect(() => {
+    if (view !== 'code' || !workflow) return
+    if (workflow.yaml?.trim()) { setCodeViewYaml(workflow.yaml); return }
+    engine.exportWorkflow(workflowToExportRequest(workflow))
+      .then(setCodeViewYaml)
+      .catch(console.error)
+  }, [view, workflow])
+
   const summary = useMemo(
     () => deriveRunSummary(steps, runOutcome, runDuration, runErrorMessage),
     [steps, runOutcome, runDuration, runErrorMessage],
@@ -225,7 +235,7 @@ export function WorkflowCanvasScreen() {
 
     try {
       const entry = useWorkflowWorkspaceStore.getState().getWorkflowEntry(workflow.id)
-      const { document, format, source } = buildWorkflowRunPayload(workflow, {
+      const { document, format, source } = await buildWorkflowRunPayload(workflow, {
         sourceFormat: entry?.sourceFormat,
       })
       console.info('[tractl:workflow-run] payload sent to Go', {
@@ -278,13 +288,7 @@ export function WorkflowCanvasScreen() {
         {view === 'graph' ? (
           <GraphView />
         ) : (
-          <CodeView
-            yaml={
-              workflow.yaml && workflow.yaml.trim().length > 0
-                ? workflow.yaml
-                : serializeWorkflow(workflow)
-            }
-          />
+          <CodeView yaml={codeViewYaml} />
         )}
 
         {openStepId !== null ? (

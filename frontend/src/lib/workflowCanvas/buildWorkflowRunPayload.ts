@@ -1,24 +1,33 @@
 import type { RunHistorySourceFormat } from '@/stores/runHistoryStore'
 import type { TractlWasmParseFormat } from '@/platform/web/wasm/loadTractlWasmRuntime'
-import { serializeWorkflow } from '@/platform/web/workflowSerializer'
+import { engine } from '@/platform/engine'
 import type { Workflow } from '@/types/workflow'
+import { workflowToExportRequest } from './workflowToExportRequest'
 import { resolveWorkflowRunFormat } from './resolveWorkflowRunFormat'
 
 export type WorkflowRunDocumentSource = 'opened-file' | 'canvas-serializer'
 
-export function buildWorkflowRunPayload(
+export async function buildWorkflowRunPayload(
   workflow: Workflow,
   options?: { sourceFormat?: RunHistorySourceFormat },
-): {
+): Promise<{
   document: string
   format: TractlWasmParseFormat
   source: WorkflowRunDocumentSource
-} {
+}> {
   const hasOpenedYaml = Boolean(workflow.yaml?.trim())
-  const document = hasOpenedYaml ? workflow.yaml! : serializeWorkflow(workflow)
+  if (hasOpenedYaml) {
+    return {
+      document: workflow.yaml!,
+      format: resolveWorkflowRunFormat(options?.sourceFormat),
+      source: 'opened-file',
+    }
+  }
+  const req = workflowToExportRequest(workflow)
+  const yaml = await engine.exportWorkflow(req)
   return {
-    document,
-    format: resolveWorkflowRunFormat(options?.sourceFormat),
-    source: hasOpenedYaml ? 'opened-file' : 'canvas-serializer',
+    document: yaml,
+    format: 'yaml',
+    source: 'canvas-serializer',
   }
 }

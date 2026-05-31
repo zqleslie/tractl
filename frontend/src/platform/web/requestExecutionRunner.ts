@@ -1,12 +1,8 @@
 import type { RequestExecutionRunner } from '@/platform/requestExecution/types'
-import { requestFormStateToTraCtlSpec } from '@/components/request-editor/requestFormStateToTraCtlSpec'
+import { draftToRequestDef } from '@/lib/requestEditor/draftToRequestDef'
 import type { RequestState } from '@/components/request-editor/requestState'
 import { requestStateToDraft } from '@/lib/requestEditor/workspaceMapping'
-import {
-  isTractlWasmRuntimeReady,
-  loadTractlWasmRuntime,
-} from '@/platform/web/wasm/loadTractlWasmRuntime'
-import { runRequestInWasm } from '@/platform/web/wasm/runRequestInWasm'
+import { engine } from '@/platform/engine'
 
 export class WasmRuntimeUnavailableError extends Error {
   constructor(message = 'WASM runtime is not ready') {
@@ -19,8 +15,7 @@ export const webRequestExecutionRunner: RequestExecutionRunner = {
   supportsPersistence: false,
 
   async checkAvailable() {
-    await loadTractlWasmRuntime()
-    if (!isTractlWasmRuntimeReady()) {
+    if (!window.tractl?.run) {
       throw new WasmRuntimeUnavailableError()
     }
   },
@@ -31,12 +26,8 @@ export const webRequestExecutionRunner: RequestExecutionRunner = {
 
   async runRequest(input) {
     const request = input.request as RequestState
-    const document = requestFormStateToTraCtlSpec(
-      request.method,
-      request.url,
-      requestStateToDraft(request),
-      request.name,
-    )
-    return runRequestInWasm(document)
+    const draft = requestStateToDraft(request)
+    const def = draftToRequestDef(request.method, request.url, draft)
+    return engine.runRequest(def)
   },
 }

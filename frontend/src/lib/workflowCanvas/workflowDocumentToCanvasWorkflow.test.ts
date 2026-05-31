@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import type { TraCtlSpecDocument } from '@/components/request-editor/tractlSpecDocument'
-import { serializeWorkflow } from '@/platform/web/workflowSerializer'
 import { workflowDocumentToCanvasWorkflow } from '@/lib/workflowCanvas/workflowDocumentToCanvasWorkflow'
 
 const document: TraCtlSpecDocument = {
@@ -67,16 +66,6 @@ describe('workflowDocumentToCanvasWorkflow', () => {
     expect(workflow.yaml).toBe('schemaVersion: 1')
   })
 
-  it('round-trips spec variables and step assertions through the canvas serializer', () => {
-    const workflow = workflowDocumentToCanvasWorkflow(document)
-    const yaml = serializeWorkflow(workflow)
-
-    expect(yaml).toContain('variables:')
-    expect(yaml).toContain('baseUrl: "https://httpbin.org"')
-    expect(yaml).toContain('assertions:')
-    expect(yaml).toContain('step-auth')
-  })
-
   it('leaves concurrency unset when the workflow omits it', () => {
     const withoutConcurrency: TraCtlSpecDocument = {
       schemaVersion: 1,
@@ -101,7 +90,6 @@ describe('workflowDocumentToCanvasWorkflow', () => {
 
     const workflow = workflowDocumentToCanvasWorkflow(withoutConcurrency)
     expect(workflow.config.concurrency).toBeUndefined()
-    expect(serializeWorkflow(workflow)).not.toContain('concurrency:')
   })
 
   it('infers implicit dependsOn from ${steps.<id>} references', () => {

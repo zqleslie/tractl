@@ -4,7 +4,6 @@ import { toHistorySourceFormat } from '@/lib/tractlDocument/inferDocumentFormat'
 import { parseAndValidateDocument } from '@/lib/tractlDocument/parseValidateDocument'
 import { buildLastRunStatusLabel } from '@/lib/workflowCanvas/lastRunStatusLabel'
 import { workflowDocumentToCanvasWorkflow } from '@/lib/workflowCanvas/workflowDocumentToCanvasWorkflow'
-import { serializeWorkflow } from '@/platform/web/workflowSerializer'
 import type { CanvasRunOutcome } from '@/platform/web/workflowRunAdapter'
 import type { TractlWasmParseFormat } from '@/platform/web/wasm/loadTractlWasmRuntime'
 import type { WorkflowLayoutResponse } from '@/platform/types'
@@ -91,11 +90,6 @@ function persistCanvasWorkflow(workflow: Workflow): void {
   }
 }
 
-/** Refresh stored YAML from canvas state so config edits apply on the next run. */
-function withSerializedYaml(workflow: Workflow): Workflow {
-  const yaml = serializeWorkflow({ ...workflow, yaml: undefined })
-  return { ...workflow, yaml }
-}
 
 function applyLoadCanvasWorkflow(
   previous: WorkflowCanvasState,
@@ -261,7 +255,7 @@ export const useWorkflowCanvasStore = create<WorkflowCanvasState>((set) => ({
   updateConfig: (config) =>
     set((s) => {
       if (!s.workflow) return {}
-      const workflow = withSerializedYaml({ ...s.workflow, config })
+      const workflow = withoutStaleYaml({ ...s.workflow, config })
       persistCanvasWorkflow(workflow)
       return { workflow }
     }),
