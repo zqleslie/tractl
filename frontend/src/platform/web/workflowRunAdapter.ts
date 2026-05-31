@@ -1,59 +1,8 @@
-import type {
-  StepAssertionResult,
-  StepExtractResult,
-  StepOutcome,
-  StepResult,
-} from '@/types/workflow'
-import {
-  isTractlWasmRunSuccess,
-  type TractlWasmRunResult,
-} from '@/platform/web/wasm/loadTractlWasmRuntime'
+import type { StepAssertionResult, StepResult } from '@/types/workflow'
+import { isTractlWasmRunSuccess, type TractlWasmRunResult } from '@/platform/web/wasm/loadTractlWasmRuntime'
 
 export type WorkflowRunOutcome = 'passed' | 'failed' | 'error'
-
 export type WasmRunResult = TractlWasmRunResult
-
-type WasmWorkflowOutcome = {
-  WorkflowID?: string
-  Passed?: boolean
-  Skipped?: boolean
-  Steps?: WasmStepOutcome[]
-}
-
-type WasmStepOutcome = {
-  StepID?: string
-  State?: string
-  CausesFailure?: boolean
-  AssertionResults?: WasmAssertionOutcome[]
-  ResponseStatus?: number
-  ResponseHeaders?: Record<string, string>
-  ResponseBody?: string
-  Error?: string
-}
-
-type WasmAssertionOutcome = {
-  AssertionID?: string
-  Kind?: string
-  Outcome?: string
-  Message?: string
-  Severity?: string
-}
-
-type WasmDiagnostics = {
-  Duration?: number
-  Workflows?: Array<{
-    WorkflowID?: string
-    StartedAt?: string
-    Duration?: number
-    Steps?: Array<{
-      StepID?: string
-      StartedAt?: string
-      Duration?: number
-      Requests?: Array<{ URL?: string; Timeline?: { TotalMs?: number } }>
-      Extracts?: Array<{ ID?: string; Source?: string; As?: string }>
-    }>
-  }>
-}
 
 export type CanvasRunOutcome = {
   workflowOutcome: WorkflowRunOutcome
@@ -62,254 +11,89 @@ export type CanvasRunOutcome = {
   errorMessage?: string
 }
 
-function bridgeErrorMessage(result: TractlWasmRunResult): string | undefined {
-  if (isTractlWasmRunSuccess(result)) return undefined
-  const { code, message } = result.error
-  return `${code}: ${message}`
-}
+type RunRecord = Record<string, unknown>
 
-function pipelineErrorMessage(result: Record<string, unknown>): string | undefined {
-  const parseError = readString(result, 'ParseError')
-  const validationError = readString(result, 'ValidationError')
-  const planError = readString(result, 'PlanError')
-  return parseError || validationError || planError || undefined
-}
+function str(v: unknown): string { return typeof v === 'string' ? v : '' }
+function num(v: unknown): number { return typeof v === 'number' ? Math.round(v) : 0 }
+function bool(v: unknown): boolean { return v === true }
+function arr<T>(v: unknown): T[] { return Array.isArray(v) ? (v as T[]) : [] }
+function obj(v: unknown): RunRecord { return (v && typeof v === 'object' && !Array.isArray(v)) ? v as RunRecord : {} }
 
-function readString(
-  value: Record<string, unknown>,
-  key: string,
-): string | undefined {
-  const entry = value[key]
-  return typeof entry === 'string' && entry.trim().length > 0 ? entry : undefined
-}
-
-function durationMsFromDiagnostics(
-  workflowId: string,
-  stepId: string,
-  diagnostics?: WasmDiagnostics,
-): number {
-  const workflow = diagnostics?.Workflows?.find((entry) => entry.WorkflowID === workflowId)
-  const step = workflow?.Steps?.find((entry) => entry.StepID === stepId)
-  if (!step) return 0
-
-  if (typeof step.Duration === 'number' && step.Duration > 0) {
-    return normalizeDurationMs(step.Duration)
-  }
-
-  const timeline = step.Requests?.[0]?.Timeline
-  if (timeline && typeof timeline.TotalMs === 'number') {
-    return timeline.TotalMs
-  }
-
-  return 0
-}
-
-function normalizeDurationMs(value: number): number {
-  if (value > 1_000_000) {
-    return Math.round(value / 1_000_000)
-  }
-  return Math.round(value)
-}
-
-function parseDiagnosticsTime(value: string | undefined): number | undefined {
-  if (!value?.trim()) return undefined
-  const parsed = Date.parse(value)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
-
-function startMsFromDiagnostics(
-  workflowId: string,
-  stepId: string,
-  diagnostics?: WasmDiagnostics,
-): number | undefined {
-  const workflow = diagnostics?.Workflows?.find((entry) => entry.WorkflowID === workflowId)
-  const step = workflow?.Steps?.find((entry) => entry.StepID === stepId)
-  if (!workflow || !step) return undefined
-
-  const workflowStart = parseDiagnosticsTime(workflow.StartedAt)
-  const stepStart = parseDiagnosticsTime(step.StartedAt)
-  if (workflowStart === undefined || stepStart === undefined) return undefined
-
-  return Math.max(0, stepStart - workflowStart)
-}
-
-function mapStepOutcome(
-  state: string | undefined,
-  causesFailure: boolean | undefined,
-  error: string | undefined,
-): StepOutcome {
-  if (error?.trim()) return 'failed'
+function stepOutcome(step: RunRecord): StepResult['outcome'] {
+  const state = str(step['State'])
+  if (str(step['Error'])) return 'failed'
   if (state === 'dependency-skipped' || state === 'conditional-skip') return 'skipped'
-  if (state === 'failed' || causesFailure) return 'failed'
+  if (state === 'failed' || bool(step['CausesFailure'])) return 'failed'
   if (state === 'succeeded') return 'passed'
   return 'skipped'
 }
 
-function mapAssertionSeverity(
-  severity: string | undefined,
-): StepAssertionResult['severity'] {
-  if (severity === 'warning') return 'warn'
-  if (severity === 'error') return 'error'
-  return 'info'
+function stepDuration(workflowId: string, stepId: string, diagnostics: RunRecord): number {
+  const wf = arr<RunRecord>(obj(diagnostics)['Workflows']).find((w) => str(w['WorkflowID']) === workflowId)
+  const st = arr<RunRecord>(wf?.['Steps']).find((s) => str(s['StepID']) === stepId)
+  if (!st) return 0
+  if (num(st['Duration']) > 0) return num(st['Duration'])
+  const req = arr<RunRecord>(st['Requests'])[0]
+  return num(obj(req?.['Timeline'])['TotalMs'])
 }
 
-function parseExpectedReceived(message: string): {
-  expected?: string
-  received?: string
-} {
-  const match = message.match(/expected\s+(.+?),\s+got\s+(.+)$/i)
-  if (!match) return {}
-  return { expected: match[1], received: match[2] }
-}
-
-function mapAssertion(assertion: WasmAssertionOutcome): StepAssertionResult {
-  const description =
-    assertion.Message?.trim() ||
-    `${assertion.Kind ?? 'assertion'} ${assertion.AssertionID ?? ''}`.trim()
-
+function mapStep(step: RunRecord, workflowId: string, diagnostics: RunRecord): StepResult {
+  const assertions: StepAssertionResult[] = arr<RunRecord>(step['AssertionResults']).map((a) => ({
+    description: str(a['Message']) || `${str(a['Kind'])} ${str(a['AssertionID'])}`.trim(),
+    passed: str(a['Outcome']) === 'pass',
+    severity: str(a['Severity']) === 'warning' ? 'warn' : 'error',
+    expected: str(a['expected']),
+    received: str(a['received']),
+  }))
+  const stepId = str(step['StepID'])
+  const req = arr<RunRecord>(
+    arr<RunRecord>(
+      arr<RunRecord>(obj(diagnostics)['Workflows']).find((w) => str(w['WorkflowID']) === workflowId)?.['Steps']
+    ).find((s) => str(s['StepID']) === stepId)?.['Requests']
+  )[0]
   return {
-    description,
-    passed: assertion.Outcome === 'pass',
-    severity: mapAssertionSeverity(assertion.Severity),
-    ...parseExpectedReceived(assertion.Message ?? ''),
-  }
-}
-
-function requestUrlFromDiagnostics(
-  workflowId: string,
-  stepId: string,
-  diagnostics?: WasmDiagnostics,
-): string | undefined {
-  const step = diagnostics?.Workflows?.find((entry) => entry.WorkflowID === workflowId)
-    ?.Steps?.find((entry) => entry.StepID === stepId)
-  const url = step?.Requests?.[0]?.URL?.trim()
-  return url || undefined
-}
-
-function mapExtracts(
-  workflowId: string,
-  stepId: string,
-  diagnostics?: WasmDiagnostics,
-): StepExtractResult[] {
-  const step = diagnostics?.Workflows?.find((entry) => entry.WorkflowID === workflowId)
-    ?.Steps?.find((entry) => entry.StepID === stepId)
-
-  return (step?.Extracts ?? []).map((extract) => {
-    const variable = extract.As || extract.ID || 'extract'
-    return {
-      variable,
-      expression: extract.Source || '',
-      value: extract.Source || '',
-      scope: 'workflow',
-    }
-  })
-}
-
-function mapStep(
-  step: WasmStepOutcome,
-  workflowId: string,
-  diagnostics?: WasmDiagnostics,
-): StepResult {
-  const stepId = step.StepID ?? ''
-  const assertions = (step.AssertionResults ?? []).map(mapAssertion)
-
-  const startMs = startMsFromDiagnostics(workflowId, stepId, diagnostics)
-
-  return {
-    outcome: mapStepOutcome(step.State, step.CausesFailure, step.Error),
-    statusCode: step.ResponseStatus,
-    durationMs: durationMsFromDiagnostics(workflowId, stepId, diagnostics),
-    startMs,
+    outcome: stepOutcome(step),
+    statusCode: num(step['ResponseStatus']) || undefined,
+    durationMs: stepDuration(workflowId, stepId, diagnostics),
     assertions,
-    extracts: mapExtracts(workflowId, stepId, diagnostics),
-    responseBody: step.ResponseBody,
-    responseHeaders: step.ResponseHeaders,
-    requestUrl: requestUrlFromDiagnostics(workflowId, stepId, diagnostics),
+    extracts: [],
+    responseBody: str(step['ResponseBody']) || undefined,
+    responseHeaders: obj(step['ResponseHeaders']) as Record<string, string>,
+    requestUrl: str(obj(req)['URL']) || undefined,
   }
 }
 
-function workflowDurationMs(
-  workflow: WasmWorkflowOutcome | undefined,
-  diagnostics: WasmDiagnostics | undefined,
-  stepResults: StepResult[],
-): number {
-  const diagnosticWorkflow = diagnostics?.Workflows?.find(
-    (entry) => entry.WorkflowID === workflow?.WorkflowID,
-  )
-  if (diagnosticWorkflow && typeof diagnosticWorkflow.Duration === 'number') {
-    return normalizeDurationMs(diagnosticWorkflow.Duration)
-  }
-  if (diagnostics && typeof diagnostics.Duration === 'number') {
-    return normalizeDurationMs(diagnostics.Duration)
-  }
-  return stepResults.reduce((sum, step) => sum + (step.durationMs ?? 0), 0)
-}
-
-function mapWorkflowOutcome(
-  workflow: WasmWorkflowOutcome | undefined,
-  runPassed: boolean | undefined,
-): WorkflowRunOutcome {
-  if (workflow?.Skipped) return 'failed'
-  if (workflow?.Passed === true) return 'passed'
-  if (workflow?.Passed === false) return 'failed'
-  if (runPassed === true) return 'passed'
-  return 'failed'
-}
-
-export function mapRunResult(
-  wasmResult: WasmRunResult,
-  workflowId: string,
-): CanvasRunOutcome {
-  const bridgeError = bridgeErrorMessage(wasmResult)
+export function mapRunResult(wasmResult: WasmRunResult, workflowId: string): CanvasRunOutcome {
   if (!isTractlWasmRunSuccess(wasmResult)) {
-    return {
-      workflowOutcome: 'error',
-      duration: 0,
-      stepOutcomes: {},
-      errorMessage: bridgeError ?? bridgeErrorMessage(wasmResult),
-    }
+    const { code, message } = (wasmResult as { error: { code: string; message: string } }).error
+    return { workflowOutcome: 'error', duration: 0, stepOutcomes: {}, errorMessage: `${code}: ${message}` }
   }
 
-  const run = wasmResult as Record<string, unknown>
-  const pipelineError = pipelineErrorMessage(run)
-  if (pipelineError) {
-    return {
-      workflowOutcome: 'error',
-      duration: 0,
-      stepOutcomes: {},
-      errorMessage: pipelineError,
-    }
-  }
+  const run = wasmResult as RunRecord
+  const parseErr = str(run['ParseError']) || str(run['ValidationError']) || str(run['PlanError'])
+  if (parseErr) return { workflowOutcome: 'error', duration: 0, stepOutcomes: {}, errorMessage: parseErr }
 
-  const diagnostics = (run.diagnostics ?? run.Diagnostics) as WasmDiagnostics | undefined
-  const workflows = (run.Workflows as WasmWorkflowOutcome[] | undefined) ?? []
-  const workflow =
-    workflows.find((entry) => entry.WorkflowID === workflowId) ?? workflows[0]
+  const diagnostics = obj(run['diagnostics'] ?? run['Diagnostics'])
+  const workflows = arr<RunRecord>(run['Workflows'])
+  const wf = workflows.find((w) => str(w['WorkflowID']) === workflowId) ?? workflows[0]
+  if (!wf) return { workflowOutcome: 'error', duration: 0, stepOutcomes: {}, errorMessage: 'Run produced no workflow result' }
 
-  if (!workflow) {
-    return {
-      workflowOutcome: 'error',
-      duration: 0,
-      stepOutcomes: {},
-      errorMessage: 'Run produced no workflow result',
-    }
-  }
-
-  const resolvedWorkflowId = workflow.WorkflowID ?? workflowId
+  const resolvedId = str(wf['WorkflowID']) || workflowId
   const stepOutcomes: Record<string, StepResult> = {}
-  for (const step of workflow.Steps ?? []) {
-    if (!step.StepID) continue
-    stepOutcomes[step.StepID] = mapStep(step, resolvedWorkflowId, diagnostics)
+  for (const step of arr<RunRecord>(wf['Steps'])) {
+    const id = str(step['StepID'])
+    if (id) stepOutcomes[id] = mapStep(step, resolvedId, diagnostics)
   }
 
-  const results = Object.values(stepOutcomes)
+  const wfDiag = arr<RunRecord>(diagnostics['Workflows']).find((w) => str(w['WorkflowID']) === resolvedId)
+  const duration = num(wfDiag?.['Duration']) || num(diagnostics['Duration']) ||
+    Object.values(stepOutcomes).reduce((s, r) => s + (r.durationMs ?? 0), 0)
 
+  const passed = bool(wf['Passed'])
   return {
-    workflowOutcome: mapWorkflowOutcome(workflow, run.Passed as boolean | undefined),
-    duration: workflowDurationMs(workflow, diagnostics, results),
+    workflowOutcome: bool(wf['Skipped']) ? 'failed' : passed ? 'passed' : 'failed',
+    duration,
     stepOutcomes,
-    errorMessage: results.some((step) => step.outcome === 'failed')
-      ? 'One or more steps failed'
-      : undefined,
+    errorMessage: !passed ? Object.values(stepOutcomes).some((s) => s.outcome === 'failed') ? 'One or more steps failed' : undefined : undefined,
   }
 }

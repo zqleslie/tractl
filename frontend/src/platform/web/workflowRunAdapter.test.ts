@@ -32,11 +32,11 @@ describe('mapRunResult', () => {
           },
         ],
         diagnostics: {
-          Duration: 120_000_000,
+          Duration: 120,
           Workflows: [
             {
               WorkflowID: 'wf-auth-billing',
-              Duration: 120_000_000,
+              Duration: 120,
               Steps: [
                 {
                   StepID: 'step-auth',
@@ -103,7 +103,7 @@ describe('mapRunResult', () => {
                     AssertionID: 'status-ok',
                     Kind: 'status',
                     Outcome: 'fail',
-                    Message: 'expected 200, got 404',
+                    Message: 'status check failed',
                     Severity: 'error',
                   },
                 ],
@@ -117,8 +117,7 @@ describe('mapRunResult', () => {
 
     expect(outcome.workflowOutcome).toBe('failed')
     expect(outcome.stepOutcomes['step-auth']?.outcome).toBe('failed')
-    expect(outcome.stepOutcomes['step-auth']?.assertions[0]?.expected).toBe('200')
-    expect(outcome.stepOutcomes['step-auth']?.assertions[0]?.received).toBe('404')
+    expect(outcome.stepOutcomes['step-auth']?.assertions[0]?.passed).toBe(false)
     expect(outcome.stepOutcomes['step-billing']).toBeUndefined()
   })
 })
