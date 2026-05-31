@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { IconChevronDown, IconChevronUp, IconQuestionMark } from '@tabler/icons-react'
 import { cn } from '@/lib/cn'
 import { detectSurface } from '@/platform'
+import { getEngineDefaults } from '@/stores/engineDefaultsStore'
 import type { FailurePolicy, WorkflowConfig } from '@/types/workflow'
 
 const ENGINE_DEFAULT_CONCURRENCY = 4
@@ -154,7 +155,7 @@ export function WorkflowConfigStrip({
                 onClick={() => setPolicy('resilient')}
                 className={cn(
                   policyBase,
-                  config.failurePolicy === 'resilient' ? policyActive : policyInactive,
+                  config.failurePolicy === getEngineDefaults().failurePolicy ? policyActive : policyInactive,
                 )}
               >
                 resilient

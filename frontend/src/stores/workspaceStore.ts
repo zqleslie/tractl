@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import { createEmptyRequestFormState } from '@/components/request-editor/createEmptyRequestFormState'
 import type { HttpMethod } from '@/components/primitives'
 import type { RequestState } from '@/components/request-editor/requestState'
+import { getEngineDefaults } from '@/stores/engineDefaultsStore'
 
 export type WorkspaceTab = {
   id: string
@@ -66,9 +67,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           assertions: [],
           extracts: [],
           settings: {
-            timeoutMs: 30_000,
+            timeoutMs: getEngineDefaults().timeoutMs,
             retry: null,
-            failurePolicy: 'resilient',
+            failurePolicy: getEngineDefaults().failurePolicy,
           },
         }
         set((state) => ({

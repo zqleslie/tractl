@@ -23,7 +23,7 @@ export type AuthType = 'None' | 'Bearer token' | 'Basic auth' | 'API key'
 
 export type RetryStrategy = 'None' | 'Fixed' | 'Linear' | 'Exponential'
 
-export type FailurePolicy = 'resilient' | 'failFast'
+export type FailurePolicy = string
 
 export type ConfigTabDefinition = {
   id: ConfigTab

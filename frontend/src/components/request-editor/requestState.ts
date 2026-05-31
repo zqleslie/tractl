@@ -26,7 +26,7 @@ export type RequestState = Omit<
   settings: {
     timeoutMs: number
     retry: RetryConfig | null
-    failurePolicy: 'resilient' | 'failFast'
+    failurePolicy: string
   }
 }
 

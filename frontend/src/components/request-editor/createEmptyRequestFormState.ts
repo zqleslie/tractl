@@ -1,4 +1,5 @@
 import type { RequestFormState } from '@/components/request-editor/types'
+import { getEngineDefaults } from '@/stores/engineDefaultsStore'
 
 /** Blank request editor state — no prefilled rows or sample URL. */
 export function createEmptyRequestFormState(): RequestFormState {
@@ -33,7 +34,7 @@ export function createEmptyRequestFormState(): RequestFormState {
       timeoutUnit: 'seconds',
       retry: 'None',
       retryConfig: null,
-      failurePolicy: 'resilient',
+      failurePolicy: getEngineDefaults().failurePolicy,
     },
   }
 }

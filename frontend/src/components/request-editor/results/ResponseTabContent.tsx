@@ -8,6 +8,7 @@ import type { ResultTab } from '@/components/request-editor/types'
 import { cn } from '@/lib/cn'
 import type { RunResult as PlatformRunResult } from '@/platform/types'
 import type { RunResult, RunState } from '@/stores/executionStore'
+import { isSuccessStatus } from '@/stores/engineDefaultsStore'
 import { useUiStore } from '@/stores/uiStore'
 
 export type ResponseTabContentProps = {
@@ -81,11 +82,7 @@ export function ResponseTabContent({
     <div data-testid="request-response-body">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Badge
-          tone={
-            runResult.statusCode >= 200 && runResult.statusCode < 300
-              ? 'success'
-              : 'danger'
-          }
+          tone={isSuccessStatus(runResult.statusCode) ? 'success' : 'danger'}
         >
           {runResult.statusText || String(runResult.statusCode)}
         </Badge>

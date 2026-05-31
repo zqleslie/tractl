@@ -7,6 +7,7 @@ import { parseAndValidateDocument } from '@/lib/tractlDocument/parseValidateDocu
 import type { TraCtlSpecDocument } from '@/components/request-editor/tractlSpecDocument'
 import { getRequestExecutionRunner } from '@/platform/requestExecution/getRequestExecutionRunner'
 import type { RunResult } from '@/platform/types'
+import { getEngineDefaults } from '@/stores/engineDefaultsStore'
 import type { RequestDef } from '@/types/requestDef'
 import type {
   RunHistorySourceFormat,
@@ -103,7 +104,7 @@ export async function runTraCtlDocument(
       params: [],
       assertions: [],
       extracts: [],
-      settings: { failurePolicy: 'resilient' },
+      settings: { failurePolicy: getEngineDefaults().failurePolicy },
     }
     const result = await runner.runRequest({
       request,

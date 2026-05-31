@@ -29,6 +29,7 @@ import {
   type RunHistoryEntry,
 } from '@/stores/runHistoryStore'
 import { useUiStore } from '@/stores/uiStore'
+import { isSuccessStatus } from '@/stores/engineDefaultsStore'
 
 type SaveTarget =
   | { kind: 'history'; entry: RunHistoryEntry }
@@ -109,7 +110,7 @@ function RequestSidebarRow({
           <span
             className={cn(
               'h-1.5 w-1.5 shrink-0 rounded-full',
-              statusCode >= 200 && statusCode < 400
+              isSuccessStatus(statusCode)
                 ? 'bg-success-fg'
                 : 'bg-danger-fg',
             )}

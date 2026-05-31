@@ -1,4 +1,5 @@
 import { cn } from '@/lib/cn'
+import { isSuccessStatus } from '@/stores/engineDefaultsStore'
 import type { StepOutcome, WorkflowStep } from '@/types/workflow'
 
 export interface ResultTabProps {
@@ -9,7 +10,7 @@ function HttpStatusChip({ statusCode }: { statusCode?: number }) {
   const tone =
     statusCode === undefined
       ? 'border-border bg-surface-elevated text-text-muted'
-      : statusCode >= 200 && statusCode < 300
+      : isSuccessStatus(statusCode)
         ? 'border-success bg-success-bg text-success-fg'
         : statusCode >= 400
           ? 'border-danger bg-danger-bg text-danger-fg'

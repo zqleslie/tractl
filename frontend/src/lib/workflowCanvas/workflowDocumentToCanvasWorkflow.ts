@@ -5,6 +5,7 @@ import type {
 } from '@/components/request-editor/tractlSpecDocument'
 import { inferImplicitDependsOn } from '@/lib/workflowCanvas/inferImplicitDependsOn'
 import { stripAuthoringSystemFields } from '@/lib/workflowCanvas/stripAuthoringSystemFields'
+import { getEngineDefaults } from '@/stores/engineDefaultsStore'
 import type {
   FailurePolicy,
   HttpMethod,
@@ -79,7 +80,7 @@ function workflowConfig(workflow: WorkflowWithConfig): WorkflowConfig {
   return {
     concurrency: workflow.concurrency,
     timeoutMs: parseTimeoutMs(workflow.timeout),
-    failurePolicy: (workflow.failurePolicy ?? 'resilient') as FailurePolicy,
+    failurePolicy: (workflow.failurePolicy ?? getEngineDefaults().failurePolicy) as FailurePolicy,
     hasHooks: workflow.steps.some((step) => Boolean(step.hooks)),
     hasOverlay: false,
   }

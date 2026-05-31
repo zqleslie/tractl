@@ -5,7 +5,7 @@ import type {
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export type StepOutcome = 'idle' | 'running' | 'passed' | 'failed' | 'skipped'
-export type FailurePolicy = 'resilient' | 'failFast'
+export type FailurePolicy = string
 
 export interface StepAssertionResult {
   description: string

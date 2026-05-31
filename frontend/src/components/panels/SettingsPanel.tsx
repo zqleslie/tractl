@@ -1,6 +1,7 @@
 import {
   LabeledSelect,
 } from '@/components/request-editor/shared/LabeledField'
+import { getEngineDefaults } from '@/stores/engineDefaultsStore'
 import type {
   FailurePolicy,
   RequestSettingsDraft,
@@ -65,9 +66,9 @@ export function SettingsPanel({ value, onChange, readOnly }: SettingsPanelProps)
                 ? null
                 : value.retryConfig ?? {
                     strategy: retry.toLowerCase() as 'fixed',
-                    maxAttempts: 3,
+                    maxAttempts: getEngineDefaults().retry.maxAttempts,
                     delayMs: 1000,
-                    backoffFactor: 2,
+                    backoffFactor: getEngineDefaults().retry.backoffFactor,
                   },
           })
         }
@@ -120,7 +121,7 @@ export function SettingsPanel({ value, onChange, readOnly }: SettingsPanelProps)
               <input
                 type="number"
                 className="w-[52px] rounded-ui border-[0.5px] border-border bg-surface px-2 py-1"
-                value={value.retryConfig.backoffFactor ?? 2}
+                value={value.retryConfig.backoffFactor ?? getEngineDefaults().retry.backoffFactor}
                 readOnly={readOnly}
                 onChange={(event) =>
                   onChange({
@@ -149,7 +150,7 @@ export function SettingsPanel({ value, onChange, readOnly }: SettingsPanelProps)
         }
       />
       <p className="text-[length:var(--density-font-label)] text-text-muted">
-        {value.failurePolicy === 'resilient'
+        {value.failurePolicy === getEngineDefaults().failurePolicy
           ? 'Dependent steps are skipped on failure, independent steps continue'
           : 'All pending steps are cancelled immediately on first failure'}
       </p>

@@ -5,7 +5,7 @@ export type AssertionKind = 'status' | 'header' | 'body'
 export type AssertionSeverity = 'error' | 'warning'
 export type ExtractSource = 'body' | 'header' | 'status' | 'timing'
 export type ExtractScope = 'workflow' | 'spec' | 'step'
-export type FailurePolicy = 'resilient' | 'failFast'
+export type FailurePolicy = string
 export type RetryStrategy = 'fixed' | 'linear' | 'exponential'
 
 export interface KVRow {

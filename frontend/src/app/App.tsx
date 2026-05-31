@@ -4,6 +4,8 @@ import {
   pushRequestRoute,
   syncRequestRouteFromLocation,
 } from '@/lib/requestEditor/syncRequestRoute'
+import { engine } from '@/platform/engine'
+import { useEngineDefaultsStore } from '@/stores/engineDefaultsStore'
 import { EnvironmentManager } from '@/screens/EnvironmentManager'
 import { FastStartScreen } from '@/screens/FastStartScreen'
 import { WorkflowCanvasScreen } from '@/screens/WorkflowCanvas'
@@ -15,6 +17,12 @@ export default function App() {
   const activeScreen = useUiStore((s) => s.activeScreen)
   const requestEditorKey = useUiStore((s) => s.requestEditorKey)
   const activeTabId = useUiStore((s) => s.activeTabId)
+
+  useEffect(() => {
+    engine.defaults()
+      .then(useEngineDefaultsStore.getState().setDefaults)
+      .catch(() => { /* built-in constants remain — no crash */ })
+  }, [])
 
   useEffect(() => {
     syncRequestRouteFromLocation()

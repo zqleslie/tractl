@@ -22,7 +22,7 @@ type TraCtlWorkflow = {
   id: string
   name?: string
   concurrency?: number
-  failurePolicy?: 'resilient' | 'failFast'
+  failurePolicy?: string
   steps: TraCtlStep[]
 }
 
