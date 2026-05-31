@@ -1,3 +1,6 @@
+// walker.go implements the gopkg.in/yaml.v3 AST walker that enforces all
+// structural subset restrictions: anchors, aliases, explicit tags, single-quoted
+// strings, flow style, merge keys, complex keys, and duplicate keys.
 package yaml
 
 import (

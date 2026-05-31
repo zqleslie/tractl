@@ -1,3 +1,7 @@
+// populate.go defines the spec entity population helpers shared by all format
+// parsers: AssignULIDs (depth-first ULID assignment to all identifiable entities),
+// SetMetadata (sourceFormat and sourceRef annotation), UnmarshalYAMLBytes,
+// UnmarshalJSONBytes, and FormatValidationError.
 package common
 
 import (
@@ -14,27 +18,44 @@ import (
 // AssignULIDs walks the spec tree depth-first and assigns a new ULID to every
 // entity whose ULID field is currently empty. Document order is preserved.
 // Entities: Workflow, Step, Assertion, Extract.
-func AssignULIDs(s *spec.TraCtlSpec) {
+func AssignULIDs(s *spec.TraCtlSpec) error {
 	for i := range s.Workflows {
 		if s.Workflows[i].ULID == "" {
-			s.Workflows[i].ULID = NewULID()
+			id, err := NewULID()
+			if err != nil {
+				return fmt.Errorf("parser: populate workflow: %w", err)
+			}
+			s.Workflows[i].ULID = id
 		}
 		for j := range s.Workflows[i].Steps {
 			if s.Workflows[i].Steps[j].ULID == "" {
-				s.Workflows[i].Steps[j].ULID = NewULID()
+				id, err := NewULID()
+				if err != nil {
+					return fmt.Errorf("parser: populate step: %w", err)
+				}
+				s.Workflows[i].Steps[j].ULID = id
 			}
 			for k := range s.Workflows[i].Steps[j].Assertions {
 				if s.Workflows[i].Steps[j].Assertions[k].ULID == "" {
-					s.Workflows[i].Steps[j].Assertions[k].ULID = NewULID()
+					id, err := NewULID()
+					if err != nil {
+						return fmt.Errorf("parser: populate assertion: %w", err)
+					}
+					s.Workflows[i].Steps[j].Assertions[k].ULID = id
 				}
 			}
 			for k := range s.Workflows[i].Steps[j].Extracts {
 				if s.Workflows[i].Steps[j].Extracts[k].ULID == "" {
-					s.Workflows[i].Steps[j].Extracts[k].ULID = NewULID()
+					id, err := NewULID()
+					if err != nil {
+						return fmt.Errorf("parser: populate extract: %w", err)
+					}
+					s.Workflows[i].Steps[j].Extracts[k].ULID = id
 				}
 			}
 		}
 	}
+	return nil
 }
 
 // SetMetadata ensures s.Metadata is non-nil and sets SourceFormat and SourceRef.

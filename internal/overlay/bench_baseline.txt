@@ -1,0 +1,21 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/tractl/tractl/internal/overlay
+cpu: Apple M2 Pro
+BenchmarkOverlayApply-10            	    5588	    215663 ns/op	  200811 B/op	    3884 allocs/op
+BenchmarkOverlayApply-10            	    5487	    205422 ns/op	  200911 B/op	    3884 allocs/op
+BenchmarkOverlayApply-10            	    5566	    205384 ns/op	  200859 B/op	    3884 allocs/op
+BenchmarkOverlayApply-10            	    5788	    207647 ns/op	  200898 B/op	    3884 allocs/op
+BenchmarkOverlayApply-10            	    6054	    203112 ns/op	  200897 B/op	    3884 allocs/op
+BenchmarkOverlayApplySingle-10      	   12448	    101911 ns/op	   78939 B/op	    1832 allocs/op
+BenchmarkOverlayApplySingle-10      	   10000	    100170 ns/op	   78945 B/op	    1832 allocs/op
+BenchmarkOverlayApplySingle-10      	   10000	    100701 ns/op	   78953 B/op	    1832 allocs/op
+BenchmarkOverlayApplySingle-10      	   12390	     96558 ns/op	   78945 B/op	    1832 allocs/op
+BenchmarkOverlayApplySingle-10      	   12456	     96667 ns/op	   78930 B/op	    1832 allocs/op
+BenchmarkOverlayApplyParallel-10    	    8452	    154518 ns/op	  209523 B/op	    3895 allocs/op
+BenchmarkOverlayApplyParallel-10    	    8224	    157707 ns/op	  209363 B/op	    3895 allocs/op
+BenchmarkOverlayApplyParallel-10    	    8349	    150656 ns/op	  209260 B/op	    3895 allocs/op
+BenchmarkOverlayApplyParallel-10    	    8798	    155928 ns/op	  209462 B/op	    3895 allocs/op
+BenchmarkOverlayApplyParallel-10    	    8008	    154279 ns/op	  209422 B/op	    3895 allocs/op
+PASS
+ok  	github.com/tractl/tractl/internal/overlay	22.597s

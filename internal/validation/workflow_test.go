@@ -1,3 +1,6 @@
+// workflow_test.go tests the workflow-level validation rules (Rules 3–6):
+// workflows presence, workflow identifier format, duplicate IDs, and
+// failure policy values.
 package validation
 
 import (

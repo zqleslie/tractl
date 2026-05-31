@@ -74,10 +74,10 @@ func (p *Planner) Plan(s *spec.TraCtlSpec) (*ExecutionPlan, error) {
 		return nil, topoErr
 	}
 
-	// Resolve workflow-level concurrency cap (default 10).
+	// Resolve workflow-level concurrency cap.
 	workflowConcurrency := s.WorkflowConcurrency
 	if workflowConcurrency <= 0 {
-		workflowConcurrency = 10
+		workflowConcurrency = DefaultWorkflowConcurrency
 	}
 
 	// Generate plan ID (ULID for uniqueness and sorting)
@@ -94,10 +94,10 @@ func (p *Planner) Plan(s *spec.TraCtlSpec) (*ExecutionPlan, error) {
 			errs = append(errs, err)
 		}
 
-		// Resolve concurrency limit: default 4 (parallel by default), user overrides via concurrency:.
+		// Resolve concurrency limit: user overrides via concurrency:, else DefaultStepConcurrency.
 		concurrencyLimit := workflow.Concurrency
 		if concurrencyLimit <= 0 {
-			concurrencyLimit = 4
+			concurrencyLimit = DefaultStepConcurrency
 		}
 
 		// Resolve failure policy (default: resilient per spec §6.3)
@@ -199,7 +199,7 @@ func (p *Planner) PlanWorkflow(s *spec.TraCtlSpec, workflowID string) (*Executio
 
 	concurrencyLimit := targetWorkflow.Concurrency
 	if concurrencyLimit <= 0 {
-		concurrencyLimit = 4
+		concurrencyLimit = DefaultStepConcurrency
 	}
 	failurePolicy := targetWorkflow.FailurePolicy
 	if failurePolicy == "" {

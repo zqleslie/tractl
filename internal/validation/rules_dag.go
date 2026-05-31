@@ -1,3 +1,6 @@
+// rules_dag.go defines validation rules for step dependency graphs:
+// dependsOn reference validity (Rule 11), self-reference detection, and cycle
+// detection via depth-first search (Rule 12). Reference: tractl_spec.md §12.
 package validation
 
 import (

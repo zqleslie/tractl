@@ -1,19 +1,19 @@
-package validation
+// validator_rules_target.go defines OverlayValidator target validation rules:
+// OV-002 (mutual exclusion of path/match/source), OV-003 (target mode values),
+// OV-007 (path non-empty), OV-008 (source type non-empty), OV-009 (match
+// non-empty), and OV-011 (mode absent for path targeting).
+package overlay
 
-import (
-	"fmt"
+import "fmt"
 
-	"github.com/tractl/tractl/internal/overlay"
-)
-
-var validTargetModes = map[overlay.TargetMode]bool{
-	"":                    true,
-	overlay.TargetModeOne: true,
-	overlay.TargetModeAll: true,
+var validTargetModes = map[TargetMode]bool{
+	"":            true,
+	TargetModeOne: true,
+	TargetModeAll: true,
 }
 
 // validateTargetMutualExclusion enforces OV-002: exactly one of Path/Match/Source must be set.
-func validateTargetMutualExclusion(patches []overlay.Patch) []ValidationError {
+func validateTargetMutualExclusion(patches []Patch) []ValidationError {
 	var errs []ValidationError
 	for i, p := range patches {
 		set := 0
@@ -38,14 +38,14 @@ func validateTargetMutualExclusion(patches []overlay.Patch) []ValidationError {
 }
 
 // validateTargetMode enforces OV-003: Mode must be empty, "one", or "all".
-func validateTargetMode(patches []overlay.Patch) []ValidationError {
+func validateTargetMode(patches []Patch) []ValidationError {
 	var errs []ValidationError
 	for i, p := range patches {
 		if !validTargetModes[p.Target.Mode] {
 			errs = append(errs, ValidationError{
 				Field:   patchField(i, "target.mode"),
 				Code:    errOverlayInvalidTargetMode,
-				Message: fmt.Sprintf("invalid target mode %q: must be empty, %q, or %q", p.Target.Mode, overlay.TargetModeOne, overlay.TargetModeAll),
+				Message: fmt.Sprintf("invalid target mode %q: must be empty, %q, or %q", p.Target.Mode, TargetModeOne, TargetModeAll),
 			})
 		}
 	}
@@ -53,7 +53,7 @@ func validateTargetMode(patches []overlay.Patch) []ValidationError {
 }
 
 // validatePathNotEmpty enforces OV-007: path string must be non-empty when path targeting is used.
-func validatePathNotEmpty(patches []overlay.Patch) []ValidationError {
+func validatePathNotEmpty(patches []Patch) []ValidationError {
 	var errs []ValidationError
 	for i, p := range patches {
 		// Fire when all selectors are absent: OV-002 treats an empty path as "not set",
@@ -70,7 +70,7 @@ func validatePathNotEmpty(patches []overlay.Patch) []ValidationError {
 }
 
 // validateSourceType enforces OV-008: Source.Type must be non-empty when source targeting is used.
-func validateSourceType(patches []overlay.Patch) []ValidationError {
+func validateSourceType(patches []Patch) []ValidationError {
 	var errs []ValidationError
 	for i, p := range patches {
 		if p.Target.Source != nil && p.Target.Source.Type == "" {
@@ -85,7 +85,7 @@ func validateSourceType(patches []overlay.Patch) []ValidationError {
 }
 
 // validateMatchNotEmpty enforces OV-009: MatchSelector must have at least one entry.
-func validateMatchNotEmpty(patches []overlay.Patch) []ValidationError {
+func validateMatchNotEmpty(patches []Patch) []ValidationError {
 	var errs []ValidationError
 	for i, p := range patches {
 		// A non-nil but zero-length map means the user explicitly set match to an
@@ -102,7 +102,7 @@ func validateMatchNotEmpty(patches []overlay.Patch) []ValidationError {
 }
 
 // validatePathModeAbsent enforces OV-011: Mode must be empty when path targeting is used.
-func validatePathModeAbsent(patches []overlay.Patch) []ValidationError {
+func validatePathModeAbsent(patches []Patch) []ValidationError {
 	var errs []ValidationError
 	for i, p := range patches {
 		if p.Target.Path != "" && p.Target.Mode != "" {

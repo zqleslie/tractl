@@ -1,3 +1,6 @@
+// rules_diagnostics_test.go tests the diagnostics validation rules: allowed
+// DiagnosticsKind values, allowed DiagnosticsRetention values, and invalid
+// combinations at both the workflow and step level.
 package validation
 
 import (

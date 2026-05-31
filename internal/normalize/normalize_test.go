@@ -1,4 +1,7 @@
-package normalizer
+// normalize_test.go tests the Normalizer: implicit dependency inference from
+// header/target/body expressions, explicit + implicit deduplication, self-reference
+// errors, dead-reference errors, cross-workflow ref exclusion, and determinism.
+package normalize
 
 import (
 	"reflect"

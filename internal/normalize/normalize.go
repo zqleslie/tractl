@@ -1,4 +1,7 @@
-package normalizer
+// normalize.go defines the Normalizer type and its Normalize method, responsible
+// for resolving implicit step dependencies by scanning expression-bearing fields
+// for ${steps.<id>...} references and merging them into each step's DependsOn list.
+package normalize
 
 import (
 	"sort"

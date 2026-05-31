@@ -1,3 +1,6 @@
+// aggregate_test.go tests that SpecValidator runs all rules independently
+// and returns the complete error list without short-circuiting on the first
+// failure. Reference: tractl_spec.md §18.3.
 package validation
 
 import (

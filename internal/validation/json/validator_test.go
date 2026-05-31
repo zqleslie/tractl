@@ -1,3 +1,6 @@
+// validator_test.go tests the JSON format validator against the traCtl JSON
+// subset rules. Covers: valid canonical examples, encoding violations, JSON5
+// comments, trailing commas, duplicate keys, and reserved key prefixes.
 package json_test
 
 import (

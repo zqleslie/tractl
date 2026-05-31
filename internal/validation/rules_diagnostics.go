@@ -1,3 +1,6 @@
+// rules_diagnostics.go defines validation rules for the optional diagnostics
+// configuration on workflows and steps: allowed DiagnosticsKind values and
+// allowed DiagnosticsRetention values. Reference: tractl_spec.md §14.
 package validation
 
 import (

@@ -1,3 +1,6 @@
+// provenance.go defines the provenance tracking functions responsible for
+// recording which overlay and patch index last modified each field, writing
+// overlay refs and patch records into the spec candidate's metadata section.
 package overlay
 
 import (

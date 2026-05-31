@@ -1,23 +1,25 @@
-package validation
+// validator_rules_patch.go defines OverlayValidator patch validation rules:
+// OV-004 (merge action legality), OV-005 (remove must have no data body),
+// OV-006 (non-remove must have non-empty data), and OV-010 (appendUnique
+// identity contract enforcement).
+package overlay
 
 import (
 	"fmt"
 	"strings"
-
-	"github.com/tractl/tractl/internal/overlay"
 )
 
-var validMergeActions = map[overlay.MergeAction]bool{
-	"":                         true,
-	overlay.ActionReplace:      true,
-	overlay.ActionDeepMerge:    true,
-	overlay.ActionAppend:       true,
-	overlay.ActionAppendUnique: true,
-	overlay.ActionRemove:       true,
+var validMergeActions = map[MergeAction]bool{
+	"":                 true,
+	ActionReplace:      true,
+	ActionDeepMerge:    true,
+	ActionAppend:       true,
+	ActionAppendUnique: true,
+	ActionRemove:       true,
 }
 
 // validateMergeAction enforces OV-004: Action must be one of the five valid values or empty.
-func validateMergeAction(patches []overlay.Patch) []ValidationError {
+func validateMergeAction(patches []Patch) []ValidationError {
 	var errs []ValidationError
 	for i, p := range patches {
 		if !validMergeActions[p.Action] {
@@ -32,10 +34,10 @@ func validateMergeAction(patches []overlay.Patch) []ValidationError {
 }
 
 // validateRemovePatchShape enforces OV-005: action=remove must not carry a Data field.
-func validateRemovePatchShape(patches []overlay.Patch) []ValidationError {
+func validateRemovePatchShape(patches []Patch) []ValidationError {
 	var errs []ValidationError
 	for i, p := range patches {
-		if p.Action == overlay.ActionRemove && len(p.Data) > 0 {
+		if p.Action == ActionRemove && len(p.Data) > 0 {
 			errs = append(errs, ValidationError{
 				Field:   patchField(i, "data"),
 				Code:    errOverlayRemovePatchForbidden,
@@ -47,10 +49,10 @@ func validateRemovePatchShape(patches []overlay.Patch) []ValidationError {
 }
 
 // validateNonRemovePatchShape enforces OV-006: non-remove patches must carry a non-empty Data field.
-func validateNonRemovePatchShape(patches []overlay.Patch) []ValidationError {
+func validateNonRemovePatchShape(patches []Patch) []ValidationError {
 	var errs []ValidationError
 	for i, p := range patches {
-		if p.Action != overlay.ActionRemove && len(p.Data) == 0 {
+		if p.Action != ActionRemove && len(p.Data) == 0 {
 			errs = append(errs, ValidationError{
 				Field:   patchField(i, "data"),
 				Code:    errOverlayPatchRequired,
@@ -64,17 +66,17 @@ func validateNonRemovePatchShape(patches []overlay.Patch) []ValidationError {
 // validateAppendUniqueContract enforces OV-010: appendUnique is only legal on
 // identity-contract arrays. Only checked for path targeting; match/source targets
 // are not subject to terminal-segment resolution here (Phase 3+ concern).
-func validateAppendUniqueContract(patches []overlay.Patch) []ValidationError {
+func validateAppendUniqueContract(patches []Patch) []ValidationError {
 	var errs []ValidationError
 	for i, p := range patches {
-		if p.Action != overlay.ActionAppendUnique || p.Target.Path == "" {
+		if p.Action != ActionAppendUnique || p.Target.Path == "" {
 			continue
 		}
 		segment := p.Target.Path
 		if idx := strings.LastIndex(p.Target.Path, "."); idx >= 0 {
 			segment = p.Target.Path[idx+1:]
 		}
-		if !overlay.IdentityContractArrays[segment] {
+		if !IdentityContractArrays[segment] {
 			errs = append(errs, ValidationError{
 				Field:   patchField(i, "target.path"),
 				Code:    errOverlayAppendUniqueContract,

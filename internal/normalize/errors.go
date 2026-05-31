@@ -1,5 +1,5 @@
-// Package normalizer implements Phase 3.5 of the canonical pipeline:
-// the implicit dependency normalizer.
+// Package normalize implements Phase 3.5 of the canonical pipeline:
+// the implicit dependency normalization step.
 //
 // It scans expression-bearing string fields of every step for
 // ${steps.<id>...} references and merges discovered step IDs into
@@ -7,11 +7,11 @@
 //
 // Pipeline position:
 //
-//	parser → overlay → normalizer → validation → planner → compiler → ...
+//	parser → overlay → normalize → validation → planner → compiler → ...
 //
 // The normalizer does NOT call the canonical validator and does NOT
 // mutate the input spec. It returns a new *spec.TraCtlSpec.
-package normalizer
+package normalize
 
 import "fmt"
 

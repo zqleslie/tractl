@@ -1,3 +1,6 @@
+// rules_step.go defines validation rules for individual steps: step identifier
+// format and uniqueness (Rules 7–8), step kind legality (Rule 9), step body
+// and kind consistency (Rules 10–12), and assertion/extract field validation.
 package validation
 
 import (

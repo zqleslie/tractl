@@ -1,3 +1,6 @@
+// traverse.go defines the semantic and source-native tree traversal functions
+// used by the overlay engine to resolve match-based and source-based patch
+// targets: semanticMatch (walks map[string]any depth-first) and sourceNativeMatch.
 package overlay
 
 import (

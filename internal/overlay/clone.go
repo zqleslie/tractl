@@ -1,3 +1,6 @@
+// clone.go defines cloneSpec, which deep-clones an arbitrary value via JSON
+// marshal/unmarshal round-trip so that the overlay engine never mutates its
+// input. Returns ErrCloneFailed if either the marshal or unmarshal step fails.
 package overlay
 
 import (

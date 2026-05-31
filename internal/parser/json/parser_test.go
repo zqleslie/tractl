@@ -1,3 +1,6 @@
+// parser_test.go tests the JSON format parser. Covers: valid minimal documents,
+// ULID assignment, JSON5 comment rejection, trailing comma rejection, multi-step
+// dependsOn, metadata preservation, and failurePolicy round-trip.
 package json_test
 
 import (

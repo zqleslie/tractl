@@ -1,3 +1,6 @@
+// lexer.go implements the raw-byte lexical pre-checks for the YAML validator:
+// encoding validation, tab indentation detection, YAML directive rejection,
+// and document-end marker rejection. All checks produce accurate line numbers.
 package yaml
 
 import (

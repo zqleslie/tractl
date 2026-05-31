@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/tractl/tractl/internal/compiler"
+	"github.com/tractl/tractl/internal/planner"
 	"github.com/tractl/tractl/internal/runtime"
 )
 
@@ -22,10 +23,10 @@ func (s *Scheduler) runWorkflow(
 ) (*WorkflowResult, error) {
 	started := time.Now()
 
-	// set concurrency limit: default 4, user overrides via concurrency: in workflow spec
+	// set concurrency limit: user overrides via concurrency: in workflow spec, else DefaultStepConcurrency
 	concLimit := workflow.ConcurrencyLimit
 	if concLimit <= 0 {
-		concLimit = 4
+		concLimit = planner.DefaultStepConcurrency
 	}
 
 	// structured concurrency: semaphore and errgroup

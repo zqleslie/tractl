@@ -1,3 +1,6 @@
+// rules_workflow.go defines validation rules for the workflows array: presence
+// (Rule 3), workflow identifier format (Rule 4), duplicate workflow IDs
+// (Rule 5), and dispatch to per-step and per-DAG validation.
 package validation
 
 import (

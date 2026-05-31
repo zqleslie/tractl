@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/tractl/tractl/internal/compiler"
-	"github.com/tractl/tractl/internal/normalizer"
+	"github.com/tractl/tractl/internal/normalize"
 	"github.com/tractl/tractl/internal/overlay"
 	jsonparser "github.com/tractl/tractl/internal/parser/json"
 	toonparser "github.com/tractl/tractl/internal/parser/toon"
@@ -42,7 +42,7 @@ func (m *mockExecutor) Execute(ctx context.Context, step *compiler.CompiledStep,
 // buildPipeline runs the full canonical pipeline up to (but not including)
 // scheduler.Run. It returns the compiled plan or an error from any stage.
 func buildPipeline(s *spec.TraCtlSpec) (*compiler.CompiledPlan, error) {
-	norm, err := normalizer.Normalize(s)
+	norm, err := normalize.Normalize(s)
 	if err != nil {
 		return nil, err
 	}

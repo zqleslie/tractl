@@ -1,3 +1,6 @@
+// parser_test.go tests the TOON format parser. Covers: valid minimal documents,
+// ULID assignment, document separator rejection, anchor rejection, 'yes' as bare
+// string (TOON §7.2), tab indentation rejection, and metadata preservation.
 package toon_test
 
 import (

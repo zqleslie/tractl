@@ -1,4 +1,7 @@
-package normalizer
+// scan.go defines the step-reference scanner used by Normalize: the stepRefRE
+// regular expression, scanStepRefs (string scanning), and scanRefsInValue
+// (recursive value scanning for body content maps and slices).
+package normalize
 
 import "regexp"
 

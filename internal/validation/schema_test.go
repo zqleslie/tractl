@@ -1,3 +1,6 @@
+// schema_test.go tests the schemaVersion and capabilities validation rules
+// (Rules 1–2): valid values, missing fields, invalid formats, and reserved
+// identifier prefixes.
 package validation
 
 import (

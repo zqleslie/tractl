@@ -1,3 +1,6 @@
+// encoding.go defines CheckEncoding, which validates UTF-8 compliance and
+// strips a leading BOM from raw document bytes. Used by all three format
+// validators (yaml, json, toon) as their first validation phase.
 package common
 
 import (

@@ -1,3 +1,6 @@
+// step_test.go tests the step-level validation rules (Rules 7–12): step
+// identifier format, step kind legality, step body / kind consistency,
+// assertion and extract field validation.
 package validation
 
 import (

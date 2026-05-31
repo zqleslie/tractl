@@ -19,7 +19,7 @@ import (
 
 	"github.com/tractl/tractl/internal/compiler"
 	"github.com/tractl/tractl/internal/executor"
-	"github.com/tractl/tractl/internal/normalizer"
+	"github.com/tractl/tractl/internal/normalize"
 	jsonparser "github.com/tractl/tractl/internal/parser/json"
 	yamlparser "github.com/tractl/tractl/internal/parser/yaml"
 	"github.com/tractl/tractl/internal/planner"
@@ -51,7 +51,7 @@ func runWorkflowJSON(t *testing.T, jsonInput, workflowID string) *scheduler.Work
 
 func runSpec(t *testing.T, s *spec.TraCtlSpec, workflowID string) *scheduler.WorkflowResult {
 	t.Helper()
-	norm, err := normalizer.Normalize(s)
+	norm, err := normalize.Normalize(s)
 	if err != nil {
 		t.Fatalf("normalize: %v", err)
 	}

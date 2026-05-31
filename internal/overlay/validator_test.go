@@ -1,23 +1,40 @@
-package validation
+// validator_test.go tests OverlayValidator: OV-001 (patches required) and
+// integration tests verifying that all errors are collected independently
+// and that field paths use the correct patch index notation.
+package overlay
 
-import (
-	"testing"
+import "testing"
 
-	"github.com/tractl/tractl/internal/overlay"
-)
+// ── test helpers ──────────────────────────────────────────────────────────────
 
-// makeDoc returns a minimal valid OverlayDocument with the given patches.
-func makeDoc(patches ...overlay.Patch) *overlay.OverlayDocument {
-	return &overlay.OverlayDocument{Patches: patches}
+func makeDoc(patches ...Patch) *OverlayDocument {
+	return &OverlayDocument{Patches: patches}
 }
 
-// validPathPatch returns a patch that passes all rules on its own.
-func validPathPatch() overlay.Patch {
-	return overlay.Patch{
-		Target: overlay.Target{Path: "workflows.main.steps"},
-		Action: overlay.ActionReplace,
+func validPathPatch() Patch {
+	return Patch{
+		Target: Target{Path: "workflows.main.steps"},
+		Action: ActionReplace,
 		Data:   map[string]any{"id": "login"},
 	}
+}
+
+func hasError(errs []ValidationError, code ErrorCode) bool {
+	for _, e := range errs {
+		if e.Code == code {
+			return true
+		}
+	}
+	return false
+}
+
+func hasErrorOnField(errs []ValidationError, code ErrorCode, field string) bool {
+	for _, e := range errs {
+		if e.Code == code && e.Field == field {
+			return true
+		}
+	}
+	return false
 }
 
 // ── OV-001 ────────────────────────────────────────────────────────────────────
@@ -26,7 +43,7 @@ func TestValidatePatchesPresent(t *testing.T) {
 	v := NewOverlayValidator()
 	tests := []struct {
 		name     string
-		doc      *overlay.OverlayDocument
+		doc      *OverlayDocument
 		wantErr  bool
 		wantCode ErrorCode
 	}{
@@ -37,7 +54,7 @@ func TestValidatePatchesPresent(t *testing.T) {
 		},
 		{
 			name:     "invalid: nil patches",
-			doc:      &overlay.OverlayDocument{},
+			doc:      &OverlayDocument{},
 			wantErr:  true,
 			wantCode: errOverlayPatchesRequired,
 		},
@@ -73,24 +90,24 @@ func TestOverlayValidate_AllErrorsCollected(t *testing.T) {
 	v := NewOverlayValidator()
 	doc := makeDoc(
 		// OV-002: two selectors set simultaneously
-		overlay.Patch{
-			Target: overlay.Target{
+		Patch{
+			Target: Target{
 				Path:  "workflows.main",
-				Match: overlay.MatchSelector{"id": "x"},
+				Match: MatchSelector{"id": "x"},
 			},
-			Action: overlay.ActionReplace,
+			Action: ActionReplace,
 			Data:   map[string]any{"k": "v"},
 		},
 		// OV-004: unknown action
-		overlay.Patch{
-			Target: overlay.Target{Path: "workflows.other"},
+		Patch{
+			Target: Target{Path: "workflows.other"},
 			Action: "upsert",
 			Data:   map[string]any{"k": "v"},
 		},
 		// OV-006: non-remove patch with no data
-		overlay.Patch{
-			Target: overlay.Target{Path: "workflows.third"},
-			Action: overlay.ActionReplace,
+		Patch{
+			Target: Target{Path: "workflows.third"},
+			Action: ActionReplace,
 		},
 	)
 
@@ -108,9 +125,9 @@ func TestOverlayValidate_PatchFieldPaths(t *testing.T) {
 	v := NewOverlayValidator()
 	doc := makeDoc(
 		validPathPatch(), // patches[0] — valid
-		overlay.Patch{ // patches[1] — OV-007: all selectors absent
-			Target: overlay.Target{},
-			Action: overlay.ActionReplace,
+		Patch{ // patches[1] — OV-007: all selectors absent
+			Target: Target{},
+			Action: ActionReplace,
 			Data:   map[string]any{"k": "v"},
 		},
 	)

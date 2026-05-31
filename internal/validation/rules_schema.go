@@ -1,3 +1,6 @@
+// rules_schema.go defines validation rules for top-level document fields:
+// schemaVersion (Rule 1), capabilities (Rule 2), and the shared identifier
+// and capability-format validators used by other rule files.
 package validation
 
 import (

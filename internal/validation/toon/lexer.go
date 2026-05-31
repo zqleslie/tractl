@@ -1,3 +1,6 @@
+// lexer.go implements raw-byte pre-checks for the TOON validator: UTF-8
+// encoding, tab indentation rejection, YAML directive rejection, document
+// separator rejection, and invalid escape sequence detection in double-quoted strings.
 package toon
 
 import (

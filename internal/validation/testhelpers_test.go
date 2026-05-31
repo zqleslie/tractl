@@ -1,3 +1,5 @@
+// testhelpers_test.go provides shared test fixture builders, assertion helpers,
+// and the table-driven test runner used by all validation rule test files.
 package validation
 
 import (
@@ -41,15 +43,6 @@ func minimalValidSpec() *spec.TraCtlSpec {
 func hasError(errs []ValidationError, code ErrorCode) bool {
 	for _, e := range errs {
 		if e.Code == code {
-			return true
-		}
-	}
-	return false
-}
-
-func hasErrorOnField(errs []ValidationError, code ErrorCode, field string) bool {
-	for _, e := range errs {
-		if e.Code == code && e.Field == field {
 			return true
 		}
 	}

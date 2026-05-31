@@ -36,7 +36,9 @@ func Parse(src []byte, sourceRef string) (*spec.TraCtlSpec, error) {
 		return nil, fmt.Errorf("yaml: unmarshal: %w", err)
 	}
 
-	parscommon.AssignULIDs(s)
+	if err := parscommon.AssignULIDs(s); err != nil {
+		return nil, fmt.Errorf("yaml: assign ULIDs: %w", err)
+	}
 	parscommon.SetMetadata(s, "yaml", sourceRef)
 	return s, nil
 }

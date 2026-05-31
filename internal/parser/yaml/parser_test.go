@@ -1,3 +1,7 @@
+// parser_test.go tests the YAML format parser. Covers: valid minimal documents,
+// ULID assignment to all spec entities, rejection of authored _ulid keys,
+// format validation errors, multi-step dependsOn, metadata preservation, and
+// failurePolicy round-trip.
 package yaml_test
 
 import (

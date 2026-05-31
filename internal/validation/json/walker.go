@@ -1,3 +1,6 @@
+// walker.go implements the encoding/json token-stream walker that enforces
+// JSON subset restrictions: top-level object shape, single-value constraint,
+// duplicate key prohibition, reserved key prefixes, and prohibited number forms.
 package json
 
 import (

@@ -1,3 +1,6 @@
+// keys.go defines shared key validation helpers used by the YAML, JSON, and
+// TOON AST walkers: _ulid authoring prohibition, reserved prefix enforcement,
+// and duplicate key detection.
 package common
 
 import "strings"

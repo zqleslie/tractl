@@ -37,7 +37,9 @@ func Parse(src []byte, sourceRef string) (*spec.TraCtlSpec, error) {
 		return nil, fmt.Errorf("toon: unmarshal: %w", err)
 	}
 
-	parscommon.AssignULIDs(s)
+	if err := parscommon.AssignULIDs(s); err != nil {
+		return nil, fmt.Errorf("toon: assign ULIDs: %w", err)
+	}
 	parscommon.SetMetadata(s, "toon", sourceRef)
 	return s, nil
 }

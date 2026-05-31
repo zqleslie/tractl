@@ -1,3 +1,6 @@
+// validator_test.go tests the YAML format validator against the traCtl YAML
+// subset rules. Covers: valid canonical examples, encoding violations, tab
+// indentation, anchors, aliases, YAML 1.1 booleans, and reserved key prefixes.
 package yaml_test
 
 // Go concept — package naming for tests:

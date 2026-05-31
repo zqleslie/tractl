@@ -1,3 +1,6 @@
+// validator_test.go tests the TOON format validator against the traCtl TOON
+// subset rules. Covers: valid canonical examples, document separators, anchors,
+// tab indentation, invalid escapes, and reserved key prefixes.
 package toon_test
 
 import (

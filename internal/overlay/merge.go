@@ -1,3 +1,7 @@
+// merge.go defines applyMerge and the merge strategy implementations used by
+// the overlay engine: deepMerge (recursive map merge), appendSlice (array
+// concatenation), appendUniqueSlice (id-keyed dedup merge), and defaultAction
+// (schema-aware action inference when no explicit action is specified).
 package overlay
 
 import (

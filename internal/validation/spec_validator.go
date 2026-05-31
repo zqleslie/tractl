@@ -1,3 +1,5 @@
+// spec_validator.go defines SpecValidator and its Validate method, which
+// orchestrate all Phase 1.1 validation rules against a parsed *spec.TraCtlSpec.
 package validation
 
 import "github.com/tractl/tractl/internal/spec"

@@ -1,3 +1,6 @@
+// dag_test.go tests the dependsOn validation rules (Rules 11–12): valid
+// dependency chains, self-references, cross-workflow references, and cyclic
+// dependency detection.
 package validation
 
 import (

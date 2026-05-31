@@ -1,7 +1,6 @@
 // parse.go selects and invokes the correct format parser based on file extension or
-// explicit format name. Format detection uses a switch over the three supported formats
-// (yaml, json, toon). When Stream A's parser factory lands, this file becomes a thin
-// wrapper over parser.FormatFor().
+// explicit format name. Delegates to the parser registry (internal/parser) for
+// format dispatch — adding a new format requires only a registry entry, not a change here.
 
 package engine
 
@@ -10,8 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	parserjson "github.com/tractl/tractl/internal/parser/json"
-	parsertoon "github.com/tractl/tractl/internal/parser/toon"
+	"github.com/tractl/tractl/internal/parser"
 	parseryaml "github.com/tractl/tractl/internal/parser/yaml"
 	"github.com/tractl/tractl/internal/spec"
 )
@@ -40,22 +38,23 @@ func parseByExtension(src []byte, filePath string) (*spec.TraCtlSpec, error) {
 	case "yaml", "yml", "json", "toon", "":
 		return ParseByFormat(src, ext, filePath)
 	default:
+		// Unknown extension: fall back to YAML to preserve existing CLI behaviour.
 		return parseryaml.Parse(src, filePath)
 	}
 }
 
-// ParseByFormat selects the parser for an in-memory document format.
-// Exported so surfaces (e.g. WASM bridge) that receive a document without going
-// through Run can parse without duplicating the format-dispatch switch.
+// ParseByFormat selects the parser for an in-memory document format via the
+// parser registry. Exported so surfaces (e.g. WASM bridge) that receive a
+// document without going through Run can parse without duplicating format dispatch.
 func ParseByFormat(src []byte, format string, sourceRef string) (*spec.TraCtlSpec, error) {
-	switch strings.ToLower(strings.TrimSpace(format)) {
-	case "yaml", "yml", "":
-		return parseryaml.Parse(src, sourceRef)
-	case "json":
-		return parserjson.Parse(src, sourceRef)
-	case "toon":
-		return parsertoon.Parse(src, sourceRef)
-	default:
+	norm := strings.ToLower(strings.TrimSpace(format))
+	// Normalise yml → yaml and empty → yaml to match registry keys.
+	if norm == "yml" || norm == "" {
+		norm = "yaml"
+	}
+	p, err := parser.ForFormat(norm)
+	if err != nil {
 		return nil, fmt.Errorf("unsupported format %q", format)
 	}
+	return p.Parse(src, sourceRef)
 }

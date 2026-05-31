@@ -1,39 +1,38 @@
-package validation
+// validator_rules_patch_test.go tests the patch validation rules defined in
+// validator_rules_patch.go: OV-004 (invalid action), OV-005 (remove with
+// data), OV-006 (non-remove missing data), and OV-010 (appendUnique contract).
+package overlay
 
-import (
-	"testing"
-
-	"github.com/tractl/tractl/internal/overlay"
-)
+import "testing"
 
 // ── OV-004 ────────────────────────────────────────────────────────────────────
 
 func TestValidateMergeAction(t *testing.T) {
 	tests := []struct {
 		name     string
-		patches  []overlay.Patch
+		patches  []Patch
 		wantErr  bool
 		wantCode ErrorCode
 	}{
 		{
 			name:    "valid: empty action (schema default)",
-			patches: []overlay.Patch{{Target: overlay.Target{Path: "x"}, Data: map[string]any{"k": "v"}}},
+			patches: []Patch{{Target: Target{Path: "x"}, Data: map[string]any{"k": "v"}}},
 			wantErr: false,
 		},
 		{
 			name:    "valid: replace",
-			patches: []overlay.Patch{{Target: overlay.Target{Path: "x"}, Action: overlay.ActionReplace, Data: map[string]any{"k": "v"}}},
+			patches: []Patch{{Target: Target{Path: "x"}, Action: ActionReplace, Data: map[string]any{"k": "v"}}},
 			wantErr: false,
 		},
 		{
 			name:    "valid: remove",
-			patches: []overlay.Patch{{Target: overlay.Target{Path: "x"}, Action: overlay.ActionRemove}},
+			patches: []Patch{{Target: Target{Path: "x"}, Action: ActionRemove}},
 			wantErr: false,
 		},
 		{
 			name: "invalid: unknown action",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Path: "x"},
+			patches: []Patch{{
+				Target: Target{Path: "x"},
 				Action: "upsert",
 				Data:   map[string]any{"k": "v"},
 			}},
@@ -63,25 +62,25 @@ func TestValidateMergeAction(t *testing.T) {
 func TestValidateRemovePatchShape(t *testing.T) {
 	tests := []struct {
 		name     string
-		patches  []overlay.Patch
+		patches  []Patch
 		wantErr  bool
 		wantCode ErrorCode
 	}{
 		{
 			name:    "valid: remove with no data",
-			patches: []overlay.Patch{{Target: overlay.Target{Path: "x"}, Action: overlay.ActionRemove}},
+			patches: []Patch{{Target: Target{Path: "x"}, Action: ActionRemove}},
 			wantErr: false,
 		},
 		{
 			name:    "valid: non-remove with data",
-			patches: []overlay.Patch{validPathPatch()},
+			patches: []Patch{validPathPatch()},
 			wantErr: false,
 		},
 		{
 			name: "invalid: remove with data present",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Path: "x"},
-				Action: overlay.ActionRemove,
+			patches: []Patch{{
+				Target: Target{Path: "x"},
+				Action: ActionRemove,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr:  true,
@@ -110,33 +109,33 @@ func TestValidateRemovePatchShape(t *testing.T) {
 func TestValidateNonRemovePatchShape(t *testing.T) {
 	tests := []struct {
 		name     string
-		patches  []overlay.Patch
+		patches  []Patch
 		wantErr  bool
 		wantCode ErrorCode
 	}{
 		{
 			name:    "valid: non-remove with data",
-			patches: []overlay.Patch{validPathPatch()},
+			patches: []Patch{validPathPatch()},
 			wantErr: false,
 		},
 		{
 			name:    "valid: remove without data",
-			patches: []overlay.Patch{{Target: overlay.Target{Path: "x"}, Action: overlay.ActionRemove}},
+			patches: []Patch{{Target: Target{Path: "x"}, Action: ActionRemove}},
 			wantErr: false,
 		},
 		{
 			name: "invalid: replace with no data",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Path: "x"},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{Path: "x"},
+				Action: ActionReplace,
 			}},
 			wantErr:  true,
 			wantCode: errOverlayPatchRequired,
 		},
 		{
 			name: "invalid: empty action with no data",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Path: "x"},
+			patches: []Patch{{
+				Target: Target{Path: "x"},
 			}},
 			wantErr:  true,
 			wantCode: errOverlayPatchRequired,
@@ -164,47 +163,47 @@ func TestValidateNonRemovePatchShape(t *testing.T) {
 func TestValidateAppendUniqueContract(t *testing.T) {
 	tests := []struct {
 		name     string
-		patches  []overlay.Patch
+		patches  []Patch
 		wantErr  bool
 		wantCode ErrorCode
 	}{
 		{
 			name: "valid: appendUnique on assertions",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Path: "workflows.main.steps.login.assertions"},
-				Action: overlay.ActionAppendUnique,
+			patches: []Patch{{
+				Target: Target{Path: "workflows.main.steps.login.assertions"},
+				Action: ActionAppendUnique,
 				Data:   map[string]any{"id": "check-status"},
 			}},
 			wantErr: false,
 		},
 		{
 			name: "valid: appendUnique on workflows (top-level)",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Path: "workflows"},
-				Action: overlay.ActionAppendUnique,
+			patches: []Patch{{
+				Target: Target{Path: "workflows"},
+				Action: ActionAppendUnique,
 				Data:   map[string]any{"id": "wf2"},
 			}},
 			wantErr: false,
 		},
 		{
 			name:    "valid: replace on non-contract field",
-			patches: []overlay.Patch{validPathPatch()},
+			patches: []Patch{validPathPatch()},
 			wantErr: false,
 		},
 		{
 			name: "valid: appendUnique with match targeting (path check skipped)",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Match: overlay.MatchSelector{"id": "x"}},
-				Action: overlay.ActionAppendUnique,
+			patches: []Patch{{
+				Target: Target{Match: MatchSelector{"id": "x"}},
+				Action: ActionAppendUnique,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr: false,
 		},
 		{
 			name: "invalid: appendUnique on non-contract field",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Path: "workflows.main.steps.login.request.headers"},
-				Action: overlay.ActionAppendUnique,
+			patches: []Patch{{
+				Target: Target{Path: "workflows.main.steps.login.request.headers"},
+				Action: ActionAppendUnique,
 				Data:   map[string]any{"X-Extra": "value"},
 			}},
 			wantErr:  true,

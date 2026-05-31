@@ -1,11 +1,23 @@
-// Package validation implements the canonical contract enforcement layer.
-package validation
+// validator.go defines OverlayValidator, which validates an overlay document against the overlay schema rules.
+//
+// ValidationError and ErrorCode are defined here (not imported from internal/validation) so that
+// internal/overlay remains import-cycle–free: internal/validation must not import internal/overlay,
+// and internal/overlay must not import internal/validation.
+//
+// COORDINATION(Stream C): if engine.go or any caller currently imports validation.OverlayValidator,
+// update that import to overlay.OverlayValidator after this PR lands.
+package overlay
 
-import (
-	"fmt"
+import "fmt"
 
-	"github.com/tractl/tractl/internal/overlay"
-)
+// ValidationError describes a single overlay validation failure.
+// Field uses dot-bracket notation matching the overlay document structure.
+// ErrorCode is shared with the engine layer (defined in errors.go).
+type ValidationError struct { //nolint:revive
+	Field   string
+	Code    ErrorCode
+	Message string
+}
 
 const (
 	errOverlayPatchesRequired      ErrorCode = "OV-001"
@@ -29,7 +41,7 @@ func NewOverlayValidator() *OverlayValidator { return &OverlayValidator{} }
 
 // Validate runs all overlay validation rules and returns every error found.
 // Returns a single OV-001 error immediately when patches is nil or empty.
-func (v *OverlayValidator) Validate(doc *overlay.OverlayDocument) []ValidationError {
+func (v *OverlayValidator) Validate(doc *OverlayDocument) []ValidationError {
 	errs := validatePatchesPresent(doc.Patches)
 	if len(errs) > 0 {
 		return errs
@@ -53,7 +65,7 @@ func patchField(i int, field string) string {
 	return fmt.Sprintf("patches[%d].%s", i, field)
 }
 
-func validatePatchesPresent(patches []overlay.Patch) []ValidationError {
+func validatePatchesPresent(patches []Patch) []ValidationError {
 	if len(patches) == 0 {
 		return []ValidationError{{
 			Field:   "patches",

@@ -12,6 +12,7 @@ import (
 
 	"github.com/tractl/tractl/internal/overlay"
 	"github.com/tractl/tractl/internal/spec"
+	"github.com/tractl/tractl/internal/validation"
 )
 
 // applyOverlays applies each overlay file in order to the spec.
@@ -29,9 +30,29 @@ func applyOverlays(s *spec.TraCtlSpec, overlayFiles []string) (*spec.TraCtlSpec,
 			format = "yaml"
 		}
 
+		fv, err := validation.ValidatorFor(format)
+		if err != nil {
+			return nil, fmt.Errorf("overlay: unsupported format %q in %q", format, path)
+		}
+		if result := fv.Validate(raw); !result.Valid {
+			msgs := make([]string, len(result.Errors))
+			for i, e := range result.Errors {
+				msgs[i] = e.Error()
+			}
+			return nil, fmt.Errorf("overlay: format validation failed for %q:\n%s", path, strings.Join(msgs, "\n"))
+		}
+
 		doc, err := overlay.Parse(raw, format)
 		if err != nil {
 			return nil, fmt.Errorf("overlay: parse %q: %w", path, err)
+		}
+
+		if errs := overlay.NewOverlayValidator().Validate(doc); len(errs) > 0 {
+			msgs := make([]string, len(errs))
+			for i, e := range errs {
+				msgs[i] = fmt.Sprintf("[%s] %s (field: %s)", e.Code, e.Message, e.Field)
+			}
+			return nil, fmt.Errorf("overlay: validation failed for %q:\n%s", path, strings.Join(msgs, "\n"))
 		}
 
 		specJSON, err := json.Marshal(s)

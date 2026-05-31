@@ -33,7 +33,9 @@ func Parse(src []byte, sourceRef string) (*spec.TraCtlSpec, error) {
 		return nil, fmt.Errorf("json: unmarshal: %w", err)
 	}
 
-	parscommon.AssignULIDs(s)
+	if err := parscommon.AssignULIDs(s); err != nil {
+		return nil, fmt.Errorf("json: assign ULIDs: %w", err)
+	}
 	parscommon.SetMetadata(s, "json", sourceRef)
 	return s, nil
 }

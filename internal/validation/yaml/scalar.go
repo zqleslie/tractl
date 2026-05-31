@@ -1,3 +1,6 @@
+// scalar.go implements YAML scalar value checks enforced during the AST walk:
+// YAML 1.1 boolean prohibition, ambiguous null forms, implicit timestamp
+// detection, and prohibited numeric forms. Reference: tractl_yaml_spec.md §7.
 package yaml
 
 import (

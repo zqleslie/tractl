@@ -1,3 +1,6 @@
+// path.go defines dot-notation path resolution for the overlay engine:
+// resolvePath (locate and return a node), setAtPath (write a value at a path),
+// and deleteAtPath (remove a key). All functions operate on map[string]any.
 package overlay
 
 import (

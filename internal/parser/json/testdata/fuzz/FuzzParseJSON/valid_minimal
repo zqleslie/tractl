@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{\n  \"schemaVersion\": 1,\n  \"capabilities\": [\"protocol.http\"],\n  \"workflows\": [\n    {\n      \"id\": \"wf-001\",\n      \"steps\": [\n        {\n          \"id\": \"step-001\",\n          \"kind\": \"request\",\n          \"request\": {\n            \"protocol\": \"http\",\n            \"target\": \"https://example.com\",\n            \"operation\": \"GET\"\n          }\n        }\n      ]\n    }\n  ]\n}")

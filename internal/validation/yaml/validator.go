@@ -1,3 +1,6 @@
+// validator.go defines Validate, the sole public entry point for the traCtl
+// YAML subset validator. Runs three sequential phases: lexical pre-checks,
+// structural parse via gopkg.in/yaml.v3, and AST walk. Reference: §6–§22.
 package yaml
 
 import (

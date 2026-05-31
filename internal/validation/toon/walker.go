@@ -1,3 +1,6 @@
+// walker.go implements the gopkg.in/yaml.v3 AST walker for TOON documents,
+// enforcing TOON-specific subset restrictions: anchors, aliases, explicit tags,
+// single-quoted strings, merge keys, complex keys, and duplicate keys.
 package toon
 
 import (

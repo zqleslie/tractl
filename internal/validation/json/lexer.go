@@ -1,3 +1,6 @@
+// lexer.go implements raw-byte pre-checks for the JSON validator: UTF-8
+// encoding validation, BOM stripping, forbidden-syntax scan (JSON5/JSONC
+// comments, single-quoted strings), and trailing comma detection.
 package json
 
 import (

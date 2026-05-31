@@ -1,3 +1,6 @@
+// vars.go defines package-level regexp patterns and constant maps shared by
+// all validation rule files — identifier format, capability format, reserved
+// prefixes, and the exhaustive set of valid step kinds.
 package validation
 
 import "regexp"

@@ -1,51 +1,51 @@
-package validation
+// validator_rules_target_test.go tests the target validation rules defined in
+// validator_rules_target.go: OV-002 (mutual exclusion), OV-003 (target mode),
+// OV-007 (empty path), OV-008 (source type), OV-009 (empty match), OV-011
+// (mode with path targeting).
+package overlay
 
-import (
-	"testing"
-
-	"github.com/tractl/tractl/internal/overlay"
-)
+import "testing"
 
 // ── OV-002 ────────────────────────────────────────────────────────────────────
 
 func TestValidateTargetMutualExclusion(t *testing.T) {
 	tests := []struct {
 		name     string
-		patches  []overlay.Patch
+		patches  []Patch
 		wantErr  bool
 		wantCode ErrorCode
 	}{
 		{
 			name:    "valid: path only",
-			patches: []overlay.Patch{validPathPatch()},
+			patches: []Patch{validPathPatch()},
 			wantErr: false,
 		},
 		{
 			name: "valid: match only",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Match: overlay.MatchSelector{"id": "login"}},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{Match: MatchSelector{"id": "login"}},
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr: false,
 		},
 		{
 			name: "valid: source only",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Source: &overlay.SourceSelector{Type: "openapi"}},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{Source: &SourceSelector{Type: "openapi"}},
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr: false,
 		},
 		{
 			name: "invalid: path and match both set",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{
+			patches: []Patch{{
+				Target: Target{
 					Path:  "workflows.main",
-					Match: overlay.MatchSelector{"id": "login"},
+					Match: MatchSelector{"id": "login"},
 				},
-				Action: overlay.ActionReplace,
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr:  true,
@@ -53,13 +53,13 @@ func TestValidateTargetMutualExclusion(t *testing.T) {
 		},
 		{
 			name: "invalid: all three set",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{
+			patches: []Patch{{
+				Target: Target{
 					Path:   "workflows.main",
-					Match:  overlay.MatchSelector{"id": "x"},
-					Source: &overlay.SourceSelector{Type: "openapi"},
+					Match:  MatchSelector{"id": "x"},
+					Source: &SourceSelector{Type: "openapi"},
 				},
-				Action: overlay.ActionReplace,
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr:  true,
@@ -88,38 +88,38 @@ func TestValidateTargetMutualExclusion(t *testing.T) {
 func TestValidateTargetMode(t *testing.T) {
 	tests := []struct {
 		name     string
-		patches  []overlay.Patch
+		patches  []Patch
 		wantErr  bool
 		wantCode ErrorCode
 	}{
 		{
 			name:    "valid: empty mode",
-			patches: []overlay.Patch{validPathPatch()},
+			patches: []Patch{validPathPatch()},
 			wantErr: false,
 		},
 		{
 			name: "valid: mode=one",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Match: overlay.MatchSelector{"id": "x"}, Mode: overlay.TargetModeOne},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{Match: MatchSelector{"id": "x"}, Mode: TargetModeOne},
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr: false,
 		},
 		{
 			name: "valid: mode=all",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Match: overlay.MatchSelector{"id": "x"}, Mode: overlay.TargetModeAll},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{Match: MatchSelector{"id": "x"}, Mode: TargetModeAll},
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr: false,
 		},
 		{
 			name: "invalid: unrecognised mode value",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Match: overlay.MatchSelector{"id": "x"}, Mode: "first"},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{Match: MatchSelector{"id": "x"}, Mode: "first"},
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr:  true,
@@ -148,29 +148,29 @@ func TestValidateTargetMode(t *testing.T) {
 func TestValidatePathNotEmpty(t *testing.T) {
 	tests := []struct {
 		name     string
-		patches  []overlay.Patch
+		patches  []Patch
 		wantErr  bool
 		wantCode ErrorCode
 	}{
 		{
 			name:    "valid: non-empty path",
-			patches: []overlay.Patch{validPathPatch()},
+			patches: []Patch{validPathPatch()},
 			wantErr: false,
 		},
 		{
 			name: "valid: match targeting (no path field involved)",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Match: overlay.MatchSelector{"id": "x"}},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{Match: MatchSelector{"id": "x"}},
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr: false,
 		},
 		{
 			name: "invalid: all selectors absent (path intended but empty)",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{},
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr:  true,
@@ -199,29 +199,29 @@ func TestValidatePathNotEmpty(t *testing.T) {
 func TestValidateSourceType(t *testing.T) {
 	tests := []struct {
 		name     string
-		patches  []overlay.Patch
+		patches  []Patch
 		wantErr  bool
 		wantCode ErrorCode
 	}{
 		{
 			name: "valid: source with type set",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Source: &overlay.SourceSelector{Type: "openapi"}},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{Source: &SourceSelector{Type: "openapi"}},
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr: false,
 		},
 		{
 			name:    "valid: no source targeting",
-			patches: []overlay.Patch{validPathPatch()},
+			patches: []Patch{validPathPatch()},
 			wantErr: false,
 		},
 		{
 			name: "invalid: source present but type empty",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Source: &overlay.SourceSelector{}},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{Source: &SourceSelector{}},
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr:  true,
@@ -250,29 +250,29 @@ func TestValidateSourceType(t *testing.T) {
 func TestValidateMatchNotEmpty(t *testing.T) {
 	tests := []struct {
 		name     string
-		patches  []overlay.Patch
+		patches  []Patch
 		wantErr  bool
 		wantCode ErrorCode
 	}{
 		{
 			name: "valid: match with entries",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Match: overlay.MatchSelector{"id": "login"}},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{Match: MatchSelector{"id": "login"}},
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr: false,
 		},
 		{
 			name:    "valid: nil match (path targeting)",
-			patches: []overlay.Patch{validPathPatch()},
+			patches: []Patch{validPathPatch()},
 			wantErr: false,
 		},
 		{
 			name: "invalid: match set to empty map",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{Match: overlay.MatchSelector{}},
-				Action: overlay.ActionReplace,
+			patches: []Patch{{
+				Target: Target{Match: MatchSelector{}},
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr:  true,
@@ -301,35 +301,35 @@ func TestValidateMatchNotEmpty(t *testing.T) {
 func TestValidatePathModeAbsent(t *testing.T) {
 	tests := []struct {
 		name     string
-		patches  []overlay.Patch
+		patches  []Patch
 		wantErr  bool
 		wantCode ErrorCode
 	}{
 		{
 			name:    "valid: path targeting with no mode",
-			patches: []overlay.Patch{validPathPatch()},
+			patches: []Patch{validPathPatch()},
 			wantErr: false,
 		},
 		{
 			name: "valid: match targeting with mode=all",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{
-					Match: overlay.MatchSelector{"id": "x"},
-					Mode:  overlay.TargetModeAll,
+			patches: []Patch{{
+				Target: Target{
+					Match: MatchSelector{"id": "x"},
+					Mode:  TargetModeAll,
 				},
-				Action: overlay.ActionReplace,
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr: false,
 		},
 		{
 			name: "invalid: path targeting with mode set",
-			patches: []overlay.Patch{{
-				Target: overlay.Target{
+			patches: []Patch{{
+				Target: Target{
 					Path: "workflows.main",
-					Mode: overlay.TargetModeAll,
+					Mode: TargetModeAll,
 				},
-				Action: overlay.ActionReplace,
+				Action: ActionReplace,
 				Data:   map[string]any{"k": "v"},
 			}},
 			wantErr:  true,
