@@ -1,11 +1,14 @@
 package localapi
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Store points handlers at a git-native workspace root.
@@ -67,4 +70,25 @@ func (s *Store) resolvePath(rel string) (string, error) {
 		return "", errors.New("localapi: file path escapes workspace")
 	}
 	return absPath, nil
+}
+
+// commitPath stages and commits a single file. Silently no-ops if the workspace
+// is not a git repository — never errors.
+func (s *Store) commitPath(absPath, message string) {
+	gitCtx := func() (context.Context, context.CancelFunc) {
+		return context.WithTimeout(context.Background(), 10*time.Second)
+	}
+	ctx, cancel := gitCtx()
+	err := exec.CommandContext(ctx, "git", "-C", s.rootDir, "rev-parse", "--git-dir").Run()
+	cancel()
+	if err != nil {
+		return
+	}
+	ctx, cancel = gitCtx()
+	_ = exec.CommandContext(ctx, "git", "-C", s.rootDir, "add", absPath).Run()
+	cancel()
+	ctx, cancel = gitCtx()
+	_ = exec.CommandContext(ctx, "git", "-C", s.rootDir, "commit", "-m", message,
+		"--author=traCtl Agent <tractl@local>").Run()
+	cancel()
 }

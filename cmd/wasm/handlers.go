@@ -14,10 +14,12 @@
 package main
 
 import (
+	"encoding/json"
 	"strings"
 	"syscall/js"
 
 	"github.com/tractl/tractl/internal/engine"
+	"github.com/tractl/tractl/internal/localapi"
 )
 
 // handleVersion returns bridge surface, runtime name, and current binary version.
@@ -151,6 +153,90 @@ func handleRun(this js.Value, args []js.Value) any {
 	}
 
 	payload, err := runResultPayload(result)
+	if err != nil {
+		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
+	}
+	return payload
+}
+
+// handleRunRequest accepts a RequestDef JSON string.
+// Returns RunResult JSON — same shape as POST /api/v1/run.
+func handleRunRequest(this js.Value, args []js.Value) any {
+	if len(args) != 1 || args[0].Type() != js.TypeString {
+		return bridgeError("TRACTL_WASM_INVALID_ARGUMENT", "runRequest expects one JSON string argument")
+	}
+	var def localapi.RequestDef
+	if err := json.Unmarshal([]byte(args[0].String()), &def); err != nil {
+		return bridgeError("TRACTL_WASM_INVALID_ARGUMENT", err.Error())
+	}
+	result, err := localapi.RunRequestDef(def)
+	if err != nil {
+		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
+	}
+	payload, err := jsonSafeObject(result)
+	if err != nil {
+		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
+	}
+	return payload
+}
+
+// handleLayout accepts a JSON array of StepRef and returns WorkflowLayoutResponse.
+func handleLayout(this js.Value, args []js.Value) any {
+	if len(args) != 1 || args[0].Type() != js.TypeString {
+		return bridgeError("TRACTL_WASM_INVALID_ARGUMENT", "layout expects one JSON string argument")
+	}
+	var steps []localapi.StepRef
+	if err := json.Unmarshal([]byte(args[0].String()), &steps); err != nil {
+		return bridgeError("TRACTL_WASM_INVALID_ARGUMENT", err.Error())
+	}
+	result := localapi.ComputeWorkflowLayout(steps)
+	payload, err := jsonSafeObject(result)
+	if err != nil {
+		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
+	}
+	return payload
+}
+
+// handleInferDeps accepts a JSON array of StepScanDef and returns InferDepsResponse.
+func handleInferDeps(this js.Value, args []js.Value) any {
+	if len(args) != 1 || args[0].Type() != js.TypeString {
+		return bridgeError("TRACTL_WASM_INVALID_ARGUMENT", "inferDeps expects one JSON string argument")
+	}
+	var steps []localapi.StepScanDef
+	if err := json.Unmarshal([]byte(args[0].String()), &steps); err != nil {
+		return bridgeError("TRACTL_WASM_INVALID_ARGUMENT", err.Error())
+	}
+	result := localapi.InferImplicitDeps(steps)
+	payload, err := jsonSafeObject(result)
+	if err != nil {
+		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
+	}
+	return payload
+}
+
+// handleExportWorkflow accepts a WorkflowExportRequest JSON string and returns WorkflowExportResponse.
+func handleExportWorkflow(this js.Value, args []js.Value) any {
+	if len(args) != 1 || args[0].Type() != js.TypeString {
+		return bridgeError("TRACTL_WASM_INVALID_ARGUMENT", "exportWorkflow expects one JSON string argument")
+	}
+	var req localapi.WorkflowExportRequest
+	if err := json.Unmarshal([]byte(args[0].String()), &req); err != nil {
+		return bridgeError("TRACTL_WASM_INVALID_ARGUMENT", err.Error())
+	}
+	result, err := localapi.ExportWorkflow(req)
+	if err != nil {
+		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
+	}
+	payload, err := jsonSafeObject(result)
+	if err != nil {
+		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
+	}
+	return payload
+}
+
+// handleDefaults returns the canonical engine defaults — synchronous, no I/O.
+func handleDefaults(this js.Value, args []js.Value) any {
+	payload, err := jsonSafeObject(localapi.DefaultEngineSettings)
 	if err != nil {
 		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
 	}
