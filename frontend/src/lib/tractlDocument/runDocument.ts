@@ -1,14 +1,10 @@
-import {
-  formatMissingEnvironmentVariables,
-  resolveTraCtlSpecEnvironmentVariables,
-} from '@/lib/resolveEnvironmentVariables'
 import { extractRunSummaryFromDocument } from '@/lib/tractlDocument/extractRunSummary'
 import { parseAndValidateDocument } from '@/lib/tractlDocument/parseValidateDocument'
 import type { TraCtlSpecDocument } from '@/components/request-editor/tractlSpecDocument'
 import { getRequestExecutionRunner } from '@/platform/requestExecution/getRequestExecutionRunner'
 import type { RunResult } from '@/platform/types'
 import { getEngineDefaults } from '@/stores/engineDefaultsStore'
-import type { RequestDef } from '@/types/requestDef'
+import type { RequestDef as LegacyRequestDef } from '@/types/requestDef'
 import type {
   RunHistorySourceFormat,
   RunHistorySourceType,
@@ -34,7 +30,7 @@ export type RunDocumentSuccess = {
 
 export type RunDocumentFailure = ParseValidateFailure | {
   ok: false
-  stage: 'summary' | 'environment' | 'execution'
+  stage: 'summary' | 'execution'
   message: string
   errors: Array<{ message: string; code?: string }>
 }
@@ -74,31 +70,14 @@ export async function runTraCtlDocument(
     }
   }
 
-  const resolved = resolveTraCtlSpecEnvironmentVariables(
-    validated.spec,
-    input.environmentVariables ?? {},
-  )
-  if (resolved.missing.length > 0) {
-    const message = formatMissingEnvironmentVariables(resolved.missing)
-    return {
-      ok: false,
-      stage: 'environment',
-      message,
-      errors: resolved.missing.map((name) => ({
-        message: `Missing environment variable: ${name}`,
-        code: 'TRACTL_ENV_VARIABLE_MISSING',
-      })),
-    }
-  }
-
   const runner = getRequestExecutionRunner()
 
   try {
     await runner.checkAvailable()
-    const request: RequestDef = {
+    const request: LegacyRequestDef = {
       id: input.sourceName,
       name: summary.requestName,
-      method: summary.method as RequestDef['method'],
+      method: summary.method as LegacyRequestDef['method'],
       url: summary.url,
       headers: [],
       params: [],
@@ -107,7 +86,7 @@ export async function runTraCtlDocument(
       settings: { failurePolicy: getEngineDefaults().failurePolicy },
     }
     const result = await runner.runRequest({
-      request,
+      request: { ...request, env: input.environmentVariables } as unknown as LegacyRequestDef,
       name: summary.requestName,
     })
 

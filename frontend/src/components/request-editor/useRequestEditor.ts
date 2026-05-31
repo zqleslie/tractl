@@ -13,12 +13,7 @@ import {
   updateExtractRow,
   updateKeyValueRow,
 } from '@/components/request-editor/requestFormStateMutations'
-import { requestFormStateToTraCtlSpec } from '@/components/request-editor/requestFormStateToTraCtlSpec'
 import { validateRequestRunUrl } from '@/components/request-editor/normalizeRequestUrl'
-import {
-  formatMissingEnvironmentVariables,
-  resolveTraCtlSpecEnvironmentVariables,
-} from '@/lib/resolveEnvironmentVariables'
 import type {
   AssertionRowModel,
   ConfigTab,
@@ -64,24 +59,6 @@ function requestTabTitleFromUrl(url: string): string {
   }
 }
 
-function environmentResolutionErrorResult(missing: string[]): PlatformRunResult {
-  const message = formatMissingEnvironmentVariables(missing)
-
-  return {
-    durationMs: 0,
-    statusCode: 0,
-    statusText: 'Environment error',
-    body: message,
-    headers: {},
-    timing: { dns: 0, tcp: 0, tls: 0, ttfb: 0, transfer: 0, total: 0, unit: 'ms' },
-    assertionResults: [],
-    extractResults: [],
-    assertionsPassed: 0,
-    assertionsTotal: 0,
-    passed: false,
-    error: message,
-  }
-}
 
 export function useRequestEditor() {
   const pendingHistoryEntry = useUiStore((s) => s.pendingHistoryEntry)
@@ -284,14 +261,13 @@ export function useRequestEditor() {
   )
 
   const recordHistoryResult = useCallback(
-    (result: PlatformRunResult, document: ReturnType<typeof requestFormStateToTraCtlSpec>) => {
+    (result: PlatformRunResult) => {
       recordRunHistoryEntry({
         requestName,
         method,
         url,
         result,
         sourceType: 'request',
-        document,
       })
     },
     [method, requestName, url],
@@ -329,27 +305,7 @@ export function useRequestEditor() {
     setResultsOpen(true)
 
     try {
-      const document = requestFormStateToTraCtlSpec(method, url, draft, requestName)
-      const resolved = resolveTraCtlSpecEnvironmentVariables(
-        document,
-        activeEnvironment?.variables ?? {},
-      )
-      if (resolved.missing.length > 0) {
-        console.warn('[tractl:request-run] Missing environment variables', {
-          missing: resolved.missing,
-          activeEnvironmentName: activeEnvironment?.name ?? null,
-        })
-        const result = environmentResolutionErrorResult(resolved.missing)
-        setRunResult(result)
-        setExecutionResult(requestRunResultToExecutionResult(result))
-        setRunError(result.error ?? null)
-        recordHistoryResult(result, document)
-        return
-      }
-
-      const resolvedTarget =
-        resolved.value.workflows[0]?.steps[0]?.request.target ?? url
-      const urlError = validateRequestRunUrl(resolvedTarget)
+      const urlError = validateRequestRunUrl(url)
       if (urlError) {
         setRunError(urlError)
         setRunResult(null)
@@ -360,7 +316,7 @@ export function useRequestEditor() {
         requestId,
         requestName,
         method,
-        resolvedTarget,
+        url,
         draft,
       )
 
@@ -387,7 +343,7 @@ export function useRequestEditor() {
         setRunError(result.error)
         setExecutionError(result.error)
       }
-      recordHistoryResult(result, resolved.value)
+      recordHistoryResult(result)
     } catch (error) {
       const message =
         error instanceof LocalApiUnavailableError
