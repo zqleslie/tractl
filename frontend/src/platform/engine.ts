@@ -8,26 +8,14 @@ import type {
   StepRef, StepScanDef,
 } from '@/platform/types'
 
-// Re-export baseUrl from localApi/client so that file doesn't need changing yet
-import { baseUrl as baseHttpUrl } from '@/platform/localApi/client'
+import { requestJson } from '@/platform/localApi/client'
 
-async function httpPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${baseHttpUrl()}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}) as Record<string, string>)
-    throw new Error((err as Record<string, string>)['error'] ?? `HTTP ${res.status}`)
-  }
-  return res.json() as Promise<T>
+function httpPost<T>(path: string, body: unknown): Promise<T> {
+  return requestJson<T>(path, { method: 'POST', body: JSON.stringify(body) })
 }
 
-async function httpGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${baseHttpUrl()}${path}`)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json() as Promise<T>
+function httpGet<T>(path: string): Promise<T> {
+  return requestJson<T>(path)
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

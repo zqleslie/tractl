@@ -27,7 +27,7 @@ export async function buildWorkflowRunPayload(
   const yaml = await engine.exportWorkflow(req)
   return {
     document: yaml,
-    format: 'yaml',
+    format: resolveWorkflowRunFormat(options?.sourceFormat),
     source: 'canvas-serializer',
   }
 }

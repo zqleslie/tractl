@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { detectSurface } from '@/platform'
 import { engine } from '@/platform/engine'
@@ -203,11 +203,13 @@ export function WorkflowCanvasScreen() {
 
   const steps = useMemo(() => workflow?.steps ?? [], [workflow])
 
-  const stepStructureKey = JSON.stringify(
-    steps.map((s) => ({ id: s.id, d: s.dependsOn ?? [] }))
+  const stepStructureKey = useMemo(
+    () => JSON.stringify(steps.map((s) => ({ id: s.id, d: s.dependsOn ?? [] }))),
+    [steps],
   )
   useEffect(() => {
-    if (steps.length === 0) { setLayout(null); return }
+    setLayout(null)
+    if (steps.length === 0) return
     const refs = steps.map((s) => ({ id: s.id, dependsOn: s.dependsOn ?? [] }))
     engine.computeLayout(refs)
       .then(setLayout)
@@ -215,11 +217,13 @@ export function WorkflowCanvasScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepStructureKey])
 
+  const codeViewGenRef = useRef(0)
   useEffect(() => {
     if (view !== 'code' || !workflow) return
     if (workflow.yaml?.trim()) { setCodeViewYaml(workflow.yaml); return }
+    const gen = ++codeViewGenRef.current
     engine.exportWorkflow(workflowToExportRequest(workflow))
-      .then(setCodeViewYaml)
+      .then((yaml) => { if (codeViewGenRef.current === gen) setCodeViewYaml(yaml) })
       .catch(console.error)
   }, [view, workflow])
 

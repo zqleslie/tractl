@@ -15,6 +15,7 @@ type RunRecord = Record<string, unknown>
 
 function str(v: unknown): string { return typeof v === 'string' ? v : '' }
 function num(v: unknown): number { return typeof v === 'number' ? Math.round(v) : 0 }
+function optNum(v: unknown): number | undefined { return typeof v === 'number' ? Math.round(v) : undefined }
 function bool(v: unknown): boolean { return v === true }
 function arr<T>(v: unknown): T[] { return Array.isArray(v) ? (v as T[]) : [] }
 function obj(v: unknown): RunRecord { return (v && typeof v === 'object' && !Array.isArray(v)) ? v as RunRecord : {} }
@@ -42,8 +43,8 @@ function mapStep(step: RunRecord, workflowId: string, diagnostics: RunRecord): S
     description: str(a['Message']) || `${str(a['Kind'])} ${str(a['AssertionID'])}`.trim(),
     passed: str(a['Outcome']) === 'pass',
     severity: str(a['Severity']) === 'warning' ? 'warn' : 'error',
-    expected: str(a['expected']),
-    received: str(a['received']),
+    // Go's assertion.AssertionResult has no Expected/Received fields on this path;
+    // the full message is in `description` above.
   }))
   const stepId = str(step['StepID'])
   const req = arr<RunRecord>(
@@ -53,7 +54,7 @@ function mapStep(step: RunRecord, workflowId: string, diagnostics: RunRecord): S
   )[0]
   return {
     outcome: stepOutcome(step),
-    statusCode: num(step['ResponseStatus']) || undefined,
+    statusCode: optNum(step['ResponseStatus']),
     durationMs: stepDuration(workflowId, stepId, diagnostics),
     assertions,
     extracts: [],

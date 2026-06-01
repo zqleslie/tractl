@@ -275,7 +275,7 @@ export function useRequestEditor() {
       if (result.extractResults.length === 0 || !activeEnvironmentId) return
 
       for (const extract of result.extractResults) {
-        if (extract.resolvedValue !== null) {
+        if (extract.resolvedValue) {
           setLocalEnvironmentVariable(
             activeEnvironmentId,
             extract.variableName,

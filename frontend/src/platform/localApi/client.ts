@@ -58,7 +58,7 @@ async function parseError(response: Response): Promise<Error> {
   return new Error(message)
 }
 
-async function requestJson<T>(
+export async function requestJson<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
