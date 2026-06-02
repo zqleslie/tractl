@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { type: 'group', label: 'GET STARTED' },
   { label: 'Overview',       icon: '📦', href: 'index.html' },
   { label: 'Architecture',   icon: '🏗️', href: 'pages/architecture.html' },
+  { label: 'Schema & DTOs',  icon: '🔷', href: 'pages/schema-and-dto.html' },
 
   { type: 'group', label: 'ENGINE MODULES' },
   { label: 'Pipeline',    icon: '⚡', href: 'pages/module.html?id=pipeline' },   // orchestrator
@@ -51,6 +52,7 @@ const NAV_ITEMS = [
   { label: 'Go for JS Devs',   icon: '🐹', href: 'pages/concepts.html' },
   { label: 'Security Review',  icon: '🔒', href: 'pages/security.html' },
   { label: 'Self-Check Quiz',  icon: '🎯', href: 'pages/quiz.html' },
+  { label: 'Q&A',              icon: '💬', href: 'pages/qa.html' },
 
   { type: 'divider' },
   { label: 'User Docs →', icon: '📚', href: 'user/index.html', cls: 'external' },
