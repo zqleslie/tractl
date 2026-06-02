@@ -1,5 +1,4 @@
-import type { KeyValueRow } from '@/components/request-editor/types'
-import type { RequestDef, RunResult } from '@/types/requestDef'
+import type { RequestDef, TimingResult } from '@/types/requestDef'
 
 export type ApiStatusResponse = {
   ok: boolean
@@ -28,40 +27,38 @@ export type RequestTimelineSegment = {
   ms: number
 }
 
-type LegacyAssertionResult = {
+export type AssertionResultRow = {
   id: string
+  kind: string
+  op: string
+  expected: string
+  received: string
   passed: boolean
-  label?: string
-  detail?: string
-  kind?: string
-  op?: string
-  expected?: string
-  received?: string
-  severity?: 'error' | 'warning'
+  severity: 'error' | 'warning'
 }
 
-type LegacyExtractResult = {
-  id?: string
-  variable?: string
-  value?: string
-  variableName?: string
-  resolvedValue?: string
-  scope: 'workflow' | 'spec' | 'step' | string
+export type ExtractResultRow = {
+  id: string
+  variable: string
+  value: string
+  scope: string
 }
 
-export type RequestRunResult = Partial<Omit<RunResult, 'headers' | 'assertionResults' | 'extractResults'>> & {
-  durationMs: number
+export type RequestRunResult = {
+  passed: boolean
   statusCode: number
+  statusText: string
+  durationMs: number
   body: string
-  headers: Record<string, string> | KeyValueRow[]
-  assertionResults: LegacyAssertionResult[]
-  extractResults: LegacyExtractResult[]
-  passed?: boolean
-  statusLabel?: string
-  contentType?: string
-  passedCount?: number
-  totalCount?: number
-  timeline?: RequestTimelineSegment[]
+  contentType: string
+  headers: Record<string, string>
+  timing: TimingResult
+  assertionResults: AssertionResultRow[]
+  extractResults: ExtractResultRow[]
+  assertionsPassed: number
+  assertionsTotal: number
+  timeline: RequestTimelineSegment[]
+  error?: string
 }
 
 export type ApiErrorBody = {

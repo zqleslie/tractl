@@ -13,14 +13,14 @@ export type WorkflowRunOutcome = 'passed' | 'failed' | 'error'
 
 export type WasmRunResult = TractlWasmRunResult
 
-type WasmWorkflowOutcome = {
+export type WasmWorkflowOutcome = {
   WorkflowID?: string
   Passed?: boolean
   Skipped?: boolean
   Steps?: WasmStepOutcome[]
 }
 
-type WasmStepOutcome = {
+export type WasmStepOutcome = {
   StepID?: string
   State?: string
   CausesFailure?: boolean
@@ -31,15 +31,27 @@ type WasmStepOutcome = {
   Error?: string
 }
 
-type WasmAssertionOutcome = {
+export type WasmAssertionOutcome = {
   AssertionID?: string
   Kind?: string
+  Op?: string
+  Expected?: string
+  Received?: string
   Outcome?: string
   Message?: string
   Severity?: string
 }
 
-type WasmDiagnostics = {
+export type WasmDiagTimeline = {
+  DNSMs?: number
+  TCPMs?: number
+  TLSMs?: number
+  TTFBMs?: number
+  TransferMs?: number
+  TotalMs?: number
+}
+
+export type WasmDiagnostics = {
   Duration?: number
   Workflows?: Array<{
     WorkflowID?: string
@@ -49,10 +61,17 @@ type WasmDiagnostics = {
       StepID?: string
       StartedAt?: string
       Duration?: number
-      Requests?: Array<{ URL?: string; Timeline?: { TotalMs?: number } }>
+      Requests?: Array<{ URL?: string; Timeline?: WasmDiagTimeline }>
       Extracts?: Array<{ ID?: string; Source?: string; As?: string }>
     }>
   }>
+}
+
+/** Top-level shape of the PascalCase engine.RunResult returned by window.tractl.run(). */
+export type EngineRunResult = {
+  Passed?: boolean
+  Workflows?: WasmWorkflowOutcome[]
+  diagnostics?: WasmDiagnostics
 }
 
 export type CanvasRunOutcome = {

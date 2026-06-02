@@ -1,8 +1,6 @@
 import type { HttpMethod } from '@/components/primitives'
-import type { RequestDef } from '@/types/requestDef'
+import type { AssertionDef, ExtractDef, RequestDef } from '@/types/requestDef'
 import type {
-  AssertionDef,
-  ExtractDef,
   FormRow,
   KVRow,
   RequestAuthState,

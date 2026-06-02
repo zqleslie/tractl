@@ -13,17 +13,15 @@ describe('runRequest', () => {
         passed: true,
         durationMs: 234,
         statusCode: 201,
-        statusLabel: '201 Created',
-        contentType: 'application/json',
+        statusText: '201 Created',
         body: JSON.stringify({ userId: 'usr_01HXYZ9ABC' }),
-        headers: [
-          { id: 'header-1', enabled: true, key: 'content-type', value: 'application/json' },
-        ],
+        headers: { 'content-type': 'application/json' },
+        timing: { dns: 0, tcp: 0, tls: 0, ttfb: 0, transfer: 0, total: 234, unit: 'ms' },
         assertionResults: [],
         extractResults: [],
-        passedCount: 0,
-        totalCount: 0,
-        timeline: [{ label: 'Total', ms: 234 }],
+        assertionsPassed: 0,
+        assertionsTotal: 0,
+        error: '',
       }),
     } as Response)
 

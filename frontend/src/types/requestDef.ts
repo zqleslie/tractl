@@ -1,9 +1,13 @@
+// Protocol identifies the request protocol. Defaults to 'http' when absent — ADR-017.
+// 'soap' and 'odata' are reserved; SOAP requires v1.1, OData is plain HTTP.
+export type Protocol = 'http' | 'graphql' | 'soap' | 'odata'
+
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-export type BodyEncoding = 'json' | 'form' | 'multipart' | 'raw' | 'binary' | 'none'
+export type BodyEncoding = 'json' | 'form' | 'multipart' | 'raw' | 'binary' | 'none' | 'graphql'
 export type AuthType = 'none' | 'bearer' | 'basic' | 'apikey'
-export type AssertionKind = 'status' | 'header' | 'body'
+export type AssertionKind = 'status' | 'header' | 'body' | 'schema' | 'script'
 export type AssertionSeverity = 'error' | 'warning'
-export type ExtractSource = 'body' | 'header' | 'status' | 'timing'
+export type ExtractSource = 'body' | 'header' | 'status' | 'timing' | 'metadata' | 'extension'
 export type ExtractScope = 'workflow' | 'spec' | 'step'
 export type FailurePolicy = 'resilient' | 'failFast'
 export type RetryStrategy = 'fixed' | 'linear' | 'exponential'
@@ -65,10 +69,11 @@ export interface RetryDef {
 export interface RequestSettings {
   timeoutMs?: number
   failurePolicy?: FailurePolicy
-  retry?: RetryDef
+  retry?: RetryDef | null
 }
 
 export interface RequestDef {
+  protocol?: Protocol  // defaults to 'http' when absent — ADR-017
   id: string
   name: string
   method: HttpMethod
@@ -82,6 +87,8 @@ export interface RequestDef {
   assertions?: AssertionDef[]
   extracts?: ExtractDef[]
   settings?: RequestSettings
+  /** Runtime environment variable overrides — matches Go RequestDef.Env (types.go). */
+  env?: Record<string, string>
 }
 
 export interface AssertionResult {

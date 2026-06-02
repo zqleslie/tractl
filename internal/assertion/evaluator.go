@@ -96,6 +96,7 @@ func (ae *AssertionEvaluator) evaluate(
 		outcome     AssertionOutcome
 		message     string
 		placeholder string
+		received    string
 		evalErr     error
 	)
 
@@ -108,8 +109,9 @@ func (ae *AssertionEvaluator) evaluate(
 			evalErr = resolveErr
 			outcome = OutcomeFail
 			message = fmt.Sprintf("expression resolution failed: %v", resolveErr)
+			received = strconv.Itoa(result.Status)
 		} else {
-			outcome, message, placeholder, evalErr = evalStatus(a, result, expectedStr)
+			outcome, message, placeholder, received, evalErr = evalStatus(a, result, expectedStr)
 		}
 
 	case "header":
@@ -118,8 +120,9 @@ func (ae *AssertionEvaluator) evaluate(
 			outcome = OutcomeFail
 			message = fmt.Sprintf("expression resolution failed: %v", resolveErr)
 			placeholder = headerPlaceholder(a.Target)
+			received = ""
 		} else {
-			outcome, message, placeholder, evalErr = evalHeader(a, result, expectedStr, compiledPattern)
+			outcome, message, placeholder, received, evalErr = evalHeader(a, result, expectedStr, compiledPattern)
 		}
 
 	case "body":
@@ -128,8 +131,9 @@ func (ae *AssertionEvaluator) evaluate(
 			outcome = OutcomeFail
 			message = fmt.Sprintf("expression resolution failed: %v", resolveErr)
 			placeholder = "response.body." + a.Target
+			received = ""
 		} else {
-			outcome, message, placeholder, evalErr = evalBody(a, result, expectedStr, compiledPattern)
+			outcome, message, placeholder, received, evalErr = evalBody(a, result, expectedStr, compiledPattern)
 		}
 
 	case "schema":
@@ -164,6 +168,9 @@ func (ae *AssertionEvaluator) evaluate(
 		AssertionID:   id,
 		AssertionULID: ulid,
 		Kind:          kind,
+		Op:            op,
+		Expected:      expectedStr,
+		Received:      received,
 		Outcome:       outcome,
 		Severity:      severity,
 		Message:       message,
@@ -210,47 +217,48 @@ func resolveExpected(expected interface{}, ctx *runtime.ExecutionContext) (strin
 
 // ── status ────────────────────────────────────────────────────────────────────
 
-func evalStatus(a spec.Assertion, result *runtime.StepResult, expected string) (AssertionOutcome, string, string, error) {
+func evalStatus(a spec.Assertion, result *runtime.StepResult, expected string) (AssertionOutcome, string, string, string, error) {
 	placeholder := "response.status"
+	actual := strconv.Itoa(result.Status)
 
 	switch a.Op {
 	case "equals":
 		exp, err := strconv.Atoi(expected)
 		if err != nil {
-			return OutcomeFail, fmt.Sprintf("expected value %q is not a valid integer", expected), placeholder,
+			return OutcomeFail, fmt.Sprintf("expected value %q is not a valid integer", expected), placeholder, actual,
 				&AssertionError{Code: ErrOperatorMismatch, Message: "status equals requires numeric expected value"}
 		}
 		if result.Status == exp {
-			return OutcomePass, fmt.Sprintf("status %d equals %d", result.Status, exp), placeholder, nil
+			return OutcomePass, fmt.Sprintf("status %d equals %d", result.Status, exp), placeholder, actual, nil
 		}
-		return OutcomeFail, fmt.Sprintf("expected status %d, got %d", exp, result.Status), placeholder, nil
+		return OutcomeFail, fmt.Sprintf("expected status %d, got %d", exp, result.Status), placeholder, actual, nil
 
 	case "inRange":
 		low, high, err := parseRange(expected)
 		if err != nil {
-			return OutcomeFail, err.Error(), placeholder,
+			return OutcomeFail, err.Error(), placeholder, actual,
 				&AssertionError{Code: ErrOperatorMismatch, Message: err.Error()}
 		}
 		if result.Status >= low && result.Status <= high {
-			return OutcomePass, fmt.Sprintf("status %d is in range %d-%d", result.Status, low, high), placeholder, nil
+			return OutcomePass, fmt.Sprintf("status %d is in range %d-%d", result.Status, low, high), placeholder, actual, nil
 		}
-		return OutcomeFail, fmt.Sprintf("status %d is not in range %d-%d", result.Status, low, high), placeholder, nil
+		return OutcomeFail, fmt.Sprintf("status %d is not in range %d-%d", result.Status, low, high), placeholder, actual, nil
 
 	case "exists":
 		if result.Status != 0 {
-			return OutcomePass, fmt.Sprintf("status %d exists", result.Status), placeholder, nil
+			return OutcomePass, fmt.Sprintf("status %d exists", result.Status), placeholder, actual, nil
 		}
-		return OutcomeFail, "status does not exist (0)", placeholder, nil
+		return OutcomeFail, "status does not exist (0)", placeholder, actual, nil
 
 	default:
 		msg := fmt.Sprintf("unknown operator %q for kind %q", a.Op, a.Kind)
-		return OutcomeFail, msg, placeholder, &AssertionError{Code: ErrUnknownOperator, Message: msg}
+		return OutcomeFail, msg, placeholder, actual, &AssertionError{Code: ErrUnknownOperator, Message: msg}
 	}
 }
 
 // ── header ────────────────────────────────────────────────────────────────────
 
-func evalHeader(a spec.Assertion, result *runtime.StepResult, expected string, compiledPattern *regexp.Regexp) (AssertionOutcome, string, string, error) {
+func evalHeader(a spec.Assertion, result *runtime.StepResult, expected string, compiledPattern *regexp.Regexp) (AssertionOutcome, string, string, string, error) {
 	name := strings.ToLower(a.Target)
 	placeholder := headerPlaceholder(name)
 
@@ -259,16 +267,16 @@ func evalHeader(a spec.Assertion, result *runtime.StepResult, expected string, c
 	switch a.Op {
 	case "equals":
 		if !present {
-			return OutcomeFail, fmt.Sprintf("header %q not present", a.Target), placeholder, nil
+			return OutcomeFail, fmt.Sprintf("header %q not present", a.Target), placeholder, "", nil
 		}
 		if headerVal == expected {
-			return OutcomePass, fmt.Sprintf("header %q equals %q", a.Target, expected), placeholder, nil
+			return OutcomePass, fmt.Sprintf("header %q equals %q", a.Target, expected), placeholder, headerVal, nil
 		}
-		return OutcomeFail, fmt.Sprintf("header %q: expected %q, got %q", a.Target, expected, headerVal), placeholder, nil
+		return OutcomeFail, fmt.Sprintf("header %q: expected %q, got %q", a.Target, expected, headerVal), placeholder, headerVal, nil
 
 	case "matches":
 		if !present {
-			return OutcomeFail, fmt.Sprintf("header %q not present", a.Target), placeholder, nil
+			return OutcomeFail, fmt.Sprintf("header %q not present", a.Target), placeholder, "", nil
 		}
 		rx := compiledPattern
 		if rx == nil {
@@ -276,32 +284,32 @@ func evalHeader(a spec.Assertion, result *runtime.StepResult, expected string, c
 			rx, err = regexp.Compile(expected)
 			if err != nil {
 				msg := fmt.Sprintf("invalid regex %q: %v", expected, err)
-				return OutcomeFail, msg, placeholder, &AssertionError{Code: ErrRegexInvalid, Message: msg}
+				return OutcomeFail, msg, placeholder, headerVal, &AssertionError{Code: ErrRegexInvalid, Message: msg}
 			}
 		}
 		if rx.MatchString(headerVal) {
-			return OutcomePass, fmt.Sprintf("header %q matches %q", a.Target, expected), placeholder, nil
+			return OutcomePass, fmt.Sprintf("header %q matches %q", a.Target, expected), placeholder, headerVal, nil
 		}
-		return OutcomeFail, fmt.Sprintf("header %q value %q does not match %q", a.Target, headerVal, expected), placeholder, nil
+		return OutcomeFail, fmt.Sprintf("header %q value %q does not match %q", a.Target, headerVal, expected), placeholder, headerVal, nil
 
 	case "contains":
 		if !present {
-			return OutcomeFail, fmt.Sprintf("header %q not present", a.Target), placeholder, nil
+			return OutcomeFail, fmt.Sprintf("header %q not present", a.Target), placeholder, "", nil
 		}
 		if strings.Contains(headerVal, expected) {
-			return OutcomePass, fmt.Sprintf("header %q contains %q", a.Target, expected), placeholder, nil
+			return OutcomePass, fmt.Sprintf("header %q contains %q", a.Target, expected), placeholder, headerVal, nil
 		}
-		return OutcomeFail, fmt.Sprintf("header %q value %q does not contain %q", a.Target, headerVal, expected), placeholder, nil
+		return OutcomeFail, fmt.Sprintf("header %q value %q does not contain %q", a.Target, headerVal, expected), placeholder, headerVal, nil
 
 	case "exists":
 		if present {
-			return OutcomePass, fmt.Sprintf("header %q is present", a.Target), placeholder, nil
+			return OutcomePass, fmt.Sprintf("header %q is present", a.Target), placeholder, headerVal, nil
 		}
-		return OutcomeFail, fmt.Sprintf("header %q is not present", a.Target), placeholder, nil
+		return OutcomeFail, fmt.Sprintf("header %q is not present", a.Target), placeholder, "", nil
 
 	default:
 		msg := fmt.Sprintf("unknown operator %q for kind %q", a.Op, a.Kind)
-		return OutcomeFail, msg, placeholder, &AssertionError{Code: ErrUnknownOperator, Message: msg}
+		return OutcomeFail, msg, placeholder, "", &AssertionError{Code: ErrUnknownOperator, Message: msg}
 	}
 }
 
@@ -315,21 +323,22 @@ func headerPlaceholder(lowerName string) string {
 
 // ── body ──────────────────────────────────────────────────────────────────────
 
-func evalBody(a spec.Assertion, result *runtime.StepResult, expected string, compiledPattern *regexp.Regexp) (AssertionOutcome, string, string, error) {
+func evalBody(a spec.Assertion, result *runtime.StepResult, expected string, compiledPattern *regexp.Regexp) (AssertionOutcome, string, string, string, error) {
 	placeholder := "response.body." + a.Target
 
 	if len(result.Body) == 0 {
-		return OutcomeFail, "response body is empty", placeholder, nil
+		return OutcomeFail, "response body is empty", placeholder, "", nil
 	}
 
 	gResult := gjson.GetBytes(result.Body, a.Target)
+	actual := gResult.String()
 
 	switch a.Op {
 	case "equals", "jsonpath":
-		if gResult.String() == expected {
-			return OutcomePass, fmt.Sprintf("body.%s equals %q", a.Target, expected), placeholder, nil
+		if actual == expected {
+			return OutcomePass, fmt.Sprintf("body.%s equals %q", a.Target, expected), placeholder, actual, nil
 		}
-		return OutcomeFail, fmt.Sprintf("body.%s: expected %q, got %q", a.Target, expected, gResult.String()), placeholder, nil
+		return OutcomeFail, fmt.Sprintf("body.%s: expected %q, got %q", a.Target, expected, actual), placeholder, actual, nil
 
 	case "matches":
 		rx := compiledPattern
@@ -338,29 +347,29 @@ func evalBody(a spec.Assertion, result *runtime.StepResult, expected string, com
 			rx, err = regexp.Compile(expected)
 			if err != nil {
 				msg := fmt.Sprintf("invalid regex %q: %v", expected, err)
-				return OutcomeFail, msg, placeholder, &AssertionError{Code: ErrRegexInvalid, Message: msg}
+				return OutcomeFail, msg, placeholder, actual, &AssertionError{Code: ErrRegexInvalid, Message: msg}
 			}
 		}
-		if rx.MatchString(gResult.String()) {
-			return OutcomePass, fmt.Sprintf("body.%s matches %q", a.Target, expected), placeholder, nil
+		if rx.MatchString(actual) {
+			return OutcomePass, fmt.Sprintf("body.%s matches %q", a.Target, expected), placeholder, actual, nil
 		}
-		return OutcomeFail, fmt.Sprintf("body.%s value %q does not match %q", a.Target, gResult.String(), expected), placeholder, nil
+		return OutcomeFail, fmt.Sprintf("body.%s value %q does not match %q", a.Target, actual, expected), placeholder, actual, nil
 
 	case "contains":
-		if strings.Contains(gResult.String(), expected) {
-			return OutcomePass, fmt.Sprintf("body.%s contains %q", a.Target, expected), placeholder, nil
+		if strings.Contains(actual, expected) {
+			return OutcomePass, fmt.Sprintf("body.%s contains %q", a.Target, expected), placeholder, actual, nil
 		}
-		return OutcomeFail, fmt.Sprintf("body.%s value %q does not contain %q", a.Target, gResult.String(), expected), placeholder, nil
+		return OutcomeFail, fmt.Sprintf("body.%s value %q does not contain %q", a.Target, actual, expected), placeholder, actual, nil
 
 	case "exists":
 		if gResult.Exists() && gResult.Type != gjson.Null {
-			return OutcomePass, fmt.Sprintf("body.%s exists", a.Target), placeholder, nil
+			return OutcomePass, fmt.Sprintf("body.%s exists", a.Target), placeholder, actual, nil
 		}
-		return OutcomeFail, fmt.Sprintf("body.%s does not exist or is null", a.Target), placeholder, nil
+		return OutcomeFail, fmt.Sprintf("body.%s does not exist or is null", a.Target), placeholder, actual, nil
 
 	default:
 		msg := fmt.Sprintf("unknown operator %q for kind %q", a.Op, a.Kind)
-		return OutcomeFail, msg, placeholder, &AssertionError{Code: ErrUnknownOperator, Message: msg}
+		return OutcomeFail, msg, placeholder, actual, &AssertionError{Code: ErrUnknownOperator, Message: msg}
 	}
 }
 

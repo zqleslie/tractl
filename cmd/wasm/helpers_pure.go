@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/tractl/tractl/internal/engine"
-	"github.com/tractl/tractl/internal/localapi"
 	"github.com/tractl/tractl/internal/validation"
 	"github.com/tractl/tractl/internal/version"
 )
@@ -39,14 +38,14 @@ func executionError(message string) map[string]any {
 	return bridgeError("TRACTL_EXECUTION_ERROR", message)
 }
 
-// runResultPayload maps an engine.RunResult to the unified localapi.RunResult shape
-// and returns a JS-safe map. Output field names match POST /api/v1/run exactly.
+// runResultPayload serialises engine.RunResult to a JS-safe map for the workflow canvas.
+// Field names are PascalCase (Go default) — workflowRunAdapter.ts reads Workflows, Steps,
+// AssertionResults, etc. by that exact casing. The diagnostics field retains its lowercase
+// json tag so workflowRunAdapter.ts can reach it as run.diagnostics.
+// Pipeline errors (ParseError/ValidationError/PlanError) are checked by handleRun before
+// this is called, so they will be empty strings in the serialised payload.
 func runResultPayload(result *engine.RunResult) (map[string]any, error) {
-	mapped, err := localapi.MapRunResult(result)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := jsonSafeObject(mapped)
+	payload, err := jsonSafeObject(result)
 	if err != nil {
 		return nil, fmt.Errorf("marshal run result: %w", err)
 	}

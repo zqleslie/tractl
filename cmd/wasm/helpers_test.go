@@ -71,12 +71,14 @@ func TestRunResultPayload_AddsSurfaceMetadata(t *testing.T) {
 	if payload["networkProvider"] != networkProvider {
 		t.Errorf("runResultPayload: networkProvider = %v, want %q", payload["networkProvider"], networkProvider)
 	}
-	// Verify output uses lowercase keys (not raw engine capitalized names).
-	if _, hasWorkflows := payload["Workflows"]; hasWorkflows {
-		t.Error("runResultPayload: output contains raw 'Workflows' key — should use localapi RunResult shape")
+	// Verify output uses the raw engine PascalCase shape — workflowRunAdapter.ts
+	// reads run.Workflows, step.StepID, step.ResponseStatus, etc. by this exact casing.
+	if _, hasWorkflows := payload["Workflows"]; !hasWorkflows {
+		t.Error("runResultPayload: output missing 'Workflows' key — workflowRunAdapter.ts requires PascalCase engine shape")
 	}
-	if _, hasStatusCode := payload["statusCode"]; !hasStatusCode {
-		t.Error("runResultPayload: output missing 'statusCode' key from localapi.RunResult")
+	// statusCode belongs to the flat localapi.RunResult (request-editor path), not the canvas path.
+	if _, hasStatusCode := payload["statusCode"]; hasStatusCode {
+		t.Error("runResultPayload: output contains 'statusCode' — should be raw engine shape, not localapi.RunResult")
 	}
 }
 

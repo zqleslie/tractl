@@ -21,6 +21,9 @@ type AssertionResult struct { //nolint:revive
 	AssertionID   string
 	AssertionULID string
 	Kind          string
+	Op            string
+	Expected      string
+	Received      string
 	Outcome       AssertionOutcome
 	Severity      spec.AssertionSeverity
 	// Message is human-readable: "expected 200, got 404"

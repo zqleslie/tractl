@@ -20,19 +20,33 @@ import (
 //   - concurrency planning
 //   - failure policy planning
 //   - planning trace event emission (ADR-003 §8)
+//   - surface-specific transport capability guards (ADR-017 §7)
 type Planner struct {
 	registry CapabilityRegistry
+	surface  string
 }
 
 // NewPlanner constructs a new Planner with the given capability registry.
-// Panics if registry is nil.
+// The surface defaults to "cli". Panics if registry is nil.
 func NewPlanner(registry CapabilityRegistry) *Planner {
 	if registry == nil {
 		panic("planner: capability registry cannot be nil")
 	}
-	return &Planner{
-		registry: registry,
+	return &Planner{registry: registry, surface: "cli"}
+}
+
+// NewPlannerWithConfig constructs a Planner with an explicit Config.
+// Use this to set the delivery surface for capability guards (ADR-017 §7).
+// Panics if registry is nil.
+func NewPlannerWithConfig(registry CapabilityRegistry, cfg Config) *Planner {
+	if registry == nil {
+		panic("planner: capability registry cannot be nil")
 	}
+	surface := cfg.Surface
+	if surface == "" {
+		surface = "cli"
+	}
+	return &Planner{registry: registry, surface: surface}
 }
 
 // Plan generates an ExecutionPlan for a traCtlSpec.
@@ -124,6 +138,11 @@ func (p *Planner) Plan(s *spec.TraCtlSpec) (*ExecutionPlan, error) {
 				} else if resolved != nil {
 					stepRuntime = resolved.Runtime
 				}
+			}
+
+			// Transport capability guard — must run after capability resolution (ADR-017 §7).
+			if transportErr := p.checkTransport(workflow.ID, step.ID, step); transportErr != nil {
+				errs = append(errs, transportErr)
 			}
 
 			stepPlan := StepPlan{
@@ -228,6 +247,12 @@ func (p *Planner) PlanWorkflow(s *spec.TraCtlSpec, workflowID string) (*Executio
 				stepRuntime = resolved.Runtime
 			}
 		}
+
+		// Transport capability guard — must run after capability resolution (ADR-017 §7).
+		if transportErr := p.checkTransport(targetWorkflow.ID, step.ID, step); transportErr != nil {
+			errs = append(errs, transportErr)
+		}
+
 		stepPlans = append(stepPlans, StepPlan{
 			StepID:          step.ID,
 			WorkflowID:      targetWorkflow.ID,
@@ -260,6 +285,30 @@ func (p *Planner) PlanWorkflow(s *spec.TraCtlSpec, workflowID string) (*Executio
 		},
 	}
 	return plan, nil
+}
+
+// checkTransport enforces surface-specific transport capability guards (ADR-017 §7).
+// It returns a planning error when transport.version "h3" is declared on any
+// surface other than "wasm". HTTP/3 is only supported on the WASM surface via
+// the browser's fetch() API.
+func (p *Planner) checkTransport(wfID, stepID string, step spec.Step) error {
+	if step.Request == nil {
+		return nil
+	}
+	version, ok := step.Request.Transport["version"]
+	if !ok {
+		return nil
+	}
+	if version != "h3" {
+		return nil
+	}
+	if p.surface == "wasm" {
+		return nil
+	}
+	return plannerErr(ErrTransportNotSupported, wfID, stepID,
+		`transport.version "h3" is not supported on the `+p.surface+` surface. `+
+			`HTTP/3 is available on the Web WASM surface via browser fetch only. `+
+			`CLI, Desktop, and Local API surfaces support HTTP/1.1 and HTTP/2 only.`)
 }
 
 // kindToContract maps a step kind to its capability contract.

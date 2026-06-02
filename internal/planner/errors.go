@@ -30,6 +30,7 @@ const (
 	ErrUnknownCapability      = "UNKNOWN_CAPABILITY"
 	ErrIncompatibleCapability = "INCOMPATIBLE_CAPABILITY"
 	ErrEmptySpec              = "EMPTY_SPEC"
+	ErrTransportNotSupported  = "TRANSPORT_NOT_SUPPORTED"
 )
 
 // plannerErr constructs a PlannerError with standard formatting.

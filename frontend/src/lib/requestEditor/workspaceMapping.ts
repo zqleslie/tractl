@@ -11,6 +11,21 @@ import type {
   RetryStrategy,
 } from '@/components/request-editor/types'
 import type { HttpMethod } from '@/components/primitives'
+import type { AssertionKind, ExtractScope, ExtractSource } from '@/types/requestDef'
+
+const ASSERTION_KINDS: readonly string[] = ['status', 'header', 'body', 'schema', 'script']
+const EXTRACT_SOURCES: readonly string[] = ['body', 'header', 'status', 'timing', 'metadata', 'extension']
+const EXTRACT_SCOPES: readonly string[] = ['workflow', 'spec', 'step']
+
+function toAssertionKind(v: string): AssertionKind {
+  return ASSERTION_KINDS.includes(v) ? (v as AssertionKind) : 'status'
+}
+function toExtractSource(v: string): ExtractSource {
+  return EXTRACT_SOURCES.includes(v) ? (v as ExtractSource) : 'body'
+}
+function toExtractScope(v: string): ExtractScope {
+  return EXTRACT_SCOPES.includes(v) ? (v as ExtractScope) : 'workflow'
+}
 
 const encodingToUi: Record<BodyEncodingId, BodyEncoding> = {
   json: 'JSON',
@@ -188,17 +203,17 @@ export function draftToRequestState(
     postScript: draft.scripts.post,
     assertions: draft.assertions.map((row) => ({
       id: row.id,
-      kind: row.kind,
+      kind: toAssertionKind(row.kind),
       op: row.operator,
       expected: row.expected,
       severity: row.severity,
     })),
     extracts: draft.extracts.map((row) => ({
       id: row.id,
-      source: row.source,
+      source: toExtractSource(row.source),
       path: row.path,
       variableName: row.variable,
-      scope: row.scope,
+      scope: toExtractScope(row.scope),
     })),
     settings: {
       timeoutMs: timeoutDraftToMs(draft.settings),

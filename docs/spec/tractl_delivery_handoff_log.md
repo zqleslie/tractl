@@ -3880,6 +3880,123 @@ Architectural Constraints Observed:
 
 ---
 
+## Session — Request mapper parity and assertion outcomes
+
+Date: 2026-06-02
+Milestone: Phase 7 / UI Track (request execution parity)
+Owner / Agent: Cursor
+Status: COMPLETE
+
+Summary:
+  Implemented request-editor mapper parity fixes and moved assertion `op/expected/received`
+  correctness to the engine response path. The frontend request mapper now uses canonical
+  `TraCtl*` document types, emits workflow id `request-flow`, injects auth headers for
+  bearer/basic/api-key(header), and serializes `form` body rows to URL-encoded content
+  with content-type injection. WASM result mapping removed the no-op response-headers helper
+  and now reads assertion `Op/Expected/Received` returned by engine outcomes. Engine assertion
+  outcomes were extended to include `Op`, `Expected`, and `Received`, and Local API mapping now
+  forwards those fields directly instead of deriving values from human-readable messages.
+
+Files Changed:
+  frontend/src/platform/mappers/requestDefToDocument.ts (MODIFIED) — canonical types, workflow id parity, auth injection, extensible body handlers, form/multipart handling
+  frontend/src/platform/mappers/requestDefToDocument.test.ts (MODIFIED) — workflow/auth/form/multipart coverage updates
+  frontend/src/platform/web/wasm/runRequestInWasm.ts (MODIFIED) — remove no-op helper; map engine assertion fields
+  internal/assertion/result.go (MODIFIED) — assertion outcome fields: op/expected/received
+  internal/assertion/evaluator.go (MODIFIED) — emit op/expected/received from evaluation
+  internal/localapi/mapper.go (MODIFIED) — forward assertion fields from engine; remove message parser helper
+
+Verification:
+  make test-frontend PASS (33 files, 159 tests)
+  go test ./internal/assertion ./internal/localapi ./cmd/wasm PASS
+  ReadLints on edited files PASS
+
+Architectural Constraints Observed:
+  RequestRunResult/LegacyAssertionResult type refactor was not performed (out of scope).
+  Auth query-placement injection remains TODO (explicitly deferred).
+  Capabilities array and timeout rounding behavior were unchanged.
+
+---
+
+## Session — Deferred parity fixes: Prompts A / B / C / D
+
+Date: 2026-06-02
+Milestone: Phase 7 / UI Track (mapper parity and type cleanup)
+Owner / Agent: Cursor
+Status: COMPLETE
+
+Summary:
+  Completed all four deferred prompt sets identified in the ADR/docs review.
+
+  Prompt A — `toIso8601Duration` truncation parity:
+    Changed `Math.round` → `Math.trunc` in `requestDefToDocument.ts` to match
+    Go's integer-division semantics for sub-second timeouts.
+
+  Prompt B — capabilities field and encoding parity:
+    Added `buildCapabilities(protocol)` to both TS and Go mappers; GraphQL requests
+    now emit `['protocol.http', 'protocol.graphql']`. Go mapper normalizes
+    `odata → http` at the mapper boundary (ADR-017 §4). Go mapper now rejects
+    unknown body encodings with an explicit error instead of silent pass-through.
+    TS GraphQL body builder spreads all parsed keys to preserve `extensions` field.
+
+  Prompt C — `RequestRunResult` canonical type:
+    Replaced `Partial<Omit<RunResult, ...>>` patchwork with a flat canonical type.
+    Removed all legacy aliases (`statusLabel`, `passedCount`, `totalCount`,
+    `LegacyAssertionResult`, `LegacyExtractResult`). Added `AssertionResultRow` and
+    `ExtractResultRow` as named exports. Added `mapGoRunResult()` in `client.ts`
+    to bridge Go wire format (`variableName`/`resolvedValue`) to canonical
+    (`variable`/`value`) and derive `contentType`/`timeline` from response. All
+    three adapters in `mapRunResults.ts` simplified. Six test fixture files updated.
+
+  Prompt D — docs / ADR review fixes:
+    - `qa.html:135`: updated execution path Q&A to describe TS-mapper-first (WASM)
+      vs Go-mapper (desktop/local API) paths correctly.
+    - `requestDef.ts`: added `env?: Record<string, string>` to `RequestDef` to match
+      Go struct field `Env map[string]string` (types.go line 20).
+    - `adrs.html`: subtitle updated from "16" to "17 accepted ADRs".
+    - `qa.html:121`: fixed `tygo` link href to `github.com/gzuidhof/tygo`.
+    - `ADR-000-index.md` 2026-06-02 section was already present (no change needed).
+    - Fixes 2, 3, 5 (odata normalization, GraphQL extensions, unknown encoding) were
+      implemented as part of Prompt B.
+
+Files Changed:
+  frontend/src/platform/mappers/requestDefToDocument.ts (MODIFIED) — Math.trunc, buildCapabilities, GraphQL extensions spread
+  frontend/src/platform/mappers/requestDefToDocument.test.ts (MODIFIED) — timeoutConversionTruncates, capabilitiesHttpOnly, capabilitiesGraphQL, graphqlExtensionsPreserved tests
+  frontend/src/components/request-editor/tractlSpecDocument.ts (MODIFIED) — capabilities: string[]
+  frontend/src/components/request-editor/requestFormStateToTraCtlSpec.ts (MODIFIED) — removed as cast
+  frontend/src/platform/web/requestExecutionRunner.ts (MODIFIED) — removed as cast
+  frontend/src/types/requestDef.ts (MODIFIED) — env field added; AssertionKind/ExtractSource expanded; retry null widened
+  frontend/src/lib/requestEditor/workspaceMapping.ts (MODIFIED) — toAssertionKind/toExtractSource/toExtractScope type guards
+  frontend/src/components/request-editor/requestState.ts (MODIFIED) — import canonical AssertionDef/ExtractDef
+  frontend/src/platform/localApi/types.ts (MODIFIED) — canonical RequestRunResult; AssertionResultRow; ExtractResultRow
+  frontend/src/platform/localApi/client.ts (MODIFIED) — GoRunResult type + mapGoRunResult()
+  frontend/src/platform/web/wasm/runRequestInWasm.ts (MODIFIED) — remove legacy fields; add id to extracts
+  frontend/src/lib/execution/mapRunResults.ts (MODIFIED) — simplified adapters
+  frontend/src/components/request-editor/useRequestEditor.ts (MODIFIED) — error factory result canonical fields
+  frontend/src/components/request-editor/results/ResponseTabContent.tsx (MODIFIED) — remove statusLabel/Array.isArray branches
+  frontend/src/screens/RunHistoryScreen.tsx (MODIFIED) — statusLabel → statusText
+  frontend/src/platform/mappers/requestDefToDocument.test.ts (MODIFIED) — see above
+  frontend/src/platform/web/wasm/runRequestInWasm.test.ts (MODIFIED) — statusText/assertionsPassed/assertionsTotal; extract id
+  frontend/src/components/request-editor/results/ResponseTabContent.test.tsx (MODIFIED) — canonical mock shape
+  frontend/src/lib/fastStart/buildRecentItems.test.ts (MODIFIED) — canonical mock shape
+  frontend/src/lib/history/groupHistoryByDate.test.ts (MODIFIED) — canonical mock shape
+  frontend/src/stores/runHistoryStore.test.ts (MODIFIED) — canonical mock shape
+  frontend/src/api/requests.test.ts (MODIFIED) — Go wire format mock
+  internal/localapi/request_mapper.go (MODIFIED) — odata normalization; buildCapabilities(); unknown encoding error; form/raw/binary/multipart pass-through
+  internal/localapi/request_mapper_test.go (NEW) — 5 tests: odata, capabilities (HTTP/GraphQL), unknown encoding, known encodings
+  docs/pages/qa.html (MODIFIED) — execution path description (Fix 1); tygo link (Fix 8)
+  docs/pages/opensource/adrs.html (MODIFIED) — 16 → 17 ADRs (Fix 7)
+
+Verification:
+  make test-frontend PASS (33 files, 163 tests)
+  npx tsc --noEmit PASS (0 errors)
+
+Architectural Constraints Observed:
+  No pipeline stages bypassed. All changes are at the mapper/DTO boundary.
+  ADR-017 §3 and §4 invariants fully honoured.
+  Prompt D Fix 6 (ADR-000-index.md 2026-06-02 section) was already present from prior session.
+
+---
+
 ## Entry: ADR-SERVER-CONSOLIDATION
 
 Date: 2026-05-31

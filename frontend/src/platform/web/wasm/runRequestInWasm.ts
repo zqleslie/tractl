@@ -1,6 +1,7 @@
 import type { TraCtlSpecDocument } from '@/components/request-editor/tractlSpecDocument'
 import { looksLikeViteDevShell } from '@/components/request-editor/normalizeRequestUrl'
-import type { RequestRunResult } from '@/platform/localApi/types'
+import type { AssertionResultRow, ExtractResultRow, RequestRunResult } from '@/platform/localApi/types'
+import type { EngineRunResult } from '@/platform/web/workflowRunAdapter'
 import {
   isTractlWasmRunSuccess,
   loadTractlWasmRuntime,
@@ -9,60 +10,6 @@ import {
 } from '@/platform/web/wasm/loadTractlWasmRuntime'
 
 export const REQUEST_EDITOR_WASM_FORMAT: TractlWasmParseFormat = 'json'
-
-type WasmRunSuccess = Record<string, unknown> & {
-  Passed?: boolean
-  Workflows?: WasmWorkflowOutcome[]
-  diagnostics?: WasmDiagnostics
-}
-
-type WasmWorkflowOutcome = {
-  Passed?: boolean
-  Skipped?: boolean
-  Steps?: WasmStepOutcome[]
-}
-
-type WasmStepOutcome = {
-  StepID?: string
-  AssertionResults?: WasmAssertionOutcome[]
-  ResponseStatus?: number
-  ResponseHeaders?: Record<string, string>
-  ResponseBody?: string
-  Error?: string
-}
-
-type WasmAssertionOutcome = {
-  AssertionID?: string
-  Kind?: string
-  Outcome?: string
-  Message?: string
-}
-
-type WasmDiagnostics = {
-  Workflows?: Array<{
-    Steps?: Array<{
-      Requests?: Array<{
-        Timeline?: WasmTimingRecord
-      }>
-      Extracts?: WasmExtractRecord[]
-    }>
-  }>
-}
-
-type WasmTimingRecord = {
-  DNSMs?: number
-  TCPMs?: number
-  TLSMs?: number
-  TTFBMs?: number
-  TransferMs?: number
-  TotalMs?: number
-}
-
-type WasmExtractRecord = {
-  ID?: string
-  Source?: string
-  As?: string
-}
 
 export async function runRequestInWasm(
   spec: TraCtlSpecDocument,
@@ -87,71 +34,101 @@ export function mapWasmRunResultToRequestRunResult(
     return mapWasmFailure(result.error.code, result.error.message)
   }
 
-  const run = result as WasmRunSuccess
-  const workflow = run.Workflows?.[0]
-  const step = workflow?.Steps?.[0]
+  // handleRun returns the raw engine.RunResult in PascalCase (Go default encoding).
+  // Extract the first workflow's first step result to produce a flat RequestRunResult.
+  const mapped = mapEngineRunResultToRequestRunResult(result as unknown as EngineRunResult)
 
-  if (!workflow || workflow.Skipped || !step) {
-    return mapWasmFailure(
-      'TRACTL_WASM_EMPTY_RESULT',
-      workflow?.Skipped
-        ? 'Workflow skipped due to dependency failure'
-        : 'Run produced no request result',
-    )
+  // WASM-only: detect when browser fetch accidentally hit the Vite dev server instead
+  // of an external API. The engine sees a 200 OK with HTML body and marks it as passed.
+  if (looksLikeViteDevShell(mapped.body)) {
+    return {
+      ...mapped,
+      passed: false,
+      body: 'The response is the traCtl dev app page, not an API. Use an absolute external URL such as https://httpbin.org/get.',
+      error: 'Request hit the traCtl dev server instead of an external API. Check the URL.',
+    }
   }
 
-  const assertionResults = (step.AssertionResults ?? []).map((assertion, index) => {
-    const id = assertion.AssertionID || `assertion-${index + 1}`
-    const kind = assertion.Kind || 'assertion'
-    return {
-      id,
-      kind,
-      op: 'equals',
-      expected: id,
-      received: assertion.Message || '',
-      passed: assertion.Outcome === 'pass',
-      label: `${kind} ${id}`,
-      detail: assertion.Message || '',
-      severity: 'error' as const,
-    }
-  })
+  return mapped
+}
 
-  const passedCount = assertionResults.filter((assertion) => assertion.passed).length
-  const timeline = timelineFromDiagnostics(run.diagnostics)
-  const durationMs = timeline.durationMs
-  const headers = responseHeaders(step.ResponseHeaders ?? {})
-  const statusCode = step.ResponseStatus ?? 0
-  const statusLabel = responseStatusLabel(statusCode)
-  const contentType =
-    headerValue(step.ResponseHeaders ?? {}, 'content-type') || 'application/json'
-  const rawBody = step.ResponseBody ?? step.Error ?? ''
-  const bodyLooksLikeAppShell = looksLikeViteDevShell(rawBody)
-  const body = bodyLooksLikeAppShell
-    ? 'The response is the traCtl dev app page, not an API. Use an absolute external URL such as https://httpbin.org/get.'
-    : rawBody
+function normMs(v: number | undefined): number {
+  if (!v) return 0
+  return v > 1_000_000 ? Math.round(v / 1_000_000) : Math.round(v)
+}
+
+function buildStatusText(code: number | undefined): string {
+  if (!code) return ''
+  const labels: Record<number, string> = {
+    200: 'OK', 201: 'Created', 204: 'No Content',
+    400: 'Bad Request', 401: 'Unauthorized', 403: 'Forbidden',
+    404: 'Not Found', 405: 'Method Not Allowed', 422: 'Unprocessable Entity',
+    429: 'Too Many Requests', 500: 'Internal Server Error',
+    502: 'Bad Gateway', 503: 'Service Unavailable', 504: 'Gateway Timeout',
+  }
+  const text = labels[code]
+  return text ? `${code} ${text}` : String(code)
+}
+
+function mapEngineRunResultToRequestRunResult(run: EngineRunResult): RequestRunResult {
+  const wf = run.Workflows?.[0]
+  if (!wf || wf.Skipped) {
+    return mapWasmFailure('TRACTL_EXECUTION_ERROR', 'Run produced no workflow result')
+  }
+  const step = wf.Steps?.[0]
+  if (!step) {
+    return mapWasmFailure('TRACTL_EXECUTION_ERROR', 'Run produced no step result')
+  }
+
+  const headers = step.ResponseHeaders ?? {}
+  const contentType = headers['content-type'] ?? 'application/json'
+
+  const assertionResults: AssertionResultRow[] = (step.AssertionResults ?? []).map((ar) => ({
+    id: ar.AssertionID ?? '',
+    kind: ar.Kind ?? '',
+    op: ar.Op ?? '',
+    expected: ar.Expected ?? '',
+    received: ar.Received ?? '',
+    passed: ar.Outcome === 'pass',
+    severity: (ar.Severity === 'warning' ? 'warning' : 'error') as 'error' | 'warning',
+  }))
+
+  const diagWf = run.diagnostics?.Workflows?.[0]
+  const diagStep = diagWf?.Steps?.[0]
+  const tl = diagStep?.Requests?.[0]?.Timeline
+
+  const timing = {
+    dns: tl?.DNSMs ?? 0,
+    tcp: tl?.TCPMs ?? 0,
+    tls: tl?.TLSMs ?? 0,
+    ttfb: tl?.TTFBMs ?? 0,
+    transfer: tl?.TransferMs ?? 0,
+    total: tl?.TotalMs ?? normMs(diagWf?.Duration),
+    unit: 'ms' as const,
+  }
+
+  const extractResults: ExtractResultRow[] = (diagStep?.Extracts ?? []).map((ex) => ({
+    id: ex.ID ?? '',
+    variable: ex.As ?? ex.ID ?? '',
+    value: ex.Source ?? '',
+    scope: 'workflow' as const,
+  }))
 
   return {
-    passed: run.Passed === true && !bodyLooksLikeAppShell,
-    durationMs,
-    statusCode,
-    statusText: statusLabel,
-    statusLabel,
+    passed: !step.Error && !step.CausesFailure,
+    statusCode: step.ResponseStatus ?? 0,
+    statusText: buildStatusText(step.ResponseStatus),
+    durationMs: timing.total,
+    body: step.ResponseBody ?? '',
     contentType,
-    body,
     headers,
-    timing: timeline.timing,
+    timing,
     assertionResults,
-    extractResults: extractResultsFromDiagnostics(run.diagnostics),
-    assertionsPassed: passedCount,
+    extractResults,
+    assertionsPassed: assertionResults.filter((r) => r.passed).length,
     assertionsTotal: assertionResults.length,
-    passedCount,
-    totalCount: assertionResults.length,
-    timeline: timeline.segments,
-    error:
-      step.Error ||
-      (bodyLooksLikeAppShell
-        ? 'Request hit the traCtl dev server instead of an external API. Check the URL.'
-        : undefined),
+    timeline: [],
+    error: step.Error || undefined,
   }
 }
 
@@ -162,7 +139,6 @@ function mapWasmFailure(code: string, message: string): RequestRunResult {
     durationMs: 0,
     statusCode: 0,
     statusText: 'Error',
-    statusLabel: 'Error',
     contentType: 'text/plain',
     body: detail,
     headers: {},
@@ -171,97 +147,7 @@ function mapWasmFailure(code: string, message: string): RequestRunResult {
     extractResults: [],
     assertionsPassed: 0,
     assertionsTotal: 0,
-    passedCount: 0,
-    totalCount: 0,
     timeline: [],
     error: detail,
   }
-}
-
-function responseHeaders(headers: Record<string, string>) {
-  return headers
-}
-
-function responseStatusLabel(statusCode: number): string {
-  if (statusCode <= 0) return 'Error'
-
-  const known: Record<number, string> = {
-    200: 'OK',
-    201: 'Created',
-    202: 'Accepted',
-    204: 'No Content',
-    301: 'Moved Permanently',
-    302: 'Found',
-    304: 'Not Modified',
-    400: 'Bad Request',
-    401: 'Unauthorized',
-    403: 'Forbidden',
-    404: 'Not Found',
-    408: 'Request Timeout',
-    409: 'Conflict',
-    422: 'Unprocessable Entity',
-    429: 'Too Many Requests',
-    500: 'Internal Server Error',
-    502: 'Bad Gateway',
-    503: 'Service Unavailable',
-    504: 'Gateway Timeout',
-  }
-
-  return `${statusCode} ${known[statusCode] ?? ''}`.trim()
-}
-
-function headerValue(headers: Record<string, string>, key: string): string {
-  const match = Object.entries(headers).find(
-    ([headerKey]) => headerKey.toLowerCase() === key,
-  )
-  return match?.[1] ?? ''
-}
-
-function timelineFromDiagnostics(diagnostics?: WasmDiagnostics): {
-  segments: RequestRunResult['timeline']
-  durationMs: number
-  timing: RequestRunResult['timing']
-} {
-  const timeline =
-    diagnostics?.Workflows?.[0]?.Steps?.[0]?.Requests?.[0]?.Timeline ?? undefined
-  if (!timeline) {
-    return {
-      segments: [],
-      durationMs: 0,
-      timing: { dns: 0, tcp: 0, tls: 0, ttfb: 0, transfer: 0, total: 0, unit: 'ms' },
-    }
-  }
-  const timing = {
-    dns: timeline.DNSMs ?? 0,
-    tcp: timeline.TCPMs ?? 0,
-    tls: timeline.TLSMs ?? 0,
-    ttfb: timeline.TTFBMs ?? 0,
-    transfer: timeline.TransferMs ?? 0,
-    total: timeline.TotalMs ?? 0,
-    unit: 'ms' as const,
-  }
-
-  return {
-    segments: [
-      { label: 'DNS', ms: timing.dns },
-      { label: 'TCP', ms: timing.tcp },
-      { label: 'TLS', ms: timing.tls },
-      { label: 'TTFB', ms: timing.ttfb },
-      { label: 'Transfer', ms: timing.transfer },
-    ],
-    durationMs: timing.total,
-    timing,
-  }
-}
-
-function extractResultsFromDiagnostics(diagnostics?: WasmDiagnostics) {
-  const extracts = diagnostics?.Workflows?.[0]?.Steps?.[0]?.Extracts ?? []
-  return extracts.map((extract) => {
-    const variable = extract.As || extract.ID || 'extract'
-    return {
-      variable: `steps.this.extracts.${variable}`,
-      value: extract.Source || '',
-      scope: 'workflow' as const,
-    }
-  })
 }

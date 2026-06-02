@@ -1,7 +1,9 @@
 package localapi
 
 // RequestDef is the single representation of a request.
+// Protocol defaults to "http" when absent — ADR-017.
 type RequestDef struct {
+	Protocol   string            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
 	ID         string            `json:"id" yaml:"id"`
 	Name       string            `json:"name" yaml:"name"`
 	Method     string            `json:"method" yaml:"method"`
@@ -27,6 +29,9 @@ type KVRow struct {
 
 // BodyDef describes the request body encoding and content.
 type BodyDef struct {
+	// Encoding identifies the content encoding. Accepted values:
+	// "json", "form", "multipart", "raw", "binary", "none", "graphql"
+	// "xml" is reserved for v1.1 (SOAP support).
 	Encoding       string    `json:"encoding" yaml:"encoding"`
 	Content        string    `json:"content" yaml:"content,omitempty"`
 	FormRows       []FormRow `json:"formRows" yaml:"formRows,omitempty"`

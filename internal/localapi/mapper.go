@@ -61,7 +61,6 @@ func MapRunResult(result *engine.RunResult) (*RunResult, error) {
 		if passed {
 			passedCount++
 		}
-		expected, received := parseAssertionMessage(ar.Message)
 		severity := string(ar.Severity)
 		if severity == "" {
 			severity = "error"
@@ -69,9 +68,9 @@ func MapRunResult(result *engine.RunResult) (*RunResult, error) {
 		assertionRows = append(assertionRows, AssertionResult{
 			ID:       ar.AssertionID,
 			Kind:     ar.Kind,
-			Op:       "",
-			Expected: expected,
-			Received: received,
+			Op:       ar.Op,
+			Expected: ar.Expected,
+			Received: ar.Received,
 			Passed:   passed,
 			Severity: severity,
 		})
@@ -386,7 +385,7 @@ func ExportWorkflow(req WorkflowExportRequest) (WorkflowExportResponse, error) {
 		if len(s.Headers) > 0 {
 			request["headers"] = s.Headers
 		}
-		if body := requestBody(s.Body); body != nil {
+		if body, _ := requestBody(s.Body); body != nil {
 			request["body"] = body
 		}
 		step["request"] = request
@@ -495,21 +494,6 @@ func extractResultsFromDiagnostics(result *engine.RunResult) []ExtractResult {
 		})
 	}
 	return rows
-}
-
-// parseAssertionMessage splits a human-readable message like "expected 200, got 404"
-// into separate expected and received strings.
-func parseAssertionMessage(msg string) (expected, received string) {
-	msg = strings.TrimSpace(msg)
-	const expectPrefix = "expected "
-	const gotInfix = ", got "
-	if strings.HasPrefix(msg, expectPrefix) {
-		rest := msg[len(expectPrefix):]
-		if idx := strings.Index(rest, gotInfix); idx >= 0 {
-			return rest[:idx], rest[idx+len(gotInfix):]
-		}
-	}
-	return "", msg
 }
 
 func scanStepRefs(strs ...string) map[string]struct{} {

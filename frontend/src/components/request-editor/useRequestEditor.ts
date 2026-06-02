@@ -68,9 +68,11 @@ function environmentResolutionErrorResult(missing: string[]): RequestRunResult {
   const message = formatMissingEnvironmentVariables(missing)
 
   return {
+    passed: false,
     durationMs: 0,
     statusCode: 0,
     statusText: 'Environment error',
+    contentType: 'text/plain',
     body: message,
     headers: {},
     timing: { dns: 0, tcp: 0, tls: 0, ttfb: 0, transfer: 0, total: 0, unit: 'ms' },
@@ -78,6 +80,7 @@ function environmentResolutionErrorResult(missing: string[]): RequestRunResult {
     extractResults: [],
     assertionsPassed: 0,
     assertionsTotal: 0,
+    timeline: [],
     error: message,
   }
 }

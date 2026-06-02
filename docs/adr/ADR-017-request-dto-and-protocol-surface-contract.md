@@ -301,3 +301,85 @@ via browser fetch. Non-WASM HTTP/3 is post-release, demand-driven.
 Adding `Protocol` after v1 requires all external callers to update their integration
 code. The cost of adding it now (near zero — one field with a default) is orders of
 magnitude lower than the cost of a breaking API change after release.
+
+---
+
+## Amendment — 2026-06-02
+
+Amended by: RequestDef as Shared Authoring Contract for Requests and Workflow Steps
+
+### Context
+
+ADR-017 §1 defines `RequestDef` as "the public API contract for single-request
+execution." ADR-016 §4 defines the single-request editor as using `RequestFormState`
+as its authoring type, which serializes to `RequestDef` for API submission.
+
+A gap existed: the workflow canvas step editor also uses `RequestFormState`
+internally (the step detail panel is the same form-based UI as the single-request
+editor), but this was not formally recognised as sharing the same authoring contract.
+The result was that `WorkflowStep` — a display projection — was mistakenly treated
+as the step authoring model, causing silent data loss on serialization (see
+ADR-016 Amendment 2026-06-02).
+
+### Decision
+
+#### §3 Extension — RequestDef Is the Authoring Contract for Both Request Types
+
+`RequestDef` and `RequestFormState` are the authoring contracts for **both**
+single-request execution and workflow request step editing. The two are the same
+concept at the authoring layer. The distinction is at the execution layer only:
+
+| | Single-request editor | Workflow step editor |
+|---|---|---|
+| Authoring type | `RequestFormState` → `RequestDef` | `RequestFormState` → `RequestDef` |
+| Mapper | `requestFormStateToTraCtlSpec()` | `requestFormStateToTraCtlSpec()` (same) |
+| Output | Single-step `TraCtlSpecDocument` | `TraCtlStep` merged into multi-step `TraCtlSpecDocument` |
+| Execution | Immediate, single step | As part of workflow, respects `dependsOn` |
+
+The TypeScript mapper `requestFormStateToTraCtlSpec()` MUST be the single
+serialization path for both cases. It MUST NOT be forked or duplicated for the
+workflow step case.
+
+The Go mapper `requestDefToDocument()` (`request_mapper.go`) serves external callers
+via `POST /api/v1/run` only. It is not involved in workflow step authoring.
+
+#### Shared Mapper Invariant
+
+The following invariant MUST hold:
+
+> For any `RequestFormState` value, `requestFormStateToTraCtlSpec()` produces a
+> `TraCtlStep` whose `request`, `assertions`, `extracts`, `hooks`, `timeout`, and
+> `retry` fields are semantically equivalent whether the step is embedded in a
+> single-step document or a multi-step workflow document.
+
+The only fields that differ between the two execution contexts are workflow-level
+concerns (`dependsOn`, `id` assignment, `failurePolicy`) — not the request content
+itself.
+
+#### Auth in Workflow Steps
+
+Auth (`RequestFormState.auth`) is resolved into request headers by the TypeScript
+mapper for both single-request and workflow step execution on the WASM surface
+(ADR-017 §3, ADR-016 Amendment 2026-06-02 §3). When a workflow YAML file is
+authored externally (not via the editor), auth credentials appear as resolved
+`Authorization` or custom headers in `request.headers`. The editor restores
+`hasAuth: true` from header presence on load but cannot recover the original
+auth type or credential value — this is a known limitation of plain-text YAML
+as the storage format.
+
+### Consequences
+
+**Positive:**
+
+- One mapper for both cases — no divergence in serialization behaviour
+- `RequestDef` / `RequestFormState` formally covers 100% of request authoring
+  surface in the UI
+- Workflow step editing bugs are caught by single-request editor tests and vice versa
+
+**Tradeoffs:**
+
+- The shared mapper must handle workflow-step-specific concerns (`dependsOn` is
+  not a `RequestFormState` field — it is a canvas-level concern passed separately
+  to the step assembly function)
+- External YAML authors must be aware that `auth` is an editor abstraction; in YAML
+  the resolved header is the canonical form

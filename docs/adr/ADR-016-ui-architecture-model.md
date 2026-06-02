@@ -400,6 +400,174 @@ The following from the original ADR-016 is superseded by this amendment:
 
 ---
 
+## Amendment — 2026-06-02
+
+Amended by: Workflow Step Authoring State Model
+
+### Context
+
+ADR-016 §4 states:
+
+> "No global state for form fields — form state is local to each panel component.
+> Forms serialize to the canonical traCtlSpec shape on submit/auto-save, not on
+> every keystroke."
+
+This was written for the single-request editor. It was not applied to the workflow
+canvas step editor, creating a gap: the step detail panel uses `RequestFormState`
+internally for editing but only syncs four derived fields back to `WorkflowStep`
+(booleans `hasAuth`, `hasPreScript` and counts `assertionCount`, `extractCount`).
+The actual values — headers, body, auth credentials, script source, assertions,
+extracts, timeout, retry — are never written back to the workflow state.
+
+The downstream effect is that `workflowSerializer.ts` produces incomplete YAML.
+A round-trip load → edit → save silently drops every field except `method`, `url`,
+`assertions`, and `extracts`. This contradicts the §4 invariant that forms serialize
+to the canonical spec shape.
+
+### Decision
+
+#### 1 — `WorkflowStep` Is a Display Projection, Not an Authoring Model
+
+`WorkflowStep` (`frontend/src/types/workflow.ts`) carries only what the canvas graph
+view needs to render step nodes and DAG edges:
+
+- `id`, `method`, `url`, `dependsOn`
+- Derived booleans: `hasAuth`, `hasPreScript`
+- Derived counts: `assertionCount`, `extractCount`
+- Run-time results: `result?: StepResult`
+
+`WorkflowStep` MUST NOT be used as the authoring model for step content. It has no
+fields for headers, body, auth values, params, scripts, timeout, or retry. Treating
+it as an authoring model produces silent data loss on every serialization.
+
+#### 2 — `RequestFormState` Is the Authoring Model for Workflow Steps
+
+A `kind: "request"` step in the workflow canvas is the same concept as a standalone
+request at the authoring level. Both are edited using `RequestFormState`. This is
+not incidental — it is the design. The step detail panel MUST use `RequestFormState`
+as its editing type, and this is already the case.
+
+The missing piece is the write-back path. On every change in the step detail panel,
+the full `RequestFormState` MUST be serialized into the canonical `TraCtlSpecDocument`
+held by the canvas store, and the `WorkflowStep` display projection MUST be
+re-derived from that spec document rather than from the draft.
+
+#### 3 — `workflowCanvasStore` Holds the Spec Document as Source of Truth
+
+The `workflowCanvasStore` already carries `workflow.yaml` — the serialized spec
+string. This is the source of truth for workflow content. Step edits MUST update
+`workflow.yaml` (or the in-memory `TraCtlSpecDocument` equivalent) rather than
+patching `WorkflowStep` fields.
+
+The write-back path on step edit:
+
+```
+RequestFormState (step editor)
+  → requestFormStateToTraCtlSpec()    [existing mapper, ADR-017 §3]
+  → TraCtlStep (spec-shaped object)
+  → merged into workflowCanvasStore.workflow TraCtlSpecDocument
+  → workflowDocumentToCanvasWorkflow() re-derives WorkflowStep[] for graph view
+```
+
+This makes `WorkflowStep` a pure read-only projection of the spec document, never
+the source of truth.
+
+#### 4 — `workflowSerializer` Must Produce Full-Fidelity Output
+
+`workflowSerializer.ts` MUST NOT map `WorkflowStep` fields directly to YAML. It
+operates on the `TraCtlSpecDocument` held in the store — which is already fully
+serialized. Its role is formatting (YAML string production), not field mapping.
+
+When the store holds `workflow.yaml` as the serialized spec string, `serializeWorkflow`
+is a pass-through for the YAML string. When the store holds a `TraCtlSpecDocument`
+object, `serializeWorkflow` formats it. In either case the full step content —
+headers, body, hooks, timeout, retry — is preserved because it lives in the spec
+document, not in `WorkflowStep`.
+
+Fields that `workflowSerializer` MUST include in step output when present:
+
+```
+request.protocol   request.target    request.operation
+request.headers    request.body
+hooks.beforeStep   hooks.afterStep
+timeout            retry
+assertions         extracts
+dependsOn
+```
+
+#### 5 — Round-Trip Invariant
+
+The following invariant MUST hold for every workflow step:
+
+> Load YAML → open step editor → make no changes → save → YAML output is
+> semantically identical to the input YAML for all fields the engine consumes.
+
+"Semantically identical" means: the engine executes the same request. Field order
+and comment preservation are not required. Silent field loss is not permitted.
+
+#### 6 — `workflowDocumentToCanvasWorkflow` Must Restore `RequestFormState`
+
+When loading a `TraCtlSpecDocument`, `workflowDocumentToCanvasWorkflow()` must
+produce enough data per step to initialise the step editor correctly. This requires
+mapping `TraCtlStep` fields back into a `RequestFormState`-compatible structure stored
+on `WorkflowStep` (or in a parallel map in the canvas store keyed by step ID).
+
+The reverse mapping responsibility:
+
+| `TraCtlStep` field | Restores to `RequestFormState` |
+|---|---|
+| `request.operation` | `method` |
+| `request.target` | `url` (full URL including any query string) |
+| `request.headers` | `headers: KVRow[]` (all enabled, key/value only) |
+| `request.body` | `body: RequestBodyDraft` |
+| `hooks.beforeStep.source` | `scripts.pre` |
+| `hooks.afterStep.source` | `scripts.post` |
+| `assertions[]` | `assertions: AssertionRowModel[]` |
+| `extracts[]` | `extracts: ExtractRowModel[]` |
+| `timeout` | `settings.timeoutMs` (parse ISO 8601 duration) |
+| `retry` | `settings.retryConfig` |
+
+Auth cannot be fully restored from a spec document (headers may contain a resolved
+`Authorization` value but the original auth type and credential reference are lost).
+On load, `hasAuth` is derived from the presence of an `Authorization` header;
+the auth type defaults to `Bearer token` and the token field is left empty for
+the user to re-enter. This is a known limitation of loading externally authored YAML.
+
+### Consequences
+
+**Positive:**
+
+- Round-trip invariant enforced — no silent field loss on save
+- Step editor and single-request editor share one authoring type (`RequestFormState`)
+- `WorkflowStep` has a single clear purpose (graph view projection)
+- `workflowSerializer` is simplified — it formats a spec document rather than
+  mapping a display model
+
+**Tradeoffs:**
+
+- `workflowDocumentToCanvasWorkflow` becomes more complex — must restore
+  `RequestFormState` from `TraCtlStep`, including reverse-parsing ISO 8601 durations
+- Auth is not fully restorable from externally authored YAML — token value is lost
+  on load; user must re-enter credentials for YAML files not created by the editor
+- In-memory store now holds a `TraCtlSpecDocument` rather than a lightweight
+  `Workflow` projection — higher memory footprint for large workflows (acceptable
+  at current scale)
+
+### Superseded Content
+
+The following from ADR-016 §4 is amended by this section:
+
+- Original text: "No global state for form fields — form state is local to each panel
+  component. Forms serialize to the canonical traCtlSpec shape on submit/auto-save,
+  not on every keystroke."
+- Amended to: This invariant applies to both the single-request editor and the
+  workflow step editor. The workflow step editor MUST serialize to the canonical
+  `TraCtlSpecDocument` on every change via `requestFormStateToTraCtlSpec()`. The
+  `WorkflowStep` display projection is re-derived from the spec document after
+  each serialization.   The spec document in the canvas store is the source of truth.
+
+---
+
 ## Amendment — 2026-05-31
 
 Amended by: Server Binary Consolidation and localapi Partition

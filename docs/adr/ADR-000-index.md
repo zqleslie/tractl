@@ -270,3 +270,38 @@ Tier 2, Docker, and self-hosted server binary. `cmd/localapi` is removed.
 `cmd/wasm` imports `internal/localapi/compute` only. `internal/localapi` (which
 contains `net.Listen`) is never reachable from the WASM import graph. The
 browser-safe partition is enforced by the compiler, not by convention.
+
+---
+
+## Index Update — 2026-06-02
+
+### New ADRs
+
+| ADR | Title | Status | Key Invariant |
+|-----|-------|--------|---------------|
+| [ADR-017](ADR-017-request-dto-and-protocol-surface-contract.md) | Request DTO & Protocol Surface Contract | Accepted | `RequestDef` is the public API contract; `Protocol` field required pre-release; mapper ownership split between Go (external callers) and TypeScript (frontend) |
+
+### Amended ADRs
+
+| ADR | Amendment Summary |
+|-----|-------------------|
+| [ADR-016](ADR-016-ui-architecture-model.md) | §4 workflow step state model added: `WorkflowStep` is a display projection only; `RequestFormState` is the authoring contract for workflow steps; spec document in canvas store is source of truth; `workflowSerializer` must produce full-fidelity output; round-trip invariant defined |
+| [ADR-017](ADR-017-request-dto-and-protocol-surface-contract.md) | §3 extended: `RequestDef` / `RequestFormState` is the authoring contract for both single-request execution and workflow step editing; `requestFormStateToTraCtlSpec()` is the single serialization path for both cases; auth restoration limitation from externally authored YAML documented |
+
+### Updated Core Invariants Cross-Reference
+
+**`WorkflowStep` is a display projection (ADR-016 amendment 2026-06-02):**
+`WorkflowStep` carries only graph-view data. It MUST NOT be used as an authoring
+model. The `TraCtlSpecDocument` held in the canvas store is the source of truth
+for all step content. `WorkflowStep` entries are re-derived from the spec document
+after every step edit.
+
+**Workflow step round-trip invariant (ADR-016 amendment 2026-06-02):**
+Load YAML → open step editor → make no changes → save → output YAML is semantically
+identical to input for all engine-consumed fields. Silent field loss on serialization
+is not permitted.
+
+**Shared authoring contract (ADR-017 amendment 2026-06-02):**
+`RequestFormState` and `requestFormStateToTraCtlSpec()` are the single authoring
+and serialization path for both single requests and workflow steps. The mapper MUST
+NOT be forked or duplicated for the workflow step case.

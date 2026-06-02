@@ -1,5 +1,14 @@
 package planner
 
+// Config carries surface-specific options for plan generation.
+// Pass it via NewPlannerWithConfig to enable surface-dependent capability guards.
+type Config struct {
+	// Surface identifies the delivery surface executing the plan.
+	// Accepted values: "wasm", "cli", "desktop", "localapi".
+	// Defaults to "cli" when empty, which applies all non-WASM capability guards.
+	Surface string
+}
+
 // StepPlan describes the execution plan for a single step.
 type StepPlan struct {
 	// StepID is the step identifier from spec.Step.ID.

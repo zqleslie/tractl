@@ -736,3 +736,92 @@ func TestPlan_HybridDependencies(t *testing.T) {
 		t.Error("fetch-profile and create-order should have CanSkip=true")
 	}
 }
+
+// h3Spec builds a minimal spec with one step that declares transport.version "h3".
+func h3Spec() *spec.TraCtlSpec {
+	return &spec.TraCtlSpec{
+		SchemaVersion: 1,
+		Workflows: []spec.Workflow{
+			{
+				ID: "wf",
+				Steps: []spec.Step{
+					{
+						ID:   "fetch",
+						Kind: "request",
+						Request: &spec.RequestDescriptor{
+							Protocol:  "http",
+							Target:    "https://api.example.com/data",
+							Operation: "GET",
+							Transport: map[string]interface{}{"version": "h3"},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// TestPlannerRejectsHTTP3OnCLI verifies that transport.version "h3" is rejected
+// on the CLI surface with an error referencing "h3" and "WASM" (ADR-017 §7).
+func TestPlannerRejectsHTTP3OnCLI(t *testing.T) {
+	planner := NewPlannerWithConfig(DefaultRegistry(), Config{Surface: "cli"})
+	_, err := planner.Plan(h3Spec())
+	if err == nil {
+		t.Fatal("expected planning error for h3 on CLI surface, got nil")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "h3") {
+		t.Errorf("expected error message to contain %q, got: %s", "h3", msg)
+	}
+	if !strings.Contains(msg, "WASM") {
+		t.Errorf("expected error message to contain %q, got: %s", "WASM", msg)
+	}
+	if !strings.Contains(msg, ErrTransportNotSupported) {
+		t.Errorf("expected error code %q, got: %s", ErrTransportNotSupported, msg)
+	}
+}
+
+// TestPlannerAllowsHTTP3OnWASM verifies that transport.version "h3" is accepted
+// on the WASM surface without error (ADR-017 §7).
+func TestPlannerAllowsHTTP3OnWASM(t *testing.T) {
+	planner := NewPlannerWithConfig(DefaultRegistry(), Config{Surface: "wasm"})
+	_, err := planner.Plan(h3Spec())
+	if err != nil {
+		t.Fatalf("expected no planning error for h3 on WASM surface, got: %v", err)
+	}
+}
+
+// TestPlannerIgnoresTransportWhenNoVersion verifies that a transport map with no
+// "version" key does not trigger the H3 guard on any surface (ADR-017 §7).
+func TestPlannerIgnoresTransportWhenNoVersion(t *testing.T) {
+	surfaces := []string{"cli", "desktop", "localapi", "wasm"}
+	for _, surface := range surfaces {
+		t.Run(surface, func(t *testing.T) {
+			s := &spec.TraCtlSpec{
+				SchemaVersion: 1,
+				Workflows: []spec.Workflow{
+					{
+						ID: "wf",
+						Steps: []spec.Step{
+							{
+								ID:   "fetch",
+								Kind: "request",
+								Request: &spec.RequestDescriptor{
+									Protocol:  "http",
+									Target:    "https://api.example.com/data",
+									Operation: "GET",
+									Transport: map[string]interface{}{"proxy": "socks5://proxy.example.com"},
+								},
+							},
+						},
+					},
+				},
+			}
+			planner := NewPlannerWithConfig(DefaultRegistry(), Config{Surface: surface})
+			_, err := planner.Plan(s)
+			if err != nil {
+				t.Errorf("expected no error for transport without version on %q surface, got: %v", surface, err)
+			}
+		})
+	}
+}

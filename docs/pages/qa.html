@@ -118,7 +118,7 @@
       <div class="accordion-body">
         <p>Manual sync risk. If you add a field to <code>localapi.RequestDef</code> in Go and forget to add it to <code>frontend/src/types/requestDef.ts</code>, the frontend silently ignores it (TypeScript gets <code>undefined</code>) and Go gets the zero value (empty string, 0, nil). No compile error, no runtime panic — just wrong behaviour that only shows up in testing.</p>
         <p><strong>Mitigation today:</strong> The PR checklist in CONTRIBUTING.md requires updating TypeScript types when Go types change. There is no automated check.</p>
-        <p><strong>Long-term fix:</strong> Generate TypeScript types from Go structs using a tool like <a href="https://github.com/nicholasgasior/gsfmt" target="_blank">tygo</a> or a custom generator. This is not yet implemented — worth tracking as a future improvement.</p>
+        <p><strong>Long-term fix:</strong> Generate TypeScript types from Go structs using a tool like <a href="https://github.com/gzuidhof/tygo" target="_blank">tygo</a> or a custom generator. This is not yet implemented — worth tracking as a future improvement.</p>
       </div>
     </div>
 
@@ -132,7 +132,8 @@
       <div class="accordion-body">
         <p>Two completely separate execution paths:</p>
         <ul>
-          <li><strong>Request Editor screen</strong> — user builds one request in the UI form. Frontend constructs a <code>RequestDef</code> from form state. Calls <code>tractl.runRequest()</code> or <code>POST /api/v1/run</code>. The Go mapper wraps it into a one-step spec doc.</li>
+          <li><strong>Request Editor screen (web / WASM)</strong> — user builds one request in the UI form. Frontend constructs a <code>RequestDef</code> from form state → calls the TypeScript mapper (<code>requestDefToDocumentObject</code>) → produces a spec JSON string → calls <code>tractl.run()</code> (WASM). No Go mapper is involved on the web path.</li>
+          <li><strong>Request Editor screen (desktop / local API)</strong> — frontend sends the <code>RequestDef</code> to <code>POST /api/v1/run</code>. The Go mapper (<code>requestDefToDocument</code> in <code>request_mapper.go</code>) wraps it into a one-step spec doc server-side.</li>
           <li><strong>WorkflowCanvas screen / running a YAML file</strong> — frontend has the full document content as a string. Sends <code>WorkflowRunRequest{ document: yamlString }</code>. Calls <code>tractl.run()</code> or <code>POST /api/v1/workflows/run</code>. No mapper involved — parser handles it directly.</li>
         </ul>
         <p><code>RequestDef</code> is never used when running a workflow file. <code>WorkflowRunRequest</code> is never used when running a single UI-built request.</p>

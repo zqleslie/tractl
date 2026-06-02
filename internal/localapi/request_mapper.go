@@ -14,19 +14,49 @@ func requestDefToDocument(req RequestDef) (map[string]any, error) {
 	if method == "" {
 		method = "GET"
 	}
+	// GraphQL always uses POST regardless of the Method field (ADR-017 §4).
+	if req.Body != nil && strings.EqualFold(req.Body.Encoding, "graphql") {
+		method = "POST"
+	}
+
+	protocol := req.Protocol
+	if protocol == "" {
+		protocol = "http"
+	}
+	// OData is plain HTTP (ADR-017 §4) — normalize at the mapper boundary.
+	if protocol == "odata" {
+		protocol = "http"
+	}
+
 	target, err := targetURL(req)
 	if err != nil {
 		return nil, err
 	}
 	request := map[string]any{
-		"protocol":  "http",
+		"protocol":  protocol,
 		"target":    target,
 		"operation": method,
 	}
-	if headers := enabledKVMap(req.Headers); len(headers) > 0 {
+
+	headers := enabledKVMap(req.Headers)
+	// GraphQL requires Content-Type: application/json (ADR-017 §4).
+	if req.Body != nil && strings.EqualFold(req.Body.Encoding, "graphql") {
+		if headers == nil {
+			headers = map[string]string{}
+		}
+		if _, hasContentType := headers["Content-Type"]; !hasContentType {
+			headers["Content-Type"] = "application/json"
+		}
+	}
+	if len(headers) > 0 {
 		request["headers"] = headers
 	}
-	if body := requestBody(req.Body); body != nil {
+
+	body, bodyErr := requestBody(req.Body)
+	if bodyErr != nil {
+		return nil, bodyErr
+	}
+	if body != nil {
 		request["body"] = body
 	}
 	step := map[string]any{"id": stepID(req), "kind": "request", "request": request}
@@ -55,7 +85,7 @@ func requestDefToDocument(req RequestDef) (map[string]any, error) {
 	}
 	return map[string]any{
 		"schemaVersion": 1,
-		"capabilities":  []string{"protocol.http"},
+		"capabilities":  buildCapabilities(protocol),
 		"metadata":      map[string]any{"name": name},
 		"workflows": []map[string]any{{
 			"id":            "request-flow",
@@ -98,20 +128,48 @@ func enabledKVMap(rows []KVRow) map[string]string {
 	return out
 }
 
-func requestBody(body *BodyDef) map[string]any {
-	if body == nil || strings.EqualFold(body.Encoding, "none") {
-		return nil
+func buildCapabilities(protocol string) []string {
+	if protocol == "graphql" {
+		return []string{"protocol.http", "protocol.graphql"}
 	}
-	doc := map[string]any{"encoding": strings.ToLower(body.Encoding)}
-	if strings.EqualFold(body.Encoding, "json") {
+	return []string{"protocol.http"}
+}
+
+func requestBody(body *BodyDef) (map[string]any, error) {
+	if body == nil || strings.EqualFold(body.Encoding, "none") {
+		return nil, nil
+	}
+	enc := strings.ToLower(body.Encoding)
+	doc := map[string]any{"encoding": enc}
+	switch enc {
+	case "json":
+		if strings.TrimSpace(body.Content) == "" {
+			return nil, nil
+		}
 		var decoded any
 		if err := json.Unmarshal([]byte(body.Content), &decoded); err == nil {
 			doc["content"] = decoded
-			return doc
+			return doc, nil
 		}
+	case "graphql":
+		// Content must be a JSON object with at least a "query" key (ADR-017 §4).
+		var parsed map[string]any
+		if err := json.Unmarshal([]byte(body.Content), &parsed); err != nil {
+			return nil, fmt.Errorf("graphql body: content is not valid JSON: %w", err)
+		}
+		if _, ok := parsed["query"]; !ok {
+			return nil, errors.New(`graphql body: required key "query" is missing`)
+		}
+		serialized, _ := json.Marshal(parsed)
+		doc["content"] = string(serialized)
+		return doc, nil
+	case "form", "multipart", "raw", "binary":
+		// pass content through as-is — engine handles serialization
+	default:
+		return nil, fmt.Errorf("unsupported body encoding %q; accepted: json, graphql, form, multipart, raw, binary, none", enc)
 	}
 	doc["content"] = body.Content
-	return doc
+	return doc, nil
 }
 
 func assertionDocs(assertions []AssertionDef) []map[string]any {

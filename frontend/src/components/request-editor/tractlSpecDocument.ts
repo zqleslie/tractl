@@ -2,7 +2,7 @@
 
 export type TraCtlSpecDocument = {
   schemaVersion: 1
-  capabilities: ['protocol.http']
+  capabilities: string[]
   metadata?: {
     name?: string
     description?: string
@@ -24,7 +24,7 @@ export type TraCtlStep = {
   kind: 'request'
   dependsOn?: string[]
   request: {
-    protocol: 'http'
+    protocol: string
     target: string
     operation: string
     headers?: Record<string, string>

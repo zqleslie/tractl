@@ -9,6 +9,7 @@ import type {
   SaveRequestFileResponse,
   WorkflowRunDocumentInput,
 } from '@/platform/localApi/types'
+import { type GoRunResult, mapFlatRunResult } from '@/lib/execution/mapRunResults'
 import { useSettingsStore } from '@/stores/settingsStore'
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:7428'
@@ -88,10 +89,11 @@ export async function writeWorkspaceFile(
 export async function runRequestFile(
   input: RunRequestInput,
 ): Promise<RequestRunResult> {
-  return requestJson<RequestRunResult>('/api/v1/run', {
+  const raw = await requestJson<GoRunResult>('/api/v1/run', {
     method: 'POST',
     body: JSON.stringify(input.request),
   })
+  return mapFlatRunResult(raw)
 }
 
 export async function runWorkflowDocument(

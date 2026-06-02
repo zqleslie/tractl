@@ -39,7 +39,8 @@ export function validateRequestRunUrl(url: string): string | null {
   return null
 }
 
-export function looksLikeViteDevShell(body: string): boolean {
+export function looksLikeViteDevShell(body: string | undefined | null): boolean {
+  if (!body) return false
   const sample = body.slice(0, 2048).toLowerCase()
   return (
     sample.includes('<!doctype html>') &&
