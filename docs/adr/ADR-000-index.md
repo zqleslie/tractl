@@ -248,3 +248,25 @@ build target. React components are transport-agnostic.
 chi HTTP server is compiled into cmd/server/ only. It is not bundled into
 the Desktop binary. It is not required for Web Tier 1. It is the Tier 2
 server binary distributed for local, Docker, self-hosted, and hosted use.
+
+---
+
+## Index Update — 2026-05-31
+
+### Amended ADRs
+
+| ADR | Amendment Summary |
+|-----|-------------------|
+| ADR-016 | Server binary consolidation: `cmd/server` is the single server binary (static frontend + engine API); `cmd/localapi` removed. `internal/localapi` partitioned into WASM-safe core (`internal/localapi/compute`) and HTTP server layer. `cmd/wasm` imports the core only, structurally resolving the WASM socket-boundary violation. |
+| ADR-012 | Tier 2 / Docker server binary named explicitly as `cmd/server`. Browser-safe capability partition enforced structurally at the package boundary. |
+
+### Updated Core Invariants Cross-Reference
+
+**Single server binary (ADR-016 amendment 2026-05-31):**
+`cmd/server` serves the static web frontend and all engine API routes. It is the
+Tier 2, Docker, and self-hosted server binary. `cmd/localapi` is removed.
+
+**WASM socket-boundary invariant (ADR-016 amendment 2026-05-31, ADR-012 §8):**
+`cmd/wasm` imports `internal/localapi/compute` only. `internal/localapi` (which
+contains `net.Listen`) is never reachable from the WASM import graph. The
+browser-safe partition is enforced by the compiler, not by convention.

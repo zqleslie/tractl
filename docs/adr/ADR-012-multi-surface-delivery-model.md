@@ -535,3 +535,31 @@ no automatic synchronization, shared state, or required pairing between them.
   not automatically shared between surfaces
 - Tier 1 CORS limitations are a real constraint for some users — clearly
   documented in the UI, not hidden
+
+---
+
+## Amendment — 2026-05-31
+
+Amended by: Server Binary Consolidation
+
+### Context
+
+The surface table referenced a server for Web App (extended) and Docker
+surfaces without naming the binary. The engine API routes lived in
+`cmd/localapi`, separate from the `cmd/server` static file server, making the
+Tier 2 server binary ambiguous.
+
+### Decision
+
+The Tier 2 / Docker / self-hosted server binary is `cmd/server`. It serves the
+static web frontend and all engine API routes from a single binary.
+`cmd/localapi` is removed.
+
+The browser-safe capability partition (§8) is now enforced structurally:
+`cmd/wasm` imports only `internal/localapi/compute` (the WASM-safe core), never
+`internal/localapi` (the HTTP server layer containing `net.Listen`).
+
+### Amended Surface Table Note
+
+For the Web App (extended), Docker, and Container Runtime rows, "via server"
+means a running `cmd/server` instance. No separate API binary is required.

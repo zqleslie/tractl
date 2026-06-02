@@ -397,3 +397,81 @@ The following from the original ADR-016 is superseded by this amendment:
   for the web surface to consume."
 - §7 original text: entire section — "The web surface requires the traCtl Desktop
   application to be running."
+
+---
+
+## Amendment — 2026-05-31
+
+Amended by: Server Binary Consolidation and localapi Partition
+
+### Context
+
+Investigation of the running code revealed two issues with the engine
+communication model as previously documented:
+
+1. `cmd/server` served only static frontend files and a status endpoint. The
+   engine API routes lived in a separate `cmd/localapi` binary. Tier 2 and
+   Docker deployments therefore required two binaries running together, which
+   contradicted the §3 amendment statement that the HTTP server lives in
+   `cmd/server/` as a standalone binary only.
+
+2. `internal/localapi` mixed three concerns in one package: API types, pure
+   compute functions, and the `net.Listen` HTTP server. `cmd/wasm` imported the
+   whole package, pulling socket-binding code into the WASM import graph even
+   though the WASM handlers only call the pure compute functions.
+
+### Decisions
+
+#### D1 — Single server binary
+
+`cmd/server` is the single server binary. It serves the static web frontend and
+all engine API routes (`/run`, `/workflows/run`, `/workflow/layout`,
+`/workflow/infer-deps`, `/workflow/export`, `/engine/defaults`,
+`/workspace/status`, `/files`, `/status`).
+
+`cmd/localapi` is removed. Its routes are absorbed by `cmd/server`. Local
+development uses `cmd/server` with `TRACTL_ADDR=:7428`.
+
+The Desktop binary continues to start the in-process HTTP server
+(`internal/localapi.Server`) on loopback. Desktop and `cmd/server` share the
+same HTTP server implementation; they are separate processes with no runtime
+dependency on each other.
+
+#### D2 — internal/localapi partition
+
+`internal/localapi` is partitioned into two layers:
+
+- `internal/localapi/compute` — WASM-safe core. Holds the API types and the
+  pure compute functions (`RunRequestDef`, `ComputeWorkflowLayout`,
+  `InferImplicitDeps`, `ExportWorkflow`, `MapRunResult`). No socket or
+  filesystem dependency. Compiles and runs under `GOOS=js GOARCH=wasm`.
+
+- `internal/localapi` — HTTP server layer. Holds `Server`, request handlers,
+  `Store`, middleware, and `net.Listen`. Imports `internal/localapi/compute`.
+  Not WASM-safe; never imported by `cmd/wasm`.
+
+#### D3 — cmd/wasm imports the core only
+
+`cmd/wasm` imports `internal/localapi/compute` exclusively. It never imports
+`internal/localapi`. The WASM import graph is free of `net.Listen` by
+construction. This structurally enforces the browser-safe capability partition
+(ADR-012 §8) at the package boundary rather than by convention.
+
+### Consequences
+
+**Positive:**
+
+- One Docker artifact serves the full web experience — frontend plus engine API
+- The WASM-safe boundary is compiler-enforced, not discipline-enforced
+- Desktop, server, and WASM all share one set of compute functions and types —
+  no duplicate request/workflow mapping logic
+
+**Tradeoffs:**
+
+- The `internal/localapi` partition is a one-time structural refactor
+- `cmd/localapi` users must switch to `cmd/server` with an address override
+
+### Superseded Content
+
+- The implicit assumption that `cmd/localapi` is the Tier 2 server binary is
+  superseded. `cmd/server` is the Tier 2 server binary.

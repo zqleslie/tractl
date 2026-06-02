@@ -120,6 +120,7 @@ Allowed statuses:
 | UI-0.2D | Environment Selection & Variable Resolution | Softwits / Cursor | COMPLETE | S6 Environment Manager; titlebar quick switch; sidebar envs backed by store; `{{name}}` resolver before request execution | Secrets, overlays, workflow variables | Flat string variables only; missing variables fail with `TRACTL_ENV_VARIABLE_MISSING` before runner call | UI-0.2B |
 | UI-0.2B | Fast Start Completion (S1) | Cursor | COMPLETE | Fast Start actions wired to real navigation, WASM parse/validate/run for files, OpenAPI import plumbing, persisted recent list from run history + OpenAPI imports | Workflow canvas; OpenAPI asset generation | Reuses RequestExecutionRunner + run history persist; no fake workflow loading | UI-0.2E |
 | UI-0.3D | Workflow Canvas → WASM Runtime Wiring | Softwits / Cursor | COMPLETE | Workflow Canvas Run calls `window.tractl.run` via serializer + run adapter; mock timeout removed; status bar shows last-run label | Step detail drafts (headers/body/assertions) not in store serializer yet | Web-only run guard on desktop; minimal traCtl YAML from canvas graph fields | UI-0.4D |
+| UI Arch | Server Consolidation ADR Decision | Cursor | COMPLETE | D1–D3 recorded in ADR-016/012/000 | None | Implementation deferred to change plan | Produce CHANGE_PLAN.md |
 
 ---
 
@@ -3876,6 +3877,46 @@ Verification:
 Architectural Constraints Observed:
   Collections are UI persistence only; execution still via platform runners.
   History stores mapped run results only (no new JS execution semantics).
+
+---
+
+## Entry: ADR-SERVER-CONSOLIDATION
+
+Date: 2026-05-31
+Phase: UI Architecture Governance
+Milestone: Server Binary Consolidation + localapi Partition (ADR decision)
+Owner / Agent: Cursor
+Status: COMPLETE
+
+### Work Summary
+
+Recorded three accepted architectural decisions in ADR-016, ADR-012, and
+ADR-000:
+
+- D1: `cmd/server` is the single server binary (static frontend + engine API);
+  `cmd/localapi` removed.
+- D2: `internal/localapi` partitioned into WASM-safe core
+  (`internal/localapi/compute`) and HTTP server layer.
+- D3: `cmd/wasm` imports the core only; `net.Listen` unreachable from the WASM
+  import graph.
+
+### Architectural Notes
+
+This entry records decisions only. Implementation is a separate change plan in a
+later session. No Go code changed in this entry.
+
+### Blockers
+
+None.
+
+### Next Required Action
+
+Produce CHANGE_PLAN.md for the server consolidation + localapi partition
+implementation in a successive session.
+
+### Escalation Required
+
+No
 
 ---
 
