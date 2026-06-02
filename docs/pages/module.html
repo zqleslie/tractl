@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../">
+<link rel="stylesheet" href="style.css">
+<title>Module — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <a href="pages/architecture.html">Architecture</a><span class="sep">/</span>
+      <span class="current" id="mod-breadcrumb-last">Module</span>
+    </div>
+    <div id="module-content">
+      <p class="md-loading">Loading module data…</p>
+    </div>
+  </main>
+</div>
+<script src="data/modules.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="app.js"></script>
+<script>
+  initPage({ title: 'Module' });
+  initModulePage();
+</script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../">
+<link rel="stylesheet" href="style.css">
+<title>Self-Check Quiz — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <span class="current">Self-Check Quiz</span>
+    </div>
+    <div class="page-title">Self-Check Quiz</div>
+    <div class="page-subtitle">8 questions. Answer all of them — when you're done, your score tells you if you're ready to contribute or need to re-read certain sections.</div>
+
+    <div class="callout info">
+      <p><strong>Goal:</strong> After this quiz you should be able to ask <em>precise</em> questions about the codebase — not "how does execution work?" but "does the scheduler evaluate the <code>when</code> condition before or after checking <code>dependsOn</code>?"</p>
+    </div>
+
+    <div id="quiz-container">
+      <p class="md-loading">Loading questions…</p>
+    </div>
+
+    <div class="quiz-score" id="quiz-score"></div>
+
+  </main>
+</div>
+<script src="data/quiz.js"></script>
+<script src="app.js"></script>
+<script>
+  initPage({ title: 'Self-Check Quiz' });
+
+  async function loadQuiz() {
+    const questions = await getData('QUIZ_DATA', 'data/quiz.json');
+    const container = document.getElementById('quiz-container');
+
+    container.innerHTML = questions.map((q, i) => `
+      <div class="quiz-item" id="${q.id}">
+        <div class="quiz-q">${i + 1}. ${q.question}</div>
+        <div class="quiz-options">
+          ${q.options.map(opt => `
+            <div class="quiz-opt" onclick="answerQuiz(this,'${q.id}',${opt.correct})">
+              ${opt.text}
+            </div>`).join('')}
+        </div>
+        <div class="quiz-explain" id="${q.id}-exp">${q.explanation}</div>
+      </div>`).join('');
+
+    quizTotal = questions.length;
+  }
+
+  loadQuiz();
+</script>
+</body>
+</html>

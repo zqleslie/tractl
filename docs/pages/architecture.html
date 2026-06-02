@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../">
+<link rel="stylesheet" href="style.css">
+<title>Architecture — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <span class="current">Architecture</span>
+    </div>
+
+    <div class="page-title">Architecture</div>
+    <div class="page-subtitle">Click any box in the diagram to explore that component in detail.</div>
+
+    <div class="callout info">
+      <p><strong>Core principle:</strong> The Go engine (<code>internal/engine</code>) is completely surface-agnostic. Every surface just calls <code>engine.Run(cfg)</code>. The frontend is one React codebase that adapts to each surface via a platform adapter layer.</p>
+    </div>
+
+    <h2>Full System Diagram</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+graph TB
+    subgraph Surfaces["📡 Delivery Surfaces — click to explore"]
+        CLI["💻 CLI<br/>cmd/tractl"]
+        WEB["🌐 Web + WASM<br/>cmd/server + cmd/wasm"]
+        DESK["🖥️ Desktop<br/>cmd/desktop"]
+        LAPI["🔌 Local API<br/>cmd/localapi :7428"]
+    end
+
+    subgraph FE["⚛️ React Frontend  frontend/"]
+        UI["Screens + Components"]
+        STORE["Zustand Stores"]
+        PLAT["Platform Adapter<br/>platform/index.ts"]
+    end
+
+    subgraph Engine["🔧 Go Engine  internal/"]
+        ENG["engine.Engine<br/>orchestrator"]
+        PARSE["parser"]
+        VAL["validation"]
+        PLAN["planner"]
+        COMP["compiler"]
+        SCHED["scheduler"]
+        EXEC["executor"]
+        RT["runtime<br/>ExecutionContext"]
+        SB["sandbox<br/>goja JS"]
+        ASSERT["assertion"]
+        EXTRACT["extract"]
+        OVL["overlay"]
+        DIAG["diagnostics"]
+    end
+
+    CLI  --> ENG
+    WEB  --> ENG
+    DESK --> ENG
+    LAPI --> ENG
+
+    UI --> STORE
+    UI --> PLAT
+    PLAT -->|"WASM globals"| WEB
+    PLAT -->|"Wails IPC"| DESK
+    PLAT -->|"fetch :7428"| LAPI
+
+    ENG --> PARSE --> OVL --> VAL --> PLAN --> COMP --> SCHED
+    SCHED --> EXEC
+    SCHED --> SB
+    EXEC --> RT
+    EXEC --> ASSERT
+    EXEC --> EXTRACT
+    DIAG -.->|traces| SCHED
+
+    click CLI href "pages/surface.html?id=cli" "CLI Surface"
+    click WEB href "pages/surface.html?id=web-wasm" "Web + WASM Surface"
+    click DESK href "pages/surface.html?id=desktop" "Desktop Surface"
+    click LAPI href "pages/surface.html?id=localapi" "Local API Surface"
+    click PLAT href "pages/frontend/platform-adapter.html" "Platform Adapter"
+    click UI href "pages/frontend/index.html" "React Frontend"
+    click ENG href "pages/module.html?id=pipeline" "Engine Pipeline"
+    click PARSE href "pages/module.html?id=parser" "Parser"
+    click VAL href "pages/module.html?id=validation" "Validation"
+    click PLAN href "pages/module.html?id=planner" "Planner"
+    click COMP href "pages/module.html?id=compiler" "Compiler"
+    click SCHED href "pages/module.html?id=scheduler" "Scheduler"
+    click EXEC href "pages/module.html?id=executor" "Executor"
+    click RT href "pages/module.html?id=runtime" "Runtime"
+    click SB href "pages/module.html?id=sandbox" "JS Sandbox"
+    click ASSERT href "pages/module.html?id=assertion" "Assertion"
+    click EXTRACT href "pages/module.html?id=extract" "Extract"
+    click OVL href "pages/module.html?id=overlay" "Overlay"
+    click DIAG href "pages/module.html?id=diagnostics" "Diagnostics"
+
+    style Surfaces fill:#1c2230,stroke:#30363d,color:#e6edf3
+    style FE fill:#1a1f2e,stroke:#30363d,color:#e6edf3
+    style Engine fill:#1a2520,stroke:#30363d,color:#e6edf3
+      </div>
+      <div class="diagram-label">Click any box to open its detail page</div>
+    </div>
+
+    <h2>Execution Pipeline (Stage Flow)</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    A["📄 File\nbytes"] --> B["1\nPARSE"]
+    B --> C["2\nOVERLAY"]
+    C --> D["3\nVALIDATE"]
+    D --> E["4\nPLAN"]
+    E --> F["5\nCOMPILE"]
+    F --> G["6\nEXECUTE"]
+    G --> H["🎯 RunResult\nexit 0/1/2"]
+
+    click B href "pages/module.html?id=parser"
+    click C href "pages/module.html?id=overlay"
+    click D href "pages/module.html?id=validation"
+    click E href "pages/module.html?id=planner"
+    click F href "pages/module.html?id=compiler"
+    click G href "pages/module.html?id=scheduler"
+      </div>
+    </div>
+
+    <h2>Platform Adapter (Frontend ↔ Go)</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+graph LR
+    UI["React Component\ncalls IPlatform"]
+    PA["platform/index.ts\ndetects surface"]
+    W["Web adapter\nwindow.tractl.*"]
+    D["Desktop adapter\nwindow.wails.*"]
+    L["LocalApi adapter\nfetch :7428"]
+    GW["cmd/wasm\nGo in browser"]
+    GD["cmd/desktop\nGo in process"]
+    GL["cmd/localapi\nGo HTTP server"]
+
+    UI --> PA
+    PA -->|surface=web| W --> GW
+    PA -->|surface=desktop| D --> GD
+    PA -->|surface=localApi| L --> GL
+
+    click PA href "pages/frontend/platform-adapter.html"
+    click W href "pages/surface.html?id=web-wasm"
+    click D href "pages/surface.html?id=desktop"
+    click L href "pages/surface.html?id=localapi"
+      </div>
+    </div>
+
+    <h2>Variable Resolution Chain</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    E["Expression: ${vars.token}"] --> R1{Runtime scope}
+    R1 -->|"tractl.random(), tractl.now()"| OK["✅ Resolved"]
+    R1 --> R2{Step scope}
+    R2 -->|"steps.id.extracts.name"| OK
+    R2 --> R3{Workflow scope}
+    R3 -->|"workflow vars"| OK
+    R3 --> R4{Environment scope}
+    R4 -->|"--env flag vars"| OK
+    R4 --> R5{Spec scope}
+    R5 -->|"spec.variables.*"| OK
+    R5 --> ERR["⚠️ Empty string\n(no error — silent)"]
+      </div>
+    </div>
+
+    <h2>All Surfaces at a Glance</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Surface</th><th>Entry point</th><th>Engine runs where</th><th>Best for</th></tr>
+        <tr><td><a href="pages/surface.html?id=cli"><strong>CLI</strong></a></td><td><code>cmd/tractl</code></td><td>Terminal process</td><td>CI/CD, scripting</td></tr>
+        <tr><td><a href="pages/surface.html?id=web-wasm"><strong>Web + WASM</strong></a></td><td><code>cmd/server</code> + <code>cmd/wasm</code></td><td>User's browser</td><td>Hosted web app</td></tr>
+        <tr><td><a href="pages/surface.html?id=desktop"><strong>Desktop</strong></a></td><td><code>cmd/desktop</code></td><td>Native app process</td><td>Offline, native UX</td></tr>
+        <tr><td><a href="pages/surface.html?id=localapi"><strong>Local API</strong></a></td><td><code>cmd/localapi</code></td><td>Local Go process</td><td>IDE plugins, Tier 2 web</td></tr>
+      </table>
+    </div>
+
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="app.js"></script>
+<script>initPage({ title: 'Architecture' });</script>
+</body>
+</html>

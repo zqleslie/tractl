@@ -376,6 +376,12 @@ tidy:
 
 # ── Clean ─────────────────────────────────────────────
 
+sync-docs:
+	mkdir -p docs/_raw
+	cp CONTRIBUTING.md docs/_raw/CONTRIBUTING.md
+	cp CODE_OF_CONDUCT.md docs/_raw/CODE_OF_CONDUCT.md
+	cp SECURITY.md docs/_raw/SECURITY.md
+
 clean:
 	rm -rf $(BIN_DIR)/
 	rm -rf $(DESKTOP_DIR)/build/

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../../">
+<link rel="stylesheet" href="style.css">
+<title>Testing Guide — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <a href="pages/contributing/index.html">Contributing</a><span class="sep">/</span>
+      <span class="current">Testing</span>
+    </div>
+    <div class="page-title">Testing Guide</div>
+    <div class="page-subtitle">How tests are structured, what to write, and how to run them.</div>
+
+    <h2>Test Commands</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Command</th><th>What it runs</th></tr>
+        <tr><td><code>make test</code></td><td>All Go unit tests (<code>go test ./...</code>)</td></tr>
+        <tr><td><code>make test-phase1</code></td><td>Phase 1 validation tests only — fast feedback loop</td></tr>
+        <tr><td><code>make test-cover</code></td><td>Go coverage HTML report</td></tr>
+        <tr><td><code>make test-frontend</code></td><td>Vitest component/unit tests</td></tr>
+        <tr><td><code>make test-frontend-e2e</code></td><td>Playwright E2E (requires WASM built)</td></tr>
+        <tr><td><code>make check-full</code></td><td>Everything: check + race detector + integration + E2E</td></tr>
+      </table>
+    </div>
+
+    <h2>Go Test Structure</h2>
+
+    <h3>Table-driven tests (required for validators)</h3>
+    <p>Every validator uses table-driven tests. New edge cases are added as new rows — no new test functions needed.</p>
+    <pre><span class="kw">func</span> <span class="fn">TestStepKindValidation</span>(t *testing.T) {
+    tests := []<span class="kw">struct</span> {
+        name    <span class="ty">string</span>
+        kind    <span class="ty">string</span>
+        wantErr <span class="ty">bool</span>
+    }{
+        {<span class="str">"valid request kind"</span>, <span class="str">"request"</span>, <span class="kw">false</span>},
+        {<span class="str">"valid script kind"</span>,  <span class="str">"script"</span>,  <span class="kw">false</span>},
+        {<span class="str">"unknown kind"</span>,       <span class="str">"unknown"</span>, <span class="kw">true</span>},
+        {<span class="str">"empty kind"</span>,         <span class="str">""</span>,        <span class="kw">true</span>},
+    }
+    <span class="kw">for</span> _, tt := <span class="kw">range</span> tests {
+        t.Run(tt.name, <span class="kw">func</span>(t *testing.T) {
+            err := validateStepKind(tt.kind)
+            <span class="kw">if</span> (err != <span class="kw">nil</span>) != tt.wantErr {
+                t.Errorf(<span class="str">"got err=%v, wantErr=%v"</span>, err, tt.wantErr)
+            }
+        })
+    }
+}</pre>
+
+    <h3>Dependency injection for engine tests</h3>
+    <p>The engine accepts interface implementations in <code>engine.Config</code>. Tests inject stubs without mocking HTTP.</p>
+    <pre><span class="co">// engine_test.go — inject stub planner</span>
+cfg := engine.Config{
+    WorkflowFile: <span class="str">"testdata/minimal.yaml"</span>,
+    Planner: &stubPlanner{   <span class="co">// implements engine.Planner</span>
+        plan: fixedExecutionPlan,
+    },
+}</pre>
+
+    <h3>Test file location</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Location</th><th>Contains</th></tr>
+        <tr><td><code>internal/&lt;pkg&gt;/&lt;pkg&gt;_test.go</code></td><td>Unit tests for that package</td></tr>
+        <tr><td><code>internal/&lt;pkg&gt;/testdata/</code></td><td>Input fixtures (YAML, JSON files)</td></tr>
+        <tr><td><code>test/integration/</code></td><td>Cross-package integration tests</td></tr>
+        <tr><td><code>test/e2e/</code></td><td>End-to-end Go tests</td></tr>
+        <tr><td><code>frontend/e2e/</code></td><td>Playwright browser tests</td></tr>
+      </table>
+    </div>
+
+    <h2>Frontend Testing</h2>
+    <p><strong>Vitest</strong> handles unit and component tests. <strong>Playwright</strong> handles E2E tests that exercise the full WASM bridge.</p>
+    <div class="callout warn">
+      <p>Run <code>make build-wasm</code> before running Playwright tests — the E2E tests require the compiled <code>tractl.wasm</code> file in <code>frontend/public/</code>.</p>
+    </div>
+
+    <h2>What to test</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>You changed</th><th>Write / update these tests</th></tr>
+        <tr><td>A validator rule</td><td>Table-driven test in <code>internal/validation/</code> — both valid and invalid cases</td></tr>
+        <tr><td>Parser behaviour</td><td>Unit test with a fixture file in <code>testdata/</code></td></tr>
+        <tr><td>Executor retry logic</td><td>Unit test with a stub HTTP server using <code>httptest.NewServer</code></td></tr>
+        <tr><td>Assertion evaluation</td><td>Table-driven test covering each kind+op combination</td></tr>
+        <tr><td>WASM bridge function</td><td>Playwright E2E test that calls <code>window.tractl.*</code> in the browser</td></tr>
+        <tr><td>Frontend component</td><td>Vitest test with <code>@testing-library/react</code></td></tr>
+      </table>
+    </div>
+
+  </main>
+</div>
+<script src="app.js"></script>
+<script>initPage({ title: 'Testing Guide' });</script>
+</body>
+</html>

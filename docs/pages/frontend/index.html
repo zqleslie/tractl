@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../../">
+<link rel="stylesheet" href="style.css">
+<title>React Frontend — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <span class="current">React Frontend</span>
+    </div>
+    <div class="page-title">React Frontend</div>
+    <div class="page-subtitle">One React codebase — three surfaces. Built with React 18, TypeScript, Zustand, and Vite.</div>
+
+    <div class="callout info">
+      <p><strong>Stack:</strong> React 18, TypeScript, Zustand (state), TanStack Query (async), Tabler Icons, Vite. No react-router — screen switching is URL-hash based with custom sync logic.</p>
+    </div>
+
+    <h2>Directory Structure</h2>
+    <div class="module-list">
+      <div class="module-item frontend">
+        <div class="module-path">src/app/</div>
+        <div class="module-desc"><strong>App root.</strong> Main router (<code>App.tsx</code>), theme sync, React context providers. Screen switching happens here based on URL hash.</div>
+      </div>
+      <div class="module-item frontend">
+        <div class="module-path">src/screens/</div>
+        <div class="module-desc"><strong>Full-page views.</strong> FastStartScreen, WorkflowCanvasScreen, RequestEditor, RunHistoryScreen, EnvironmentManager. Each screen is a top-level route.</div>
+      </div>
+      <div class="module-item frontend">
+        <div class="module-path">src/components/</div>
+        <div class="module-desc"><strong>Reusable components.</strong> Organised by domain: shell/, sidebar/, panels/, primitives/, results/, request-editor/, environment/. Never import from platform/ directly.</div>
+      </div>
+      <div class="module-item frontend">
+        <div class="module-path">src/stores/</div>
+        <div class="module-desc"><strong>Zustand state stores.</strong> One store per domain: uiStore, workflowCanvasStore, executionStore, runHistoryStore, requestCollectionsStore, settingsStore, workspaceStore.</div>
+      </div>
+      <div class="module-item frontend">
+        <div class="module-path">src/platform/</div>
+        <div class="module-desc"><strong>Surface adapters.</strong> The only place that knows which surface is running. Implements IPlatform for web (WASM), desktop (Wails), and localApi. <a href="pages/frontend/platform-adapter.html">Deep-dive →</a></div>
+      </div>
+      <div class="module-item frontend">
+        <div class="module-path">src/types/</div>
+        <div class="module-desc"><strong>TypeScript types.</strong> workflow.ts, requestDef.ts, recent.ts, and other domain types. These mirror the Go structs in internal/spec — keep them in sync when the spec changes.</div>
+      </div>
+      <div class="module-item frontend">
+        <div class="module-path">src/lib/</div>
+        <div class="module-desc"><strong>Utilities.</strong> tractlDocument (parsing/normalisation), requestEditor logic, fastStart templates, and other helpers that don't belong in stores or components.</div>
+      </div>
+    </div>
+
+    <h2>Screens</h2>
+    <div class="card-grid">
+      <div class="card frontend">
+        <h4>FastStartScreen</h4>
+        <p>Landing page. Quick-start templates, recent files. Entry point for new workflow creation.</p>
+        <div class="card-path">screens/FastStartScreen.tsx</div>
+      </div>
+      <div class="card frontend">
+        <h4>WorkflowCanvasScreen</h4>
+        <p>Visual DAG editor. Steps as nodes, dependsOn as edges. Click a node to edit its request.</p>
+        <div class="card-path">screens/WorkflowCanvasScreen.tsx</div>
+      </div>
+      <div class="card frontend">
+        <h4>RequestEditor</h4>
+        <p>HTTP request builder. URL, method, headers, body, assertions panel, extracts panel.</p>
+        <div class="card-path">screens/RequestEditor.tsx</div>
+      </div>
+      <div class="card frontend">
+        <h4>RunHistoryScreen</h4>
+        <p>Past execution results. Step-level pass/fail, assertion details, timing waterfall.</p>
+        <div class="card-path">screens/RunHistoryScreen.tsx</div>
+      </div>
+    </div>
+
+    <h2>Zustand Stores</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Store</th><th>Owns</th></tr>
+        <tr><td><code>uiStore</code></td><td>Active screen, sidebar collapse, active tab IDs — pure UI state</td></tr>
+        <tr><td><code>workflowCanvasStore</code></td><td>DAG nodes, edges, selected node — canvas editor state</td></tr>
+        <tr><td><code>executionStore</code></td><td>Current run: running/done, per-step outcomes, assertion results</td></tr>
+        <tr><td><code>runHistoryStore</code></td><td>Persisted list of past run results</td></tr>
+        <tr><td><code>requestCollectionsStore</code></td><td>Saved request collections — grouped sets of reusable HTTP requests</td></tr>
+        <tr><td><code>settingsStore</code></td><td>User preferences: theme, editor settings</td></tr>
+        <tr><td><code>workspaceStore</code></td><td>Workspace path, name, recent files</td></tr>
+      </table>
+    </div>
+
+    <h2>Build Modes</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Command</th><th>Output</th><th>Used by</th></tr>
+        <tr><td><code>make build-frontend-web</code></td><td><code>frontend/dist/</code> (web bundle)</td><td><code>cmd/server</code> — embedded via <code>//go:embed</code></td></tr>
+        <tr><td><code>make build-frontend-desktop</code></td><td><code>cmd/desktop/frontend/dist/</code></td><td><code>cmd/desktop</code> — Wails embeds it</td></tr>
+        <tr><td><code>make dev-web</code></td><td>Vite dev server on :5173</td><td>Local development with hot reload</td></tr>
+        <tr><td><code>make dev-desktop</code></td><td>Wails dev server</td><td>Desktop development with live reload</td></tr>
+      </table>
+    </div>
+
+  </main>
+</div>
+<script src="app.js"></script>
+<script>initPage({ title: 'React Frontend' });</script>
+</body>
+</html>

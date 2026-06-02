@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../../">
+<link rel="stylesheet" href="style.css">
+<title>Platform Adapter — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <a href="pages/frontend/index.html">React Frontend</a><span class="sep">/</span>
+      <span class="current">Platform Adapter</span>
+    </div>
+    <div class="page-title">Platform Adapter</div>
+    <div class="page-subtitle">The answer to "why does cmd/server exist AND cmd/localapi exist?" — and how the frontend works across all surfaces with one codebase.</div>
+
+    <div class="callout warn">
+      <p><strong>This is the most important concept</strong> for frontend developers joining the project. Read this before touching any code in <code>frontend/src/</code>.</p>
+    </div>
+
+    <h2>The Core Problem</h2>
+    <p>The same React codebase needs to run in three different environments:</p>
+    <div class="card-grid">
+      <div class="card">
+        <h4>🌐 Browser (Web)</h4>
+        <p>The Go engine runs as a <code>.wasm</code> file inside the browser tab. No HTTP server involved. Call Go functions directly via JS globals.</p>
+      </div>
+      <div class="card">
+        <h4>🖥️ Desktop (Wails)</h4>
+        <p>The Go engine runs in the same native process as the window. Call Go methods via Wails IPC bridge (<code>window.wails.*</code>).</p>
+      </div>
+      <div class="card">
+        <h4>🔌 Local API</h4>
+        <p>The Go engine runs in a separate process on <code>localhost:7428</code>. Call it via standard HTTP <code>fetch()</code>.</p>
+      </div>
+    </div>
+
+    <h2>The Solution: IPlatform Interface</h2>
+    <p>A TypeScript interface that all three adapters implement. React components only ever call this — they never know which surface they're on.</p>
+    <pre><span class="co">// frontend/src/platform/types.ts</span>
+<span class="kw">interface</span> <span class="ty">IPlatform</span> {
+  <span class="fn">run</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">RunResult</span>&gt;
+  <span class="fn">parse</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">TraCtlSpec</span>&gt;
+  <span class="fn">validate</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">ValidationError</span>[]&gt;
+  <span class="fn">layout</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">DAGLayout</span>&gt;
+  <span class="fn">runRequest</span>(req: <span class="ty">RequestDef</span>): <span class="ty">Promise</span>&lt;<span class="ty">RequestResult</span>&gt;
+  <span class="fn">inferDeps</span>(document: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">DepMap</span>&gt;
+  <span class="fn">exportWorkflow</span>(document: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">string</span>&gt;
+  <span class="fn">defaults</span>(): <span class="ty">Promise</span>&lt;<span class="ty">EngineDefaults</span>&gt;
+}</pre>
+
+    <h2>How Each Adapter Implements It</h2>
+    <div class="tabs">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(this,'tab-web')">🌐 Web (WASM)</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-desk')">🖥️ Desktop</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-api')">🔌 Local API</button>
+      </div>
+      <div id="tab-web" class="tab-pane active">
+        <p>Calls the Go functions registered as JavaScript globals by <code>cmd/wasm/bridge.go</code>. The engine runs inside the browser's WASM thread — no network request.</p>
+        <pre><span class="co">// platform/web/index.ts</span>
+<span class="kw">class</span> <span class="ty">WebPlatform</span> <span class="kw">implements</span> <span class="ty">IPlatform</span> {
+  <span class="kw">async</span> <span class="fn">run</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>) {
+    <span class="co">// window.tractl is registered by cmd/wasm Go binary</span>
+    <span class="kw">const</span> json = <span class="kw">await</span> window.tractl.<span class="fn">run</span>(document, format)
+    <span class="kw">return</span> <span class="ty">JSON</span>.<span class="fn">parse</span>(json) <span class="kw">as</span> <span class="ty">RunResult</span>
+  }
+}</pre>
+      </div>
+      <div id="tab-desk" class="tab-pane">
+        <p>Calls Go methods via Wails IPC. The engine runs in the same process as the native window — no HTTP, no WASM loading.</p>
+        <pre><span class="co">// platform/desktop/index.ts</span>
+<span class="kw">class</span> <span class="ty">DesktopPlatform</span> <span class="kw">implements</span> <span class="ty">IPlatform</span> {
+  <span class="kw">async</span> <span class="fn">run</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>) {
+    <span class="co">// Wails IPC — calls cmd/desktop/app.go App.Run()</span>
+    <span class="kw">const</span> json = <span class="kw">await</span> window.wails.<span class="fn">Run</span>(document, format)
+    <span class="kw">return</span> <span class="ty">JSON</span>.<span class="fn">parse</span>(json) <span class="kw">as</span> <span class="ty">RunResult</span>
+  }
+}</pre>
+      </div>
+      <div id="tab-api" class="tab-pane">
+        <p>Standard HTTP <code>fetch()</code> calls to <code>localhost:7428</code>. The engine runs in a separate Go process.</p>
+        <pre><span class="co">// platform/localApi/index.ts</span>
+<span class="kw">class</span> <span class="ty">LocalApiPlatform</span> <span class="kw">implements</span> <span class="ty">IPlatform</span> {
+  <span class="kw">async</span> <span class="fn">run</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>) {
+    <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'http://localhost:7428/api/v1/workflows/run'</span>, {
+      method: <span class="str">'POST'</span>,
+      body: <span class="ty">JSON</span>.<span class="fn">stringify</span>({ document, format })
+    })
+    <span class="kw">return</span> res.<span class="fn">json</span>() <span class="kw">as</span> <span class="ty">Promise</span>&lt;<span class="ty">RunResult</span>&gt;
+  }
+}</pre>
+      </div>
+    </div>
+
+    <h2>Surface Detection</h2>
+    <pre><span class="co">// platform/index.ts — detects which surface and exports the right adapter</span>
+<span class="kw">function</span> <span class="fn">detectPlatform</span>(): <span class="ty">IPlatform</span> {
+  <span class="kw">if</span> (<span class="kw">typeof</span> window.wails !== <span class="str">'undefined'</span>) {
+    <span class="kw">return new</span> <span class="ty">DesktopPlatform</span>()        <span class="co">// Wails desktop</span>
+  }
+  <span class="kw">if</span> (<span class="kw">await</span> <span class="fn">localApiReachable</span>()) {
+    <span class="kw">return new</span> <span class="ty">LocalApiPlatform</span>()       <span class="co">// local API server running</span>
+  }
+  <span class="kw">return new</span> <span class="ty">WebPlatform</span>()             <span class="co">// default: WASM in browser</span>
+}
+
+<span class="kw">export const</span> platform = <span class="fn">detectPlatform</span>()</pre>
+
+    <h2>Adding a New Surface</h2>
+    <div class="callout tip">
+      <p>To add a 4th surface (e.g., VS Code extension): create <code>platform/vscode/index.ts</code>, implement <code>IPlatform</code> using the VS Code extension messaging API, add detection logic in <code>platform/index.ts</code>. <strong>No React component needs to change.</strong></p>
+    </div>
+
+    <h2>Why cmd/server AND cmd/localapi?</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th></th><th>cmd/server</th><th>cmd/localapi</th></tr>
+        <tr><td><strong>Purpose</strong></td><td>Serves the React SPA to the browser</td><td>Exposes the Go engine as a REST API</td></tr>
+        <tr><td><strong>Engine logic</strong></td><td>None — static file host only</td><td>Full engine runs here (server-side)</td></tr>
+        <tr><td><strong>Where engine runs</strong></td><td>In the browser (via cmd/wasm)</td><td>In the Go process (:7428)</td></tr>
+        <tr><td><strong>Use case</strong></td><td>Hosting the web app</td><td>IDE plugins, Tier 2 web, scripting</td></tr>
+      </table>
+    </div>
+
+  </main>
+</div>
+<script src="app.js"></script>
+<script>
+  initPage({ title: 'Platform Adapter' });
+  initTabs();
+</script>
+</body>
+</html>

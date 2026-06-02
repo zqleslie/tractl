@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../../">
+<link rel="stylesheet" href="style.css">
+<title>Contributing — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <span class="current">Contributing</span>
+    </div>
+    <div class="page-title">Contributing to traCtl</div>
+    <div class="page-subtitle">The full CONTRIBUTING.md rendered here — always in sync with the repo root file.</div>
+
+    <div class="callout warn">
+      <p><strong>Read before writing any code:</strong> traCtl has a frozen architecture and a phased roadmap. Contributing without reading the ADRs and the active phase guardrail in <code>AGENTS.md</code> will result in your PR being closed. This is not bureaucracy — the architecture constraints exist for good reasons documented in each ADR.</p>
+    </div>
+
+    <div class="tabs">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(this,'tab-guide')">📋 Full Guidelines</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-quick')">⚡ Quick Reference</button>
+      </div>
+
+      <div id="tab-guide" class="tab-pane active">
+        <div id="contributing-md"><p class="md-loading">Loading CONTRIBUTING.md…</p></div>
+      </div>
+
+      <div id="tab-quick" class="tab-pane">
+        <h3>Setup in 4 commands</h3>
+        <pre>git clone https://github.com/tractl/tractl.git
+cd tractl
+make setup      # install git hooks — run once per clone
+make install    # Go modules + npm deps
+make build-cli  # verify everything compiles
+make test       # verify all tests pass</pre>
+
+        <h3>Before every commit</h3>
+        <pre>make check   # vet + fmt-check + lint + test — must be green</pre>
+
+        <h3>Branch naming</h3>
+        <pre>feat/short-description
+fix/short-description
+test/short-description
+docs/short-description
+refactor/short-description
+chore/short-description</pre>
+
+        <h3>Commit message format</h3>
+        <pre>feat: add retry backoff jitter to executor
+fix: resolve cycle detection false positive in planner
+docs: add platform adapter deep-dive page
+chore: bump goja to v0.0.0-20260311</pre>
+
+        <h3>PR checklist</h3>
+        <div class="table-wrap">
+          <table>
+            <tr><th>Check</th><th>Command</th></tr>
+            <tr><td>All tests pass</td><td><code>make check</code></td></tr>
+            <tr><td>Frontend tests pass (if UI changed)</td><td><code>make test-frontend</code></td></tr>
+            <tr><td>No architecture violations</td><td>Re-read relevant ADRs</td></tr>
+            <tr><td>Terms match terminology registry</td><td>Check <code>docs/spec/00_terminology.md</code></td></tr>
+            <tr><td>Roadmap phase and milestone stated</td><td>In PR description</td></tr>
+          </table>
+        </div>
+
+        <h3>Issue labels</h3>
+        <div class="table-wrap">
+          <table>
+            <tr><th>Label</th><th>Use for</th></tr>
+            <tr><td><code>bug</code></td><td>Something broken — use bug report template</td></tr>
+            <tr><td><code>enhancement</code></td><td>Feature request — use feature request template</td></tr>
+            <tr><td><code>arch-conflict</code></td><td>Code contradicts an ADR — high priority, reviewed promptly</td></tr>
+            <tr><td><code>security</code></td><td>Security issue — keep private, do not post details publicly</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:32px" class="card-grid-2">
+      <a class="card" href="pages/contributing/standards.html">
+        <h4>✏️ Code Standards</h4>
+        <p>Go idioms, linting rules explained, what the linter enforces and why</p>
+      </a>
+      <a class="card" href="pages/contributing/git-workflow.html">
+        <h4>🌿 Git Workflow</h4>
+        <p>Branch strategy, commit conventions, PR process, review expectations</p>
+      </a>
+      <a class="card" href="pages/contributing/testing.html">
+        <h4>🧪 Testing Guide</h4>
+        <p>Unit vs integration tests, table-driven tests, frontend testing</p>
+      </a>
+      <a class="card" href="pages/opensource/adrs.html">
+        <h4>📐 ADRs</h4>
+        <p>Architecture decisions that govern all code — read before contributing</p>
+      </a>
+    </div>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+<script src="app.js"></script>
+<script>
+  initPage({ title: 'Contributing' });
+  renderMarkdown('contributing-md', '_raw/CONTRIBUTING.md');
+</script>
+</body>
+</html>

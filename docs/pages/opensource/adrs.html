@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../../">
+<link rel="stylesheet" href="style.css">
+<title>ADRs — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <a href="pages/opensource/index.html">Open Source</a><span class="sep">/</span>
+      <span class="current">ADRs</span>
+    </div>
+    <div class="page-title">Architecture Decision Records</div>
+    <div class="page-subtitle">16 accepted ADRs that govern all code. These are normative — the highest authority in the project. Read before contributing.</div>
+
+    <div class="callout danger">
+      <p><strong>If your code contradicts an ADR, your code is wrong — not the ADR.</strong> Open an <code>arch-conflict</code> GitHub issue if you believe an ADR needs updating.</p>
+    </div>
+
+    <h2>Normative Hierarchy</h2>
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="step-num">1</div>
+        <div class="step-content"><h4>ADRs</h4><p>Architecture decisions — highest authority. Cannot be overridden by code, PRs, or README edits.</p></div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">2</div>
+        <div class="step-content"><h4>Canonical specs</h4><p><code>docs/spec/</code> — wire formats and execution semantics.</p></div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">3</div>
+        <div class="step-content"><h4>Terminology registry</h4><p><code>docs/spec/00_terminology.md</code> — canonical vocabulary. No synonyms.</p></div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">4</div>
+        <div class="step-content"><h4>HLD → Roadmap → Onboarding</h4><p>Lower authority — inform but don't override above.</p></div>
+      </div>
+    </div>
+
+    <h2>ADR Index</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>ADR</th><th>Title</th><th>Key Invariant</th></tr>
+        <tr><td><span class="badge complete">ADR-001</span></td><td>Canonical Execution Semantic Model</td><td>All inputs normalise into <code>traCtlSpec</code> before any execution. No exceptions.</td></tr>
+        <tr><td><span class="badge complete">ADR-002</span></td><td>Representation &amp; Serialization Strategy</td><td>Semantic model ≠ serialisation format. Bidirectional parity required.</td></tr>
+        <tr><td><span class="badge complete">ADR-003</span></td><td>Execution Architecture Model</td><td>Canonical pipeline mandatory; control flow is deterministic. Planner and compiler are separate concerns.</td></tr>
+        <tr><td><span class="badge complete">ADR-004</span></td><td>Extension Architecture Model</td><td>Extensions are capability providers, not runtime peers.</td></tr>
+        <tr><td><span class="badge complete">ADR-005</span></td><td>MCP Integration Boundary</td><td>MCP is adapter-layer interoperability, not runtime substrate.</td></tr>
+        <tr><td><span class="badge complete">ADR-006</span></td><td>Security Trust Model</td><td>Zero implicit trust; security is execution admission, not middleware.</td></tr>
+        <tr><td><span class="badge complete">ADR-007</span></td><td>Provider Abstraction Model</td><td>Core runtime is provider-neutral; capability contracts not vendor names.</td></tr>
+        <tr><td><span class="badge complete">ADR-008</span></td><td>Runtime Concurrency Model</td><td>Structured concurrency mandatory; semantic determinism required.</td></tr>
+        <tr><td><span class="badge complete">ADR-009</span></td><td>Packaging &amp; Deployment Model</td><td>Deployment topology must not change canonical workflow semantics.</td></tr>
+        <tr><td><span class="badge complete">ADR-010</span></td><td>Documentation Governance Model</td><td>Normative hierarchy with upward conflict resolution.</td></tr>
+        <tr><td><span class="badge complete">ADR-011</span></td><td>Capability Contract &amp; Compatibility Model</td><td>Capabilities are versioned semantic contracts, not symbolic labels.</td></tr>
+        <tr><td><span class="badge complete">ADR-012</span></td><td>Multi-Surface Delivery Model</td><td>Shared React frontend with surface-specific adapters. No surface-specific code in components.</td></tr>
+        <tr><td><span class="badge complete">ADR-013</span></td><td>Traffic Acquisition &amp; Capture Architecture</td><td>Traffic capture is an acquisition-layer concern, not an execution-layer concern.</td></tr>
+        <tr><td><span class="badge complete">ADR-014</span></td><td>Observability &amp; Traffic Diagnostics Model</td><td>Diagnostics are emitted as events; collection is decoupled from execution.</td></tr>
+        <tr><td><span class="badge complete">ADR-015</span></td><td>Packaging &amp; Distribution Strategy</td><td>Single binary per surface; no runtime dependencies.</td></tr>
+        <tr><td><span class="badge complete">ADR-016</span></td><td>UI Architecture Model</td><td>Shared React in <code>frontend/</code>; transport-agnostic components; surface adapters in <code>platform/</code>.</td></tr>
+      </table>
+    </div>
+
+    <h2>ADRs most relevant to new contributors</h2>
+    <div class="card-grid">
+      <div class="card">
+        <h4>ADR-003 — Execution Architecture</h4>
+        <p>Defines the 6-stage pipeline and why planner and compiler are separate. Read before touching engine code.</p>
+      </div>
+      <div class="card">
+        <h4>ADR-006 — Security Trust</h4>
+        <p>Defines the sandbox trust model and what the goja sandbox must and must not expose.</p>
+      </div>
+      <div class="card">
+        <h4>ADR-012 — Multi-Surface Delivery</h4>
+        <p>Defines the platform adapter pattern and why surface-specific code cannot live in components.</p>
+      </div>
+      <div class="card">
+        <h4>ADR-016 — UI Architecture</h4>
+        <p>Defines the React architecture, store boundaries, and build mode separation (web vs desktop).</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+<script src="app.js"></script>
+<script>initPage({ title: 'ADRs' });</script>
+</body>
+</html>

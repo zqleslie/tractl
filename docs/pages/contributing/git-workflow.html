@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../../">
+<link rel="stylesheet" href="style.css">
+<title>Git Workflow — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <a href="pages/contributing/index.html">Contributing</a><span class="sep">/</span>
+      <span class="current">Git Workflow</span>
+    </div>
+    <div class="page-title">Git Workflow</div>
+    <div class="page-subtitle">Branch strategy, commit conventions, and PR process.</div>
+
+    <h2>Branch Strategy</h2>
+    <p>traCtl uses a simple trunk-based model. All development branches off <code>main</code> and merges back via PR.</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Branch pattern</th><th>Use for</th><th>Example</th></tr>
+        <tr><td><code>feat/&lt;desc&gt;</code></td><td>New feature</td><td><code>feat/retry-jitter</code></td></tr>
+        <tr><td><code>fix/&lt;desc&gt;</code></td><td>Bug fix</td><td><code>fix/cycle-detection</code></td></tr>
+        <tr><td><code>test/&lt;desc&gt;</code></td><td>Tests only, no behaviour change</td><td><code>test/overlay-conformance</code></td></tr>
+        <tr><td><code>refactor/&lt;desc&gt;</code></td><td>No behaviour change</td><td><code>refactor/normalize-pipeline</code></td></tr>
+        <tr><td><code>docs/&lt;desc&gt;</code></td><td>Documentation only</td><td><code>docs/platform-adapter-guide</code></td></tr>
+        <tr><td><code>chore/&lt;desc&gt;</code></td><td>Build, tooling, config</td><td><code>chore/bump-goja</code></td></tr>
+      </table>
+    </div>
+
+    <h2>Commit Conventions</h2>
+    <p>Follows <a href="https://www.conventionalcommits.org/" target="_blank">Conventional Commits</a>. The prefix determines how the change appears in the changelog.</p>
+    <pre><span class="cm">feat:</span>     add retry backoff jitter to executor
+<span class="cm">fix:</span>      resolve cycle detection false positive in planner
+<span class="cm">test:</span>     add table-driven tests for YAML boolean edge cases
+<span class="cm">refactor:</span> extract variable resolution into its own package
+<span class="cm">docs:</span>     add platform adapter deep-dive page
+<span class="cm">chore:</span>    bump goja to v0.0.0-20260311135729</pre>
+
+    <div class="callout tip">
+      <p><strong>Scope is optional</strong> but helpful for large changes: <code>feat(executor): add connection pool reuse</code></p>
+    </div>
+
+    <h2>PR Process</h2>
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Open an issue first</h4>
+          <p>For any non-trivial change, open an issue and get alignment before writing code. This prevents wasted effort on PRs that contradict the architecture.</p>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Branch from main</h4>
+          <p><code>git checkout -b feat/your-feature main</code></p>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Run make check before pushing</h4>
+          <p>The pre-commit hook does this automatically. If you skipped <code>make setup</code>, run it manually.</p>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Open the PR with the template</h4>
+          <p>Reference the roadmap phase and milestone. Fill in the architecture notes section — maintainers use it to understand non-obvious decisions.</p>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <h4>Address review feedback</h4>
+          <p>PRs that contradict a frozen ADR will be closed with an explanation, not silently rejected. If you disagree with an ADR, open an <code>arch-conflict</code> issue — don't work around it.</p>
+        </div>
+      </div>
+    </div>
+
+    <h2>Merge Policy</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Situation</th><th>Merge strategy</th></tr>
+        <tr><td>Feature / fix PR</td><td>Squash merge — keeps main history clean</td></tr>
+        <tr><td>Long-running feature branch</td><td>Merge commit — preserves context</td></tr>
+        <tr><td>Force push to main</td><td>Never allowed</td></tr>
+      </table>
+    </div>
+
+  </main>
+</div>
+<script src="app.js"></script>
+<script>initPage({ title: 'Git Workflow' });</script>
+</body>
+</html>
