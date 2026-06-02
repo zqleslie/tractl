@@ -38,10 +38,12 @@
     "nodeAnalogy": "Like an Express.js middleware chain — each stage is a middleware, <code>RunResult</code> is the final response object. Interfaces are like TypeScript interfaces for dependency injection in NestJS.",
     "codeExample": "// Calling the engine from any surface\ncfg := engine.Config{\n    WorkflowFile: \"workflow.yaml\",\n    Verbose:      true,\n}\nresult := engine.Run(cfg)\nif !result.Passed {\n    fmt.Println(result.ValidationError) // or ParseError, PlanError\n    os.Exit(2)\n}",
     "relatedModules": [
-      { "id": "parser",    "name": "Parser",    "rel": "Stage 1 — parse file to *TraCtlSpec" },
-      { "id": "planner",   "name": "Planner",   "rel": "Stage 4 — build ExecutionPlan DAG" },
-      { "id": "compiler",  "name": "Compiler",  "rel": "Stage 5 — compile plan to executable" },
-      { "id": "scheduler", "name": "Scheduler", "rel": "Stage 6 — run workflows in parallel" }
+      { "id": "parser",     "name": "Parser",     "rel": "Stage 1 — parse file to *TraCtlSpec" },
+      { "id": "overlay",    "name": "Overlay",    "rel": "Stage 2 — apply patch files to spec" },
+      { "id": "validation", "name": "Validation", "rel": "Stage 3 — validate spec before execution" },
+      { "id": "planner",    "name": "Planner",    "rel": "Stage 4 — build ExecutionPlan DAG" },
+      { "id": "compiler",   "name": "Compiler",   "rel": "Stage 5 — compile plan to executable" },
+      { "id": "scheduler",  "name": "Scheduler",  "rel": "Stage 6 — run workflows in parallel" }
     ]
   },
 

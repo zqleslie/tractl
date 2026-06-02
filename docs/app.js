@@ -9,19 +9,19 @@ const NAV_ITEMS = [
   { label: 'Architecture',   icon: '🏗️', href: 'pages/architecture.html' },
 
   { type: 'group', label: 'ENGINE MODULES' },
-  { label: 'Pipeline',    icon: '⚡', href: 'pages/module.html?id=pipeline' },
-  { label: 'Parser',      icon: '📝', href: 'pages/module.html?id=parser' },
-  { label: 'Validation',  icon: '🛡️', href: 'pages/module.html?id=validation' },
-  { label: 'Planner',     icon: '🗺️', href: 'pages/module.html?id=planner' },
-  { label: 'Compiler',    icon: '🔨', href: 'pages/module.html?id=compiler' },
-  { label: 'Scheduler',   icon: '🔄', href: 'pages/module.html?id=scheduler' },
-  { label: 'Executor',    icon: '🚀', href: 'pages/module.html?id=executor' },
-  { label: 'Sandbox (JS)',icon: '🏖️', href: 'pages/module.html?id=sandbox' },
-  { label: 'Assertion',   icon: '✅', href: 'pages/module.html?id=assertion' },
-  { label: 'Extract',     icon: '🔍', href: 'pages/module.html?id=extract' },
-  { label: 'Overlay',     icon: '🔧', href: 'pages/module.html?id=overlay' },
-  { label: 'Runtime',     icon: '🧠', href: 'pages/module.html?id=runtime' },
-  { label: 'Diagnostics', icon: '📊', href: 'pages/module.html?id=diagnostics' },
+  { label: 'Pipeline',    icon: '⚡', href: 'pages/module.html?id=pipeline' },   // orchestrator
+  { label: 'Parser',      icon: '📝', href: 'pages/module.html?id=parser' },      // Stage 1
+  { label: 'Overlay',     icon: '🔧', href: 'pages/module.html?id=overlay' },     // Stage 2
+  { label: 'Validation',  icon: '🛡️', href: 'pages/module.html?id=validation' }, // Stage 3
+  { label: 'Planner',     icon: '🗺️', href: 'pages/module.html?id=planner' },    // Stage 4
+  { label: 'Compiler',    icon: '🔨', href: 'pages/module.html?id=compiler' },    // Stage 5
+  { label: 'Scheduler',   icon: '🔄', href: 'pages/module.html?id=scheduler' },   // Stage 6
+  { label: 'Executor',    icon: '🚀', href: 'pages/module.html?id=executor' },    // inside Stage 6
+  { label: 'Runtime',     icon: '🧠', href: 'pages/module.html?id=runtime' },     // state during exec
+  { label: 'Assertion',   icon: '✅', href: 'pages/module.html?id=assertion' },   // post-step
+  { label: 'Extract',     icon: '🔍', href: 'pages/module.html?id=extract' },     // post-step
+  { label: 'Sandbox (JS)',icon: '🏖️', href: 'pages/module.html?id=sandbox' },    // hooks
+  { label: 'Diagnostics', icon: '📊', href: 'pages/module.html?id=diagnostics' }, // observability
 
   { type: 'group', label: 'SURFACES' },
   { label: 'Overview',   icon: '📡', href: 'pages/surface.html?id=overview' },
@@ -385,7 +385,7 @@ function renderModuleDetail(m) {
   if (m.relatedModules && m.relatedModules.length) {
     html += `<h2>Related Modules</h2>
       <div class="card-grid">
-        ${m.relatedModules.map(r => `<a class="card" href="module.html?id=${r.id}">
+        ${m.relatedModules.map(r => `<a class="card" href="${window.location.pathname}?id=${r.id}">
           <h4>${r.name}</h4><p>${r.rel}</p>
         </a>`).join('')}
       </div>`;

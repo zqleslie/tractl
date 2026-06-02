@@ -65,6 +65,16 @@ window.MODULES_DATA = {
         "rel": "Stage 1 \u2014 parse file to *TraCtlSpec"
       },
       {
+        "id": "overlay",
+        "name": "Overlay",
+        "rel": "Stage 2 \u2014 apply patch files to spec"
+      },
+      {
+        "id": "validation",
+        "name": "Validation",
+        "rel": "Stage 3 \u2014 validate spec before execution"
+      },
+      {
         "id": "planner",
         "name": "Planner",
         "rel": "Stage 4 \u2014 build ExecutionPlan DAG"
