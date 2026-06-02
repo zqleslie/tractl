@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+<title>traCtl Developer Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+
+    <div class="hero">
+      <div class="hero-title">Welcome to <span>traCtl</span></div>
+      <div class="hero-desc">Developer onboarding guide — architecture, modules, contributing guidelines, and open source information. Everything a new contributor needs to get productive.</div>
+      <div class="hero-tags">
+        <span class="tag blue">Go 1.26+</span>
+        <span class="tag blue">WebAssembly</span>
+        <span class="tag green">React 18 + TypeScript</span>
+        <span class="tag purple">Wails Desktop</span>
+        <span class="tag orange">Apache 2.0</span>
+      </div>
+    </div>
+
+    <h2>What is traCtl?</h2>
+    <p>traCtl is a <strong>Git-first API workflow execution and validation platform</strong>. You define HTTP workflows as YAML/JSON files — steps that depend on each other, pass data between them, assert on responses, and run custom scripts. The same workflow definition runs identically across CLI, browser (WebAssembly), native desktop, and CI.</p>
+    <p>Define API workflows as YAML/JSON files — declarative, DAG-aware, with a sandboxed scripting engine — all in a single Go binary.</p>
+
+    <h2>New developer? Start here</h2>
+    <div class="quicknav">
+      <a class="qn-card" href="pages/architecture.html">
+        <span class="qn-icon">🏗️</span>
+        <span class="qn-title">Architecture</span>
+        <span class="qn-desc">Full system diagram — click any box to explore that component</span>
+      </a>
+      <a class="qn-card" href="pages/module.html?id=pipeline">
+        <span class="qn-icon">⚡</span>
+        <span class="qn-title">Execution Pipeline</span>
+        <span class="qn-desc">The 6-stage parse→validate→plan→compile→execute flow</span>
+      </a>
+      <a class="qn-card" href="pages/surface.html?id=overview">
+        <span class="qn-icon">📡</span>
+        <span class="qn-title">Surfaces</span>
+        <span class="qn-desc">CLI, Web WASM, Desktop, Local API — same engine, different transport</span>
+      </a>
+      <a class="qn-card" href="pages/frontend/platform-adapter.html">
+        <span class="qn-icon">🔀</span>
+        <span class="qn-title">Platform Adapter</span>
+        <span class="qn-desc">How the React frontend talks to Go across all three surfaces</span>
+      </a>
+      <a class="qn-card" href="pages/contributing/index.html">
+        <span class="qn-icon">📋</span>
+        <span class="qn-title">Contributing</span>
+        <span class="qn-desc">Setup, architecture rules, code standards, PR process</span>
+      </a>
+      <a class="qn-card" href="pages/concepts.html">
+        <span class="qn-icon">🐹</span>
+        <span class="qn-title">Go for JS Devs</span>
+        <span class="qn-desc">Every Go pattern used here — mapped to Node.js equivalents</span>
+      </a>
+    </div>
+
+    <h2>Roadmap Status</h2>
+    <p>traCtl follows a phased implementation roadmap. Architecture is frozen — read <a href="pages/opensource/adrs.html">the ADRs</a> before writing any code.</p>
+    <div class="phase-grid">
+      <div class="phase-item complete">
+        <span class="phase-num">Phase 1–6</span>
+        <span class="phase-title">Contract enforcement, parsing, overlay, planning, compilation, HTTP execution</span>
+        <span class="badge complete">Complete</span>
+      </div>
+      <div class="phase-item complete">
+        <span class="phase-num">Phase 8–9</span>
+        <span class="phase-title">Script sandbox, assertion engine, extract engine, retry, hooks</span>
+        <span class="badge complete">Complete</span>
+      </div>
+      <div class="phase-item progress">
+        <span class="phase-num">Phase 7</span>
+        <span class="phase-title">Diagnostics and reporting — TOON output formatter, per-step diagnostic directives</span>
+        <span class="badge progress">In Progress</span>
+      </div>
+      <div class="phase-item progress">
+        <span class="phase-num">UI Track</span>
+        <span class="phase-title">Web Surface Foundation — persistence, status bar, server Tier 2</span>
+        <span class="badge progress">In Progress</span>
+      </div>
+      <div class="phase-item planned">
+        <span class="phase-num">Phase 10+</span>
+        <span class="phase-title">Provider plugins, extension platform, acquisition layer</span>
+        <span class="badge planned">Not Started</span>
+      </div>
+    </div>
+
+    <h2>Quick Reference</h2>
+    <div class="card-grid-2">
+      <div class="card">
+        <h4>📦 Key Dependencies</h4>
+        <p><code>goja</code> — pure-Go JS engine (sandbox)<br>
+        <code>gjson</code> — JSONPath on response bodies<br>
+        <code>ulid/v2</code> — unique IDs for all entities<br>
+        <code>yaml.v3</code> — YAML parsing<br>
+        <code>golang.org/x/sync</code> — concurrency helpers<br>
+        <code>Wails v2</code> — desktop app framework</p>
+      </div>
+      <div class="card">
+        <h4>🛠️ Essential Make Targets</h4>
+        <p><code>make setup</code> — install git hooks (run once)<br>
+        <code>make install</code> — Go modules + npm deps<br>
+        <code>make build-cli</code> — build CLI binary<br>
+        <code>make dev-web</code> — WASM + Vite dev server<br>
+        <code>make check</code> — vet + lint + test (CI gate)<br>
+        <code>make sync-docs</code> — sync markdown to _raw/</p>
+      </div>
+      <div class="card">
+        <h4>📁 Key Directories</h4>
+        <p><code>internal/</code> — engine packages (private)<br>
+        <code>cmd/</code> — surface entry points<br>
+        <code>frontend/</code> — React + TypeScript UI<br>
+        <code>docs/adr/</code> — architecture decisions<br>
+        <code>docs/spec/</code> — canonical specs<br>
+        <code>examples/</code> — example workflow files</p>
+      </div>
+      <div class="card">
+        <h4>🔗 Important Links</h4>
+        <p><a href="pages/opensource/adrs.html">Architecture Decision Records</a><br>
+        <a href="pages/contributing/index.html">Contributing Guidelines</a><br>
+        <a href="pages/opensource/code-of-conduct.html">Code of Conduct</a><br>
+        <a href="pages/opensource/security-policy.html">Security Policy</a><br>
+        <a href="pages/quiz.html">Self-Check Quiz</a><br>
+        <a href="user/index.html">User Docs →</a></p>
+      </div>
+    </div>
+
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="app.js"></script>
+<script>initPage({ title: '' });</script>
+</body>
+</html>

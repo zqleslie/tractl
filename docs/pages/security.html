@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../">
+<link rel="stylesheet" href="style.css">
+<title>Security Review — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <span class="current">Security Review</span>
+    </div>
+    <div class="page-title">Security Review</div>
+    <div class="page-subtitle">An honest assessment of the codebase — what's solid, what needs attention, and known anti-patterns.</div>
+
+    <div class="callout info">
+      <p>Found a security issue? See the <a href="pages/opensource/security-policy.html">Security Policy</a> for the responsible disclosure process. Do not open a public GitHub issue for security vulnerabilities.</p>
+    </div>
+
+    <h2>✅ What's Well Done</h2>
+    <div id="security-good" class="security-list"><p class="md-loading">Loading…</p></div>
+
+    <h2>⚠️ Things to Watch</h2>
+    <div id="security-warn" class="security-list"></div>
+
+    <h2>🔴 Future Risks (Not Yet Active)</h2>
+    <div id="security-bad" class="security-list"></div>
+
+    <h2>Known Anti-patterns</h2>
+    <div id="security-ap"></div>
+
+    <h2>Security Architecture Reference</h2>
+    <p>The security trust model is fully specified in <a href="pages/opensource/adrs.html">ADR-006</a>. Key decisions:</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Area</th><th>Status</th><th>Notes</th></tr>
+        <tr><td>JS Sandbox</td><td><span class="badge complete">Implemented</span></td><td>goja, no I/O, 5s timeout, MutationSet pattern</td></tr>
+        <tr><td>Credential masking</td><td><span class="badge progress">Partial</span></td><td>Headers masked; response bodies not masked</td></tr>
+        <tr><td>LocalAPI auth</td><td><span class="badge planned">Planned</span></td><td>Trusted localhost only — needs auth before network exposure</td></tr>
+        <tr><td>Rate limiting</td><td><span class="badge planned">Planned</span></td><td>Not implemented — needed before production server use</td></tr>
+        <tr><td>Env var encryption</td><td><span class="badge planned">Phase 4+</span></td><td>Must encrypt at rest when workspace store is implemented</td></tr>
+        <tr><td>Audit logging</td><td><span class="badge planned">Planned</span></td><td>Required for multi-user server mode</td></tr>
+      </table>
+    </div>
+
+  </main>
+</div>
+<script src="data/security.js"></script>
+<script src="app.js"></script>
+<script>
+  initPage({ title: 'Security Review' });
+
+  async function loadSecurity() {
+    const data = await getData('SECURITY_DATA', 'data/security.json');
+
+    document.getElementById('security-good').innerHTML = data.good.map(i =>
+      `<div class="security-item good"><span class="sec-icon">✅</span>
+       <div class="sec-content"><h4>${i.title}</h4><p>${i.desc}</p></div></div>`
+    ).join('');
+
+    document.getElementById('security-warn').innerHTML = data.warn.map(i =>
+      `<div class="security-item warn"><span class="sec-icon">⚠️</span>
+       <div class="sec-content"><h4>${i.title}</h4><p>${i.desc}</p></div></div>`
+    ).join('');
+
+    document.getElementById('security-bad').innerHTML = data.bad.map(i =>
+      `<div class="security-item bad"><span class="sec-icon">🔴</span>
+       <div class="sec-content"><h4>${i.title}</h4><p>${i.desc}</p></div></div>`
+    ).join('');
+
+    document.getElementById('security-ap').innerHTML = data.antipatterns.map(i =>
+      `<div class="accordion">
+        <div class="accordion-header" onclick="toggleAccordion(this)">${i.title} <em class="chevron">▼</em></div>
+        <div class="accordion-body"><p>${i.desc}</p></div>
+       </div>`
+    ).join('');
+  }
+
+  loadSecurity();
+</script>
+</body>
+</html>

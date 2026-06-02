@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../../">
+<link rel="stylesheet" href="style.css">
+<title>Code Standards — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <a href="pages/contributing/index.html">Contributing</a><span class="sep">/</span>
+      <span class="current">Code Standards</span>
+    </div>
+    <div class="page-title">Code Standards</div>
+    <div class="page-subtitle">What the linter enforces, why each rule exists, and Go idioms expected in this codebase.</div>
+
+    <h2>The Gate: <code>make check</code></h2>
+    <p>Every commit must pass <code>make check</code>. It runs: <code>go vet</code> → <code>gofmt -l</code> → <code>golangci-lint run</code> → <code>go test ./...</code>. The pre-commit hook installed by <code>make setup</code> runs the same targets so you catch failures locally before pushing.</p>
+
+    <div class="callout warn">
+      <p><strong>GOWORK=off</strong> — The pre-commit hook and CI both run with <code>GOWORK=off</code> so an incomplete root <code>go.sum</code> cannot be masked by the workspace. If your code passes locally with <code>go.work</code> but fails CI, this is why.</p>
+    </div>
+
+    <h2>Go Rules</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Rule</th><th>Why</th></tr>
+        <tr><td>All exported symbols have godoc comments</td><td>Required by <code>golint</code>. Keeps the API self-documented without relying on external docs.</td></tr>
+        <tr><td>No global mutable state</td><td>Global vars make concurrency unsafe and tests non-deterministic. Use dependency injection via structs.</td></tr>
+        <tr><td>No <code>panic()</code> in library code</td><td>The engine must never crash a caller's process. All errors must be returned explicitly.</td></tr>
+        <tr><td>Errors must be explicit — no silent discard</td><td><code>errcheck</code> linter enforces this. Discarded errors are a leading source of bugs in Go.</td></tr>
+        <tr><td>Table-driven tests for all validators</td><td>Validators have many edge cases. Table-driven tests make coverage obvious and new cases easy to add.</td></tr>
+        <tr><td>No cross-imports between <code>internal/</code> packages at the same level</td><td>Prevents circular dependencies. Each package has a defined position in the pipeline.</td></tr>
+        <tr><td>Terminology must match <code>docs/spec/00_terminology.md</code></td><td>Vocabulary drift is a real maintenance problem. "provider" and "adapter" are not synonyms here.</td></tr>
+      </table>
+    </div>
+
+    <h2>Linting Rules Explained (<code>.golangci.yml</code>)</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Linter</th><th>What it checks</th><th>Common mistake it catches</th></tr>
+        <tr><td><code>errcheck</code></td><td>Every error return value is handled</td><td><code>json.Unmarshal(b, &v)</code> with no error check</td></tr>
+        <tr><td><code>govet</code></td><td>Suspicious code patterns (printf format, struct copies)</td><td>Passing a mutex by value instead of pointer</td></tr>
+        <tr><td><code>staticcheck</code></td><td>Deprecated API usage, unreachable code, wrong usage patterns</td><td>Using <code>ioutil.ReadFile</code> (deprecated in Go 1.16+)</td></tr>
+        <tr><td><code>revive</code></td><td>Style and idiom rules (exported names, comment format)</td><td>Exported function with no godoc comment</td></tr>
+        <tr><td><code>exhaustive</code></td><td>Switch statements on enum types cover all cases</td><td>Missing a new <code>StepState</code> value in a switch</td></tr>
+      </table>
+    </div>
+
+    <h2>Frontend Standards (TypeScript / React)</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Rule</th><th>Why</th></tr>
+        <tr><td>Components must be transport-agnostic</td><td>ADR-016: components never import from <code>platform/</code> directly — they call the IPlatform interface</td></tr>
+        <tr><td>Surface-specific code lives in <code>platform/</code> only</td><td>Keeps the same component tree working across web, desktop, and local API</td></tr>
+        <tr><td>State in Zustand stores, not component state</td><td>Execution state crosses component boundaries — local state creates inconsistencies</td></tr>
+        <tr><td><code>make test-frontend</code> must pass for UI changes</td><td>Vitest unit tests. Also run <code>make test-frontend-e2e</code> if WASM bridge behaviour changed</td></tr>
+      </table>
+    </div>
+
+    <h2>Comments Policy</h2>
+    <p>The codebase has a <strong>minimal comments policy</strong> — write a comment only when the <em>why</em> is non-obvious. Do not describe what the code does (the code does that). Do not reference ticket numbers or PR descriptions. A good comment documents a hidden constraint, a subtle invariant, or a workaround for a specific upstream bug.</p>
+
+    <pre><span class="co">// Bad: describes what, not why</span>
+<span class="co">// Increment the counter</span>
+counter++
+
+<span class="co">// Good: explains a non-obvious constraint</span>
+<span class="co">// GOWORK=off prevents a partial go.sum from masking CI failures</span>
+os.Setenv(<span class="str">"GOWORK"</span>, <span class="str">"off"</span>)</pre>
+
+  </main>
+</div>
+<script src="app.js"></script>
+<script>initPage({ title: 'Code Standards' });</script>
+</body>
+</html>

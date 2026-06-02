@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>traCtl — Developer Onboarding</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2230;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #79c0ff;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --orange: #ffa657;
+    --teal: #39d353;
+    --tag-bg: #1f2937;
+    --radius: 8px;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  .app { display: flex; min-height: 100vh; }
+
+  nav {
+    width: 240px;
+    min-width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  nav .logo {
+    padding: 0 20px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  nav .logo h1 { font-size: 18px; color: var(--accent); letter-spacing: -0.3px; }
+  nav .logo span { font-size: 11px; color: var(--muted); }
+  nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 20px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  nav a:hover { color: var(--text); background: var(--surface2); }
+  nav a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(88,166,255,0.07); }
+  nav .section-label {
+    padding: 12px 20px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  main {
+    flex: 1;
+    max-width: 900px;
+    padding: 48px 56px;
+    overflow: hidden;
+  }
+
+  /* ── Sections ───────────────────────────────────────────── */
+  section { margin-bottom: 72px; }
+  section:last-child { margin-bottom: 120px; }
+  .section-anchor { scroll-margin-top: 24px; }
+
+  h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .icon { font-size: 20px; }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+  h3 { font-size: 16px; font-weight: 600; color: var(--text); margin: 28px 0 10px; }
+  h4 { font-size: 14px; font-weight: 600; color: var(--accent2); margin: 16px 0 6px; }
+
+  p { color: var(--muted); margin-bottom: 14px; line-height: 1.7; }
+  strong { color: var(--text); }
+
+  /* ── Hero ───────────────────────────────────────────────── */
+  .hero {
+    background: linear-gradient(135deg, #1a2540 0%, #0d1117 60%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 36px 40px;
+    margin-bottom: 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(88,166,255,0.12) 0%, transparent 70%);
+  }
+  .hero h1 { font-size: 30px; color: var(--text); margin-bottom: 8px; }
+  .hero h1 span { color: var(--accent); }
+  .hero p { color: var(--muted); font-size: 15px; max-width: 600px; }
+  .hero-tags { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+  .tag {
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .tag.blue { color: var(--accent); border-color: rgba(88,166,255,0.3); }
+  .tag.green { color: var(--green); border-color: rgba(63,185,80,0.3); }
+  .tag.purple { color: var(--purple); border-color: rgba(188,140,255,0.3); }
+  .tag.orange { color: var(--orange); border-color: rgba(255,166,87,0.3); }
+
+  /* ── Cards ──────────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 12px;
+  }
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card h4 { color: var(--accent); margin: 0 0 6px; font-size: 14px; }
+  .card p { margin: 0; font-size: 13px; color: var(--muted); }
+  .card code { font-family: var(--mono); font-size: 12px; color: var(--orange); }
+
+  /* ── Module List ────────────────────────────────────────── */
+  .module-list { display: flex; flex-direction: column; gap: 6px; }
+  .module-item {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 16px;
+    align-items: start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    transition: border-color 0.15s;
+    cursor: pointer;
+  }
+  .module-item:hover { border-color: var(--accent); }
+  .module-item.critical { border-left: 3px solid var(--accent); }
+  .module-item.support { border-left: 3px solid var(--purple); }
+  .module-item.surface { border-left: 3px solid var(--green); }
+  .module-item.frontend { border-left: 3px solid var(--orange); }
+  .module-path {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent2);
+    word-break: break-all;
+  }
+  .module-desc { font-size: 13px; color: var(--muted); }
+  .module-desc strong { color: var(--text); }
+
+  /* ── Code blocks ────────────────────────────────────────── */
+  pre {
+    background: #010409;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 12px 0 20px;
+  }
+  code { font-family: var(--mono); }
+  .kw { color: #ff7b72; }
+  .ty { color: #ffa657; }
+  .fn { color: #d2a8ff; }
+  .str { color: #a5d6ff; }
+  .co { color: #8b949e; font-style: italic; }
+  .nu { color: #79c0ff; }
+  .cm { color: #3fb950; }
+
+  inline-code, .ic {
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--orange);
+  }
+
+  /* ── Diagrams ───────────────────────────────────────────── */
+  .diagram-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+  .diagram-wrap .mermaid { display: flex; justify-content: center; }
+
+  /* ── Flow steps ─────────────────────────────────────────── */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 16px 0;
+  }
+  .pipeline-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 14px 0;
+    border-left: 2px solid var(--border);
+    padding-left: 24px;
+    position: relative;
+  }
+  .pipeline-step:first-child { border-left-color: var(--accent); }
+  .pipeline-step::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 18px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border);
+    border: 2px solid var(--surface);
+  }
+  .pipeline-step:first-child::before { background: var(--accent); }
+  .step-num {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .step-content h4 { margin: 0 0 4px; font-size: 14px; color: var(--text); }
+  .step-content p { margin: 0; font-size: 13px; color: var(--muted); }
+  .step-content .input-output {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .arrow { color: var(--accent); }
+
+  /* ── Concept cards ──────────────────────────────────────── */
+  .concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .concept {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .concept-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .concept-icon { font-size: 18px; }
+  .concept h4 { margin: 0; font-size: 13px; color: var(--text); }
+  .concept .go-badge {
+    margin-left: auto;
+    background: rgba(88,166,255,0.1);
+    color: var(--accent);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+  .concept p { font-size: 12px; margin: 0 0 8px; }
+  .concept .node-eq {
+    background: #010409;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--green);
+  }
+
+  /* ── Security items ─────────────────────────────────────── */
+  .security-list { display: flex; flex-direction: column; gap: 8px; }
+  .security-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .security-item.good { border-left: 3px solid var(--green); }
+  .security-item.warn { border-left: 3px solid var(--yellow); }
+  .security-item.bad { border-left: 3px solid var(--red); }
+  .sec-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+  .sec-content h4 { font-size: 13px; color: var(--text); margin: 0 0 3px; }
+  .sec-content p { font-size: 12px; color: var(--muted); margin: 0; }
+
+  /* ── Tabs ───────────────────────────────────────────────── */
+  .tabs { margin: 16px 0; }
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    gap: 0;
+    margin-bottom: 0;
+  }
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    border: none;
+    background: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-pane { display: none; padding: 20px 0 0; }
+  .tab-pane.active { display: block; }
+
+  /* ── Accordion ──────────────────────────────────────────── */
+  .accordion { margin: 8px 0; }
+  .accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    user-select: none;
+  }
+  .accordion-header:hover { border-color: var(--accent); }
+  .accordion-header .chevron { transition: transform 0.2s; color: var(--muted); }
+  .accordion-header.open .chevron { transform: rotate(180deg); }
+  .accordion-body {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 16px 18px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .accordion-body.open { display: block; }
+
+  /* ── Quiz ───────────────────────────────────────────────── */
+  .quiz-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  .quiz-q { font-size: 14px; color: var(--text); margin-bottom: 12px; }
+  .quiz-options { display: flex; flex-direction: column; gap: 6px; }
+  .quiz-opt {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .quiz-opt:hover { border-color: var(--accent); color: var(--text); }
+  .quiz-opt.correct { background: rgba(63,185,80,0.1); border-color: var(--green); color: var(--green); }
+  .quiz-opt.wrong { background: rgba(248,81,73,0.1); border-color: var(--red); color: var(--red); }
+  .quiz-explain {
+    display: none;
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: rgba(88,166,255,0.07);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .quiz-explain.show { display: block; }
+
+  /* ── Tables ─────────────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--muted); vertical-align: top; }
+  td strong { color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ── Callouts ───────────────────────────────────────────── */
+  .callout {
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  .callout.info { background: rgba(88,166,255,0.08); border-left: 3px solid var(--accent); }
+  .callout.warn { background: rgba(210,153,34,0.08); border-left: 3px solid var(--yellow); }
+  .callout.tip { background: rgba(63,185,80,0.08); border-left: 3px solid var(--green); }
+  .callout p { color: var(--muted); margin: 0; }
+  .callout strong { color: var(--text); }
+
+  /* ── Responsive ─────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .card-grid { grid-template-columns: 1fr; }
+    .concept-grid { grid-template-columns: 1fr; }
+    main { padding: 28px 20px; }
+    nav { display: none; }
+    .module-item { grid-template-columns: 1fr; }
+  }
+
+  /* ── Scrollbar ──────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── Sidebar nav ── -->
+<nav id="sidenav">
+  <div class="logo">
+    <h1>traCtl</h1>
+    <span>Developer Onboarding Guide</span>
+  </div>
+  <div class="section-label">Get Started</div>
+  <a href="#overview">📦 What is traCtl?</a>
+  <a href="#architecture">🏗️ Architecture</a>
+  <a href="#pipeline">⚡ Execution Pipeline</a>
+  <div class="section-label">Codebase</div>
+  <a href="#modules">📁 Module Map</a>
+  <a href="#dataflow">🔄 Data Flow</a>
+  <a href="#types">🔷 Key Types</a>
+  <div class="section-label">Frontend</div>
+  <a href="#frontend">⚛️ React UI</a>
+  <a href="#platforms">🖥️ Platforms</a>
+  <div class="section-label">Go Concepts</div>
+  <a href="#go-concepts">🐹 Go for JS Devs</a>
+  <div class="section-label">Quality</div>
+  <a href="#security">🔐 Security & Risks</a>
+  <a href="#quiz">🎯 Self-Check Quiz</a>
+</nav>
+
+<!-- ── Main content ── -->
+<main>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>Welcome to <span>traCtl</span></h1>
+    <p>A multi-surface API workflow execution and validation platform — declarative, DAG-aware, and scriptable. Runs as a CLI, desktop app, or browser WASM — all from a single Go codebase.</p>
+    <div class="hero-tags">
+      <span class="tag blue">Go 1.26</span>
+      <span class="tag blue">WebAssembly</span>
+      <span class="tag green">React 18 + TypeScript</span>
+      <span class="tag purple">Wails Desktop</span>
+      <span class="tag orange">goja JS Sandbox</span>
+      <span class="tag">Zustand</span>
+      <span class="tag">goreleaser</span>
+    </div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <section id="overview" class="section-anchor">
+    <h2><span class="icon">📦</span> What is traCtl?</h2>
+    <p class="subtitle">The 30-second elevator pitch before we dive into code.</p>
+
+    <p>traCtl lets developers define <strong>API workflows</strong> as YAML/JSON files — a series of HTTP steps that can depend on each other, pass data between them, run assertions on responses, and execute custom scripts. It features explicit DAG execution, a sandboxed scripting engine, and a pluggable platform layer.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h4>📄 A Workflow File</h4>
+        <p>Declares steps, their HTTP calls, dependencies between them, assertions to verify, and variables to extract.</p>
+      </div>
+      <div class="card">
+        <h4>🔧 The Engine</h4>
+        <p>Parses the file → validates it → builds a DAG → compiles it → executes steps in parallel topological order.</p>
+      </div>
+      <div class="card">
+        <h4>⚛️ The Frontend</h4>
+        <p>A React/TypeScript SPA that visualises the DAG, lets you build requests visually, and shows execution results.</p>
+      </div>
+      <div class="card">
+        <h4>🖥️ Three Surfaces</h4>
+        <p>Same Go engine, same React UI — delivered as CLI, Wails desktop app, or browser WASM app.</p>
+      </div>
+    </div>
+
+    <h3>A Minimal Workflow (YAML)</h3>
+    <pre><span class="co"># examples/yaml/01-minimal.yaml</span>
+<span class="kw">schemaVersion</span>: <span class="nu">1</span>
+<span class="kw">capabilities</span>:
+  - <span class="str">protocol.http</span>
+
+<span class="kw">workflows</span>:
+  - <span class="kw">id</span>: <span class="str">minimal-flow</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">id</span>: <span class="str">ping</span>
+        <span class="kw">kind</span>: <span class="str">request</span>
+        <span class="kw">request</span>:
+          <span class="kw">protocol</span>: <span class="str">http</span>
+          <span class="kw">target</span>: <span class="str">"https://jsonplaceholder.typicode.com/todos/1"</span>
+          <span class="kw">operation</span>: <span class="str">GET</span></pre>
+
+    <h3>A Real Workflow — Parallel + Dependencies</h3>
+    <pre><span class="kw">variables</span>:
+  <span class="kw">baseUrl</span>: <span class="str">"https://jsonplaceholder.typicode.com"</span>
+
+<span class="kw">workflows</span>:
+  - <span class="kw">id</span>: <span class="str">parallel-dep-flow</span>
+    <span class="kw">steps</span>:
+      - <span class="kw">id</span>: <span class="str">step-1</span>            <span class="co"># Wave 1 — runs immediately</span>
+        <span class="kw">kind</span>: <span class="str">request</span>
+        <span class="kw">request</span>:
+          <span class="kw">target</span>: <span class="str">"${vars.baseUrl}/todos/1"</span>
+          <span class="kw">operation</span>: <span class="str">GET</span>
+        <span class="kw">assertions</span>:
+          - { <span class="kw">id</span>: ok, <span class="kw">kind</span>: <span class="str">status</span>, <span class="kw">op</span>: <span class="str">equals</span>, <span class="kw">expected</span>: <span class="nu">200</span> }
+        <span class="kw">extracts</span>:
+          - { <span class="kw">id</span>: title, <span class="kw">source</span>: <span class="str">body</span>, <span class="kw">path</span>: <span class="str">title</span>, <span class="kw">as</span>: <span class="str">title-from-step-1</span>, <span class="kw">scope</span>: <span class="str">workflow</span> }
+
+      - <span class="kw">id</span>: <span class="str">step-3</span>            <span class="co"># Wave 2 — waits for step-1</span>
+        <span class="kw">dependsOn</span>: [<span class="str">step-1</span>]
+        <span class="kw">request</span>:
+          <span class="kw">target</span>: <span class="str">"${vars.baseUrl}/todos/3"</span>
+          <span class="kw">operation</span>: <span class="str">GET</span></pre>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section id="architecture" class="section-anchor">
+    <h2><span class="icon">🏗️</span> Architecture</h2>
+    <p class="subtitle">Bird's-eye view — how the pieces connect.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+graph TB
+    subgraph Surfaces["📡 Delivery Surfaces"]
+        CLI["tractl CLI<br/><small>cmd/tractl</small>"]
+        WEB["Web WASM<br/><small>cmd/wasm</small>"]
+        DESK["Desktop App<br/><small>cmd/desktop</small>"]
+        LAPI["Local API Server<br/><small>cmd/localapi :7428</small>"]
+    end
+
+    subgraph Frontend["⚛️ React Frontend (frontend/)"]
+        UI["SPA<br/>React 18 + TypeScript"]
+        PLAT["Platform Adapter<br/>platform/index.ts"]
+        STORE["State<br/>Zustand Stores"]
+    end
+
+    subgraph Engine["🔧 Go Engine (internal/)"]
+        ENG["engine.Engine<br/>(orchestrator)"]
+        PARSE["parser<br/>(YAML/JSON/TOON)"]
+        VAL["validation<br/>(schema check)"]
+        PLAN["planner<br/>(DAG topo-sort)"]
+        COMP["compiler<br/>(runtime binding)"]
+        SCHED["scheduler<br/>(parallel exec)"]
+        EXEC["executor<br/>(HTTP + retry)"]
+        RT["runtime<br/>(ExecutionContext)"]
+        SANDBOX["sandbox<br/>(goja JS)"]
+        ASSERT["assertion"]
+        EXTRACT["extract"]
+        OVERLAY["overlay<br/>(patch merging)"]
+        DIAG["diagnostics<br/>(tracing)"]
+    end
+
+    CLI --> ENG
+    WEB --> ENG
+    DESK --> ENG
+    LAPI --> ENG
+    UI --> PLAT
+    PLAT -->|WASM calls| WEB
+    PLAT -->|Wails IPC| DESK
+    PLAT -->|fetch :7428| LAPI
+    ENG --> PARSE --> VAL --> PLAN --> COMP --> SCHED
+    SCHED --> EXEC --> RT
+    SCHED --> SANDBOX
+    EXEC --> ASSERT
+    EXEC --> EXTRACT
+    OVERLAY -.->|pre-execution| PARSE
+    DIAG -.->|traces every step| SCHED
+
+    style Surfaces fill:#1c2230,stroke:#30363d
+    style Frontend fill:#1a1f2e,stroke:#30363d
+    style Engine fill:#1a2520,stroke:#30363d
+      </div>
+    </div>
+
+    <div class="callout info">
+      <p><strong>Key insight:</strong> The Go engine is completely surface-agnostic. The same <code>engine.Engine</code> struct runs whether invoked from a CLI flag, a WASM JS call, a Wails IPC method, or an HTTP endpoint on localhost:7428. The surface only affects how input arrives and how output is delivered.</p>
+    </div>
+  </section>
+
+  <!-- PIPELINE -->
+  <section id="pipeline" class="section-anchor">
+    <h2><span class="icon">⚡</span> Execution Pipeline</h2>
+    <p class="subtitle">What happens when you call <code>tractl run workflow.yaml</code> — the 6-stage pipeline.</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart LR
+    F["📄 File<br/>bytes"] --> P["1 PARSE<br/>parser/"] --> O["2 OVERLAY<br/>overlay/"] --> V["3 VALIDATE<br/>validation/"] --> PL["4 PLAN<br/>planner/"] --> C["5 COMPILE<br/>compiler/"] --> E["6 EXECUTE<br/>scheduler/ + executor/"]
+    E --> R["🎯 RunResult<br/>exit 0/1/2"]
+
+    style F fill:#1c2230,stroke:#58a6ff
+    style R fill:#1c2230,stroke:#3fb950
+      </div>
+    </div>
+
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Parse — <code>internal/parser</code></h4>
+          <p>Detects format from file extension (.yaml, .json, .toon). Delegates to the matching sub-parser. Returns a <code>*spec.TraCtlSpec</code> Go struct.</p>
+          <div class="input-output">input: []byte → output: *spec.TraCtlSpec</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Overlay — <code>internal/overlay</code></h4>
+          <p>Optionally merges patch files onto the parsed spec (like JSON Patch but semantic). Allows environment-specific overrides without touching the base file.</p>
+          <div class="input-output">input: *TraCtlSpec + []OverlayFile → output: *TraCtlSpec (modified)</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Validate — <code>internal/validation</code></h4>
+          <p>Schema-level checks: required fields, valid kinds, cycle detection in <code>dependsOn</code> graphs. Fails fast with structured <code>ValidationError</code> list.</p>
+          <div class="input-output">input: *TraCtlSpec → output: []ValidationError (or nil)</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Plan — <code>internal/planner</code></h4>
+          <p>Topologically sorts steps within each workflow using <code>dependsOn</code> edges. Resolves required capabilities. Produces an <code>ExecutionPlan</code> with explicit wave ordering.</p>
+          <div class="input-output">input: *TraCtlSpec → output: *ExecutionPlan</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <h4>Compile — <code>internal/compiler</code></h4>
+          <p>Selects runtime per step (http, script, etc.). Pre-compiles regex patterns for assertions. Binds payload schemas. Produces a <code>CompiledPlan</code> ready for execution.</p>
+          <div class="input-output">input: *ExecutionPlan + *TraCtlSpec → output: *CompiledPlan</div>
+        </div>
+      </div>
+      <div class="pipeline-step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <h4>Execute — <code>internal/scheduler</code> + <code>internal/executor</code></h4>
+          <p>Runs workflows in parallel (up to WorkflowConcurrency). Within each workflow, runs steps in DAG order. Each step: run hooks → execute HTTP → evaluate assertions → extract variables. All tracked in an <code>ExecutionContext</code> with a mutex for thread safety.</p>
+          <div class="input-output">input: *CompiledPlan → output: RunResult {Passed, Workflows[], Diagnostics}</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Step Execution Detail</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant S as Scheduler
+    participant H as Hooks
+    participant E as Executor (HTTP)
+    participant A as Assertion
+    participant X as Extract
+    participant C as ExecutionContext
+
+    S->>H: beforeStep hook (optional JS)
+    H->>C: mutations applied
+    S->>E: Execute(compiledStep, execCtx)
+    E->>E: Build HTTP request (resolve vars)
+    E->>E: Send with retry policy + timeout
+    E->>E: Capture response + timeline
+    E->>C: StepResult stored
+    E->>A: EvaluateCompiled(assertion, result)
+    A-->>E: AssertionResult {passed/failed/warning}
+    E->>X: Extract(extracts, result)
+    X->>C: Write extracted vars by scope
+    S->>H: afterStep hook (optional JS)
+    S-->>S: Mark step succeeded/failed
+      </div>
+    </div>
+  </section>
+
+  <!-- MODULES -->
+  <section id="modules" class="section-anchor">
+    <h2><span class="icon">📁</span> Module Map</h2>
+    <p class="subtitle">Every package in one place — 5 lines max. Color = layer.</p>
+
+    <div class="tabs">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(this,'tab-engine')">🔧 Engine Core</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-exec')">⚙️ Execution</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-surfaces')">📡 Surfaces</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-support')">🛠️ Support</button>
+      </div>
+
+      <div id="tab-engine" class="tab-pane active">
+        <div class="module-list">
+          <div class="module-item critical">
+            <div class="module-path">internal/spec</div>
+            <div class="module-desc"><strong>Canonical data model.</strong> All Go structs that represent a workflow document: <code>TraCtlSpec</code>, <code>Workflow</code>, <code>Step</code>, <code>Assertion</code>, <code>Extract</code>. Everything else in the engine passes these types around. Think of it as the TypeScript interfaces file but for Go.</div>
+          </div>
+          <div class="module-item critical">
+            <div class="module-path">internal/engine</div>
+            <div class="module-desc"><strong>The orchestrator.</strong> Wires Parse → Overlay → Validate → Plan → Compile → Execute. Exposes <code>Engine.Run(cfg)</code> and <code>Engine.RunDocument()</code>. Never panics — all errors land in a <code>RunResult</code> struct. The only entry point callers should use.</div>
+          </div>
+          <div class="module-item critical">
+            <div class="module-path">internal/parser</div>
+            <div class="module-desc"><strong>Format-agnostic parser registry.</strong> Detects format (yaml/json/toon) from file extension, delegates to sub-parsers. Returns <code>*spec.TraCtlSpec</code>. Adding a new format = implementing the <code>Parser</code> interface in a sub-package.</div>
+          </div>
+          <div class="module-item critical">
+            <div class="module-path">internal/validation</div>
+            <div class="module-desc"><strong>Schema + structural validation.</strong> Runs after parse and after overlay. Catches missing required fields, invalid step kinds, circular <code>dependsOn</code> references. Returns a list of <code>ValidationError</code>; does not mutate the spec.</div>
+          </div>
+          <div class="module-item critical">
+            <div class="module-path">internal/planner</div>
+            <div class="module-desc"><strong>DAG planner.</strong> Performs topological sort on workflow steps using <code>dependsOn</code> edges. Detects cycles. Resolves required <code>capabilities</code>. Produces an <code>ExecutionPlan</code> — an ordered list of step waves that can run in parallel.</div>
+          </div>
+          <div class="module-item critical">
+            <div class="module-path">internal/compiler</div>
+            <div class="module-desc"><strong>Plan compiler.</strong> Selects the correct runtime (http, script) for each step. Pre-compiles regex assertion patterns so they aren't recompiled per-request. Binds payload schemas. Outputs a <code>CompiledPlan</code> that is truly ready for execution — no more spec lookups needed.</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-exec" class="tab-pane">
+        <div class="module-list">
+          <div class="module-item critical">
+            <div class="module-path">internal/scheduler</div>
+            <div class="module-desc"><strong>Parallel step runner.</strong> Takes a <code>CompiledWorkflow</code> and runs steps according to the DAG order. Steps with no pending dependencies start immediately via goroutines. Uses semaphores to enforce <code>concurrency</code> limits. Collects <code>WorkflowResult</code>.</div>
+          </div>
+          <div class="module-item critical">
+            <div class="module-path">internal/executor</div>
+            <div class="module-desc"><strong>HTTP request executor.</strong> Builds the actual <code>http.Request</code> from a <code>CompiledStep</code>, executes it (with retry + backoff), captures response body/headers/status, and attaches an HTTP trace for precise timing (DNS, TCP, TLS, TTFB). Returns a <code>StepResult</code>.</div>
+          </div>
+          <div class="module-item critical">
+            <div class="module-path">internal/runtime</div>
+            <div class="module-desc"><strong>Mutable execution state.</strong> <code>ExecutionContext</code> holds all variable scopes (spec/workflow/env/step) and step outcomes during a run. Protected by <code>sync.RWMutex</code>. Exposes <code>Freeze()</code> which returns an immutable <code>FrozenContext</code> snapshot for script sandboxing.</div>
+          </div>
+          <div class="module-item support">
+            <div class="module-path">internal/assertion</div>
+            <div class="module-desc"><strong>Assertion evaluator.</strong> Evaluates compiled assertions against a <code>StepResult</code>: status code, body JSONPath, header values, regex matches. Returns <code>AssertionResult</code> with severity (error vs. warning). Severity "warning" fails display but doesn't block the pipeline.</div>
+          </div>
+          <div class="module-item support">
+            <div class="module-path">internal/extract</div>
+            <div class="module-desc"><strong>Value extractor.</strong> Pulls values out of HTTP responses (body JSONPath, header, status) and writes them into <code>ExecutionContext</code> at a given scope (step/workflow/spec). Step extracts are the mechanism for chaining requests — e.g., step-1 extracts a token, step-2 uses <code>${steps.step-1.extracts.token}</code>.</div>
+          </div>
+          <div class="module-item support">
+            <div class="module-path">internal/sandbox</div>
+            <div class="module-desc"><strong>JS sandbox via goja.</strong> Executes user-supplied JavaScript hooks inside a pure-Go JS engine with <strong>zero I/O access</strong> (no fetch, no fs, no console). Scripts receive a <code>FrozenContext</code> and return a <code>MutationSet</code>. A goroutine enforces a 5-second hard timeout by interrupting the VM.</div>
+          </div>
+          <div class="module-item support">
+            <div class="module-path">internal/overlay</div>
+            <div class="module-desc"><strong>Document patch engine.</strong> Applies overlay files to a parsed spec before validation. Supports merge actions: replace, deepMerge, append, appendUnique, remove. Targets are JSON pointer paths or semantic selectors. Designed for environment-specific overrides without forking spec files.</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-surfaces" class="tab-pane">
+        <div class="module-list">
+          <div class="module-item surface">
+            <div class="module-path">cmd/tractl</div>
+            <div class="module-desc"><strong>CLI entry point.</strong> Parses flags (<code>--env</code>, <code>--overlay</code>, <code>--output</code>, <code>--verbose</code>), constructs an <code>engine.Config</code>, calls <code>engine.Run()</code>, formats output as text or JSON, exits with code 0/1/2.</div>
+          </div>
+          <div class="module-item surface">
+            <div class="module-path">cmd/wasm</div>
+            <div class="module-desc"><strong>WebAssembly bridge.</strong> Registers Go functions as JavaScript globals (<code>tractl.run()</code>, <code>tractl.parse()</code>, <code>tractl.validate()</code>, etc.) using <code>syscall/js</code>. The React frontend calls these when running in the browser — no HTTP round-trip needed.</div>
+          </div>
+          <div class="module-item surface">
+            <div class="module-path">cmd/desktop</div>
+            <div class="module-desc"><strong>Wails desktop shell.</strong> Wraps the React frontend in a native OS window via the Wails framework. Exposes Go methods to JavaScript via Wails IPC (not WASM). The UI looks the same as the web version but talks to Go over a different bridge.</div>
+          </div>
+          <div class="module-item surface">
+            <div class="module-path">cmd/server + internal/localapi</div>
+            <div class="module-desc"><strong>HTTP server surfaces.</strong> <code>cmd/server</code> serves the React SPA as static files and exposes <code>/api/v1/status</code>. <code>internal/localapi</code> is a full REST API on <code>:7428</code> for workspace/file/execution management — used by the localApi platform adapter in the frontend.</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-support" class="tab-pane">
+        <div class="module-list">
+          <div class="module-item support">
+            <div class="module-path">internal/diagnostics</div>
+            <div class="module-desc"><strong>Observability / tracing.</strong> Collects an <code>ExecutionRecord</code> during a run: timing per workflow, per step, per assertion, wait durations, HTTP waterfall. Emits structured trace output. Deterministic with a fixed <code>TraceID</code> seed for reproducible test runs.</div>
+          </div>
+          <div class="module-item support">
+            <div class="module-path">internal/normalize</div>
+            <div class="module-desc"><strong>Spec normalizer.</strong> Populates default values after parse (e.g., assigns ULIDs to steps with no explicit ID, sets default failure policies). Runs before validation. Ensures the engine never receives a partially-populated spec.</div>
+          </div>
+          <div class="module-item support">
+            <div class="module-path">internal/version</div>
+            <div class="module-desc"><strong>Build metadata.</strong> Provides <code>Version</code>, <code>Commit</code>, <code>BuildTime</code> constants. Values are injected at link time by goreleaser (<code>-ldflags "-X ..."</code>). Exposed via <code>tractl version</code> and all API status endpoints.</div>
+          </div>
+          <div class="module-item support">
+            <div class="module-path">pkg/capability</div>
+            <div class="module-desc"><strong>Public SDK stub.</strong> Placeholder for Phase 4 capability contract types. Not currently used by the engine. Will define the interface for third-party protocol providers (gRPC, WebSocket, etc.).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DATA FLOW -->
+  <section id="dataflow" class="section-anchor">
+    <h2><span class="icon">🔄</span> Data Flow</h2>
+    <p class="subtitle">How data moves through the system — variable scopes, extraction chains, and script mutations.</p>
+
+    <h3>Variable Resolution Chain</h3>
+    <p>Everywhere you write <code>${vars.baseUrl}</code> or <code>${steps.stepA.extracts.token}</code>, the runtime resolves it by checking scopes in this priority order:</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    EXPR["Expression: ${vars.baseUrl}"] --> R1{Runtime scope}
+    R1 -->|"tractl.random(), tractl.now()"| FOUND["✅ Resolved"]
+    R1 -->|not found| R2{Step scope}
+    R2 -->|"steps.&lt;id&gt;.extracts.&lt;name&gt;"| FOUND
+    R2 -->|not found| R3{Workflow scope}
+    R3 -->|"workflow.vars.*"| FOUND
+    R3 -->|not found| R4{Environment scope}
+    R4 -->|"--env flag variables"| FOUND
+    R4 -->|not found| R5{Spec scope}
+    R5 -->|"spec.variables.*"| FOUND
+    R5 -->|not found| ERR["❌ Unresolved (empty string)"]
+
+    style FOUND fill:#1a2520,stroke:#3fb950
+    style ERR fill:#2d1515,stroke:#f85149
+      </div>
+    </div>
+
+    <h3>Extract + Chain Example</h3>
+    <pre><span class="co"># Step 1: GET /auth/token — extracts the JWT</span>
+<span class="kw">extracts</span>:
+  - <span class="kw">id</span>: <span class="str">token-extract</span>
+    <span class="kw">source</span>: <span class="str">body</span>
+    <span class="kw">path</span>: <span class="str">access_token</span>    <span class="co"># JSONPath into response body</span>
+    <span class="kw">as</span>: <span class="str">jwt</span>               <span class="co"># stored as variable name "jwt"</span>
+    <span class="kw">scope</span>: <span class="str">workflow</span>       <span class="co"># visible to all later steps in this workflow</span>
+
+<span class="co"># Step 2: GET /users — uses the JWT (dependsOn: [step-1])</span>
+<span class="kw">request</span>:
+  <span class="kw">target</span>: <span class="str">"${vars.baseUrl}/users"</span>
+  <span class="kw">headers</span>:
+    <span class="kw">Authorization</span>: <span class="str">"Bearer ${steps.login.extracts.jwt}"</span></pre>
+
+    <h3>Script Sandbox Flow</h3>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+sequenceDiagram
+    participant EC as ExecutionContext (live, mutex-guarded)
+    participant SB as Sandbox (goja VM)
+
+    EC->>EC: Freeze() → deep copy all scope maps
+    EC-->>SB: FrozenContext (immutable snapshot)
+    Note over SB: Script runs in isolation<br/>No I/O, no require, 5s timeout
+    SB->>SB: tractl.setVar("key", "value")
+    SB->>SB: return { mutations: [...] }
+    SB-->>EC: MutationSet
+    EC->>EC: Apply mutations (under mutex)
+    Note over EC: Live context updated safely
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <p><strong>Why freeze first?</strong> Scripts are user-supplied and run in parallel. If they received a live pointer to ExecutionContext, two scripts running simultaneously could race on the same map. The freeze → mutate → apply pattern makes it safe without blocking execution while scripts run.</p>
+    </div>
+  </section>
+
+  <!-- KEY TYPES -->
+  <section id="types" class="section-anchor">
+    <h2><span class="icon">🔷</span> Key Types Quick Reference</h2>
+    <p class="subtitle">The important structs and interfaces — what each field does in plain English.</p>
+
+    <div class="tabs">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(this,'typ-spec')">TraCtlSpec</button>
+        <button class="tab-btn" onclick="switchTab(this,'typ-step')">Step</button>
+        <button class="tab-btn" onclick="switchTab(this,'typ-result')">StepResult</button>
+        <button class="tab-btn" onclick="switchTab(this,'typ-iface')">Interfaces</button>
+      </div>
+
+      <div id="typ-spec" class="tab-pane active">
+        <table>
+          <tr><th>Field</th><th>Type</th><th>What it means</th></tr>
+          <tr><td><strong>SchemaVersion</strong></td><td>int</td><td>Document format version. Currently always <code>1</code>. Will gate parser/validator behaviour in future.</td></tr>
+          <tr><td><strong>Capabilities</strong></td><td>[]string</td><td>Declares what protocols the spec uses — e.g. <code>"protocol.http"</code>. The planner checks the engine supports them before running.</td></tr>
+          <tr><td><strong>Variables</strong></td><td>map[string]string</td><td>Spec-level variables, lowest priority in resolution chain. Like a <code>.env</code> file embedded in the spec.</td></tr>
+          <tr><td><strong>Auth</strong></td><td>*AuthProfile</td><td>Shared auth configuration (bearer token, basic auth, etc.) that steps can reference instead of repeating credentials inline.</td></tr>
+          <tr><td><strong>WorkflowConcurrency</strong></td><td>int</td><td>Max workflows that run simultaneously. Default is all workflows run in parallel (no limit).</td></tr>
+          <tr><td><strong>Workflows</strong></td><td>[]Workflow</td><td>Ordered list of workflows. Each workflow can declare <code>dependsOn</code> other workflows — creates a cross-workflow DAG.</td></tr>
+        </table>
+      </div>
+
+      <div id="typ-step" class="tab-pane">
+        <table>
+          <tr><th>Field</th><th>Type</th><th>What it means</th></tr>
+          <tr><td><strong>ID</strong></td><td>string</td><td>Unique within a workflow. Referenced by other steps' <code>dependsOn</code> and by <code>${steps.&lt;id&gt;.extracts.*}</code>.</td></tr>
+          <tr><td><strong>Kind</strong></td><td>string</td><td><code>request</code> (HTTP), <code>script</code> (JS), <code>extensionCall</code> (Phase 4+), <code>composite</code> (Phase 4+).</td></tr>
+          <tr><td><strong>DependsOn</strong></td><td>[]string</td><td>Step IDs that must complete successfully before this step starts. Drives the DAG topology.</td></tr>
+          <tr><td><strong>When</strong></td><td>string</td><td>Boolean expression. If it evaluates to false, the step is skipped (not failed). Example: <code>"${vars.runExtra} == true"</code>.</td></tr>
+          <tr><td><strong>Request</strong></td><td>*RequestDescriptor</td><td>HTTP request config: target URL, method (operation), headers, body, auth reference.</td></tr>
+          <tr><td><strong>Assertions</strong></td><td>[]Assertion</td><td>What to check on the response. Failing an assertion with <code>severity: error</code> marks the step failed.</td></tr>
+          <tr><td><strong>Extracts</strong></td><td>[]Extract</td><td>Values to pull from the response and store as variables for later steps.</td></tr>
+          <tr><td><strong>Retry</strong></td><td>*RetryPolicy</td><td>Max attempts, backoff strategy, wait duration. Executes the full HTTP call on each attempt.</td></tr>
+          <tr><td><strong>Timeout</strong></td><td>string</td><td>ISO 8601 duration (e.g. <code>"PT30S"</code>). Creates a <code>context.WithTimeout</code> for the HTTP call.</td></tr>
+        </table>
+      </div>
+
+      <div id="typ-result" class="tab-pane">
+        <table>
+          <tr><th>Field</th><th>Type</th><th>What it means</th></tr>
+          <tr><td><strong>StepID / WorkflowID</strong></td><td>string</td><td>Identifies which step this result belongs to.</td></tr>
+          <tr><td><strong>State</strong></td><td>StepState</td><td>Enum: pending → running → succeeded / failed / skipped / cancelled.</td></tr>
+          <tr><td><strong>Status</strong></td><td>int</td><td>HTTP response status code (200, 404, 500…).</td></tr>
+          <tr><td><strong>Headers</strong></td><td>map[string]string</td><td>Response headers, normalised to lowercase keys.</td></tr>
+          <tr><td><strong>Body</strong></td><td>[]byte</td><td>Raw response body bytes. Assertions and extracts parse this on demand.</td></tr>
+          <tr><td><strong>Extracts</strong></td><td>map[string]string</td><td>Variables extracted from this step's response. Populated by the extract engine.</td></tr>
+          <tr><td><strong>Timeline</strong></td><td>*RequestTimeline</td><td>Detailed timing: DNS lookup, TCP connect, TLS handshake, time-to-first-byte, total duration.</td></tr>
+          <tr><td><strong>Error</strong></td><td>error</td><td>Non-nil if the request failed at transport level (timeout, DNS failure, etc.) — before any HTTP status is involved.</td></tr>
+        </table>
+      </div>
+
+      <div id="typ-iface" class="tab-pane">
+        <p>All major pipeline stages are <strong>Go interfaces</strong>, enabling dependency injection and easy test mocking.</p>
+        <table>
+          <tr><th>Interface</th><th>Defined in</th><th>What implementors do</th></tr>
+          <tr><td><code>engine.Planner</code></td><td>internal/engine</td><td>Takes <code>*spec.TraCtlSpec</code>, returns <code>*ExecutionPlan</code>. The real impl does topological sort; tests inject a stub.</td></tr>
+          <tr><td><code>engine.Compiler</code></td><td>internal/engine</td><td>Takes plan + spec, returns <code>*CompiledPlan</code>. Pre-compiles regex, selects runtimes.</td></tr>
+          <tr><td><code>engine.Evaluator</code></td><td>internal/engine</td><td>Evaluates a single <code>CompiledAssertion</code> against a <code>StepResult</code>.</td></tr>
+          <tr><td><code>engine.ScriptRunner</code></td><td>internal/engine</td><td>Runs a JS string in isolation, returns <code>MutationSet</code>. Real impl uses goja; tests use a no-op.</td></tr>
+          <tr><td><code>executor.Executor</code></td><td>internal/executor</td><td>Executes a single compiled step against an execution context. Returns <code>*StepResult</code>.</td></tr>
+          <tr><td><code>parser.Parser</code></td><td>internal/parser</td><td>Parses bytes into <code>*spec.TraCtlSpec</code>. One impl per format.</td></tr>
+        </table>
+        <div class="callout tip">
+          <p><strong>Node.js analogy:</strong> These interfaces are exactly like TypeScript interfaces. The concrete types (<code>*planner.Planner</code>, <code>*compiler.Compiler</code>) "implement" them implicitly — Go doesn't use <code>implements</code> keyword. If a struct has the right methods, it satisfies the interface automatically.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FRONTEND -->
+  <section id="frontend" class="section-anchor">
+    <h2><span class="icon">⚛️</span> React Frontend</h2>
+    <p class="subtitle">The UI layer — familiar React patterns, but bridged to Go instead of a backend API.</p>
+
+    <div class="callout info">
+      <p><strong>Stack:</strong> React 18 + TypeScript, Zustand for state, TanStack Query for async data, Tabler Icons, Vite build. <strong>No react-router</strong> — screen switching is URL-hash based with custom sync logic.</p>
+    </div>
+
+    <h3>Screen Map</h3>
+    <div class="card-grid">
+      <div class="card">
+        <h4>FastStartScreen</h4>
+        <p>Landing page. Shows quick-start templates, recent files. Lets you pick a workflow file without typing a path.</p>
+        <code>screens/FastStartScreen.tsx</code>
+      </div>
+      <div class="card">
+        <h4>WorkflowCanvasScreen</h4>
+        <p>Visual DAG editor. Shows steps as nodes, <code>dependsOn</code> edges as arrows. Select a node to edit its request.</p>
+        <code>screens/WorkflowCanvasScreen.tsx</code>
+      </div>
+      <div class="card">
+        <h4>RequestEditor</h4>
+        <p>HTTP request builder. URL, method, headers, body, assertions panel, extracts panel — all in one view.</p>
+        <code>screens/RequestEditor.tsx</code>
+      </div>
+      <div class="card">
+        <h4>RunHistoryScreen</h4>
+        <p>Past execution results. Step-level pass/fail, assertion details, timing waterfall.</p>
+        <code>screens/RunHistoryScreen.tsx</code>
+      </div>
+    </div>
+
+    <h3>State Management (Zustand Stores)</h3>
+    <div class="module-list">
+      <div class="module-item frontend">
+        <div class="module-path">stores/uiStore.ts</div>
+        <div class="module-desc">Active screen, active tab, sidebar collapse state. Global UI toggles that don't belong to any domain store.</div>
+      </div>
+      <div class="module-item frontend">
+        <div class="module-path">stores/workflowCanvasStore.ts</div>
+        <div class="module-desc">The full workflow DAG state for the canvas editor — nodes, edges, selected node. Drives WorkflowCanvasScreen.</div>
+      </div>
+      <div class="module-item frontend">
+        <div class="module-path">stores/executionStore.ts</div>
+        <div class="module-desc">Current run state: running/done, per-step outcomes, assertion results. Updated via platform adapter callbacks during execution.</div>
+      </div>
+      <div class="module-item frontend">
+        <div class="module-path">stores/runHistoryStore.ts</div>
+        <div class="module-desc">Persisted list of past run results. Read on load; updated after each run completes.</div>
+      </div>
+      <div class="module-item frontend">
+        <div class="module-path">stores/requestCollectionsStore.ts</div>
+        <div class="module-desc">Saved request collections — grouped sets of reusable HTTP requests. Persisted in workspace storage.</div>
+      </div>
+    </div>
+
+    <h3>Frontend ↔ Go Communication</h3>
+    <p>This is the most unusual part of the frontend architecture. There's no REST API to a remote backend. Instead, the frontend detects <strong>which surface it's running on</strong> and calls Go functions directly:</p>
+
+    <div class="diagram-wrap">
+      <div class="mermaid">
+graph LR
+    UI["React Component"]
+    PA["platform/index.ts<br/>(detects surface)"]
+
+    WEB["platform/web/<br/>tractl.run() WASM global"]
+    DESK["platform/desktop/<br/>window.wails.IPC()"]
+    LAPI["platform/localApi/<br/>fetch('localhost:7428')"]
+
+    GO_WASM["Go WASM binary<br/>cmd/wasm"]
+    GO_DESK["Go Wails app<br/>cmd/desktop"]
+    GO_API["Go HTTP server<br/>internal/localapi"]
+
+    UI --> PA
+    PA -->|"surface === 'web'"| WEB --> GO_WASM
+    PA -->|"surface === 'desktop'"| DESK --> GO_DESK
+    PA -->|"surface === 'localApi'"| LAPI --> GO_API
+
+    style UI fill:#1c2230,stroke:#58a6ff
+    style PA fill:#1a1f2e,stroke:#79c0ff
+      </div>
+    </div>
+
+    <pre><span class="co">// platform/types.ts — the unified interface</span>
+<span class="kw">interface</span> <span class="ty">IPlatform</span> {
+  <span class="fn">run</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">RunResult</span>&gt;
+  <span class="fn">parse</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">TraCtlSpec</span>&gt;
+  <span class="fn">validate</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">ValidationError</span>[]&gt;
+  <span class="fn">layout</span>(document: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">DAGLayout</span>&gt;
+  <span class="co">// ... runRequest, inferDeps, exportWorkflow, defaults</span>
+}
+
+<span class="co">// All three surfaces implement this same interface.</span>
+<span class="co">// React components only ever call IPlatform — never platform-specific code.</span></pre>
+  </section>
+
+  <!-- PLATFORMS -->
+  <section id="platforms" class="section-anchor">
+    <h2><span class="icon">🖥️</span> Platform Surfaces</h2>
+    <p class="subtitle">Three ways to deliver the same product — CLI, browser, native desktop.</p>
+
+    <table>
+      <tr>
+        <th>Surface</th>
+        <th>Entry Point</th>
+        <th>How Frontend Talks to Go</th>
+        <th>When Used</th>
+      </tr>
+      <tr>
+        <td><strong>CLI</strong></td>
+        <td><code>cmd/tractl/main.go</code></td>
+        <td>No frontend — pure terminal</td>
+        <td>CI/CD, scripting, headless automation</td>
+      </tr>
+      <tr>
+        <td><strong>Browser WASM</strong></td>
+        <td><code>cmd/wasm/bridge.go</code></td>
+        <td><code>tractl.run()</code> JS global (no HTTP round trip)</td>
+        <td>Hosted web app; Go runs in browser</td>
+      </tr>
+      <tr>
+        <td><strong>Desktop (Wails)</strong></td>
+        <td><code>cmd/desktop/app.go</code></td>
+        <td>Wails IPC (<code>window.wails.*</code>)</td>
+        <td>Native app (macOS/Windows/Linux)</td>
+      </tr>
+      <tr>
+        <td><strong>Local API</strong></td>
+        <td><code>internal/localapi</code></td>
+        <td><code>fetch('http://localhost:7428/...')</code></td>
+        <td>External tool integration; IDE plugin future</td>
+      </tr>
+    </table>
+
+    <h3>LocalAPI Routes</h3>
+    <table>
+      <tr><th>Method</th><th>Path</th><th>What it does</th></tr>
+      <tr><td>GET</td><td><code>/api/v1/status</code></td><td>Health check — returns version, surface, build info</td></tr>
+      <tr><td>GET</td><td><code>/api/v1/files</code></td><td>List files in workspace directory</td></tr>
+      <tr><td>GET</td><td><code>/api/v1/files/{path...}</code></td><td>Read file content from workspace</td></tr>
+      <tr><td>POST</td><td><code>/api/v1/run</code></td><td>Execute workflow from a file path</td></tr>
+      <tr><td>POST</td><td><code>/api/v1/workflows/run</code></td><td>Execute workflow from request body (inline definition)</td></tr>
+      <tr><td>GET</td><td><code>/api/v1/workflow/layout</code></td><td>Compute DAG layout coordinates for the canvas</td></tr>
+      <tr><td>GET</td><td><code>/api/v1/engine/defaults</code></td><td>Engine defaults (concurrency, timeout, etc.)</td></tr>
+      <tr><td>GET</td><td><code>/api/v1/workspace/status</code></td><td>Workspace metadata (path, name, recent files)</td></tr>
+    </table>
+
+    <h3>WASM Bridge Functions</h3>
+    <p>In the browser, these are available as <code>tractl.*</code> globals on <code>window</code> after the WASM binary loads:</p>
+    <pre><span class="fn">tractl.run</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>)         <span class="co">→ RunResult JSON</span>
+<span class="fn">tractl.parse</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>)       <span class="co">→ TraCtlSpec JSON</span>
+<span class="fn">tractl.validate</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>)   <span class="co">→ ValidationError[] JSON</span>
+<span class="fn">tractl.layout</span>(document: <span class="ty">string</span>, format: <span class="ty">string</span>)     <span class="co">→ DAGLayout JSON</span>
+<span class="fn">tractl.runRequest</span>(...)                                <span class="co">→ single HTTP execution</span>
+<span class="fn">tractl.inferDeps</span>(...)                                 <span class="co">→ auto-detected dependsOn</span>
+<span class="fn">tractl.exportWorkflow</span>(...)                            <span class="co">→ normalized spec string</span>
+<span class="fn">tractl.version</span>()                                      <span class="co">→ { surface, version, commit }</span></pre>
+  </section>
+
+  <!-- GO CONCEPTS -->
+  <section id="go-concepts" class="section-anchor">
+    <h2><span class="icon">🐹</span> Go Concepts for Node.js Developers</h2>
+    <p class="subtitle">You know JavaScript deeply. Here's what the Go patterns map to — and where they diverge.</p>
+
+    <div class="concept-grid">
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">🔌</span>
+          <h4>Interfaces (Implicit Satisfaction)</h4>
+          <span class="go-badge">Go</span>
+        </div>
+        <p>If a struct has all the methods an interface declares, it implements it automatically — no <code>implements</code> keyword.</p>
+        <div class="node-eq">// Node equivalent:
+class MyPlanner {
+  plan(spec) { ... } // ← TypeScript structural typing
+}
+// Same idea — duck typing</div>
+      </div>
+
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">🧵</span>
+          <h4>Goroutines vs Async/Await</h4>
+          <span class="go-badge">Go</span>
+        </div>
+        <p>Go runs concurrent work in goroutines (cheap OS threads). Scheduler uses <code>go func()</code> to launch step executions in parallel.</p>
+        <div class="node-eq">// Node equivalent:
+Promise.all([step1(), step2()])
+// Go: go step1(); go step2()
+// + sync with WaitGroup or channels</div>
+      </div>
+
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">🔒</span>
+          <h4>sync.RWMutex</h4>
+          <span class="go-badge">Go</span>
+        </div>
+        <p>Protects shared maps (stepResults, vars) from concurrent read/write races. <code>RLock</code> = many readers OK. <code>Lock</code> = exclusive write.</p>
+        <div class="node-eq">// Node equivalent: N/A
+// Node is single-threaded — no races
+// Go is truly parallel — mutex is essential</div>
+      </div>
+
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">📦</span>
+          <h4>embed.FS</h4>
+          <span class="go-badge">Go</span>
+        </div>
+        <p>The compiled binary includes the entire <code>dist/</code> folder baked in. No external files needed at runtime — it's a single executable.</p>
+        <div class="node-eq">// Node equivalent:
+// Like __dirname + require('./dist/index.html')
+// but baked into the binary, not the filesystem</div>
+      </div>
+
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">🔢</span>
+          <h4>context.Context</h4>
+          <span class="go-badge">Go</span>
+        </div>
+        <p>Passed as the first argument to every async function. Carries cancellation signals and deadlines. When a parent times out, all children cancel automatically.</p>
+        <div class="node-eq">// Node equivalent:
+// AbortController + AbortSignal
+// ctx.Done() === signal.aborted</div>
+      </div>
+
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">📢</span>
+          <h4>Channels (Semaphores)</h4>
+          <span class="go-badge">Go</span>
+        </div>
+        <p>A buffered channel of size N acts as a semaphore — only N goroutines can acquire a slot. Used to cap script concurrency.</p>
+        <div class="node-eq">// Node equivalent:
+// p-limit(N) — concurrency limiter
+// Same concept, different syntax</div>
+      </div>
+
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">❌</span>
+          <h4>Error Handling (No Throw)</h4>
+          <span class="go-badge">Go</span>
+        </div>
+        <p>Go functions return <code>(value, error)</code>. You check the error explicitly every time — no try/catch. Unchecked errors fail linting.</p>
+        <div class="node-eq">// Node equivalent:
+const [err, result] = await to(promise)
+// Go forces you to handle EVERY error</div>
+      </div>
+
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">🏷️</span>
+          <h4>Struct Tags (JSON/YAML)</h4>
+          <span class="go-badge">Go</span>
+        </div>
+        <p>Struct fields have backtick annotations that control JSON/YAML serialisation keys and omitempty behaviour.</p>
+        <div class="node-eq">// Node equivalent:
+// Like class-transformer decorators:
+// @Expose({ name: 'schema_version' })
+// or Joi schema field naming</div>
+      </div>
+
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">💉</span>
+          <h4>Dependency Injection via Interfaces</h4>
+          <span class="go-badge">Go</span>
+        </div>
+        <p>engine.Config has optional fields like <code>Planner</code>, <code>Compiler</code>, <code>Evaluator</code>. In tests, inject mocks. In production, leave nil (defaults used).</p>
+        <div class="node-eq">// Node equivalent:
+// Like inversify or tsyringe DI
+// or passing jest.fn() mocks in tests</div>
+      </div>
+
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">🌊</span>
+          <h4>syscall/js (WASM Bridge)</h4>
+          <span class="go-badge">Go</span>
+        </div>
+        <p>Go code compiled to WASM can register JavaScript-callable functions using <code>js.Global().Set("tractl", ...)</code>. The bridge file does exactly this.</p>
+        <div class="node-eq">// Node equivalent:
+// Like N-API native addons
+// or Rust wasm-bindgen
+// Registers Go fns as JS globals</div>
+      </div>
+
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">🔗</span>
+          <h4>-ldflags (Build Injection)</h4>
+          <span class="go-badge">Go</span>
+        </div>
+        <p>goreleaser injects <code>Version</code>, <code>Commit</code>, <code>BuildTime</code> into the binary at link time. No config file needed at runtime.</p>
+        <div class="node-eq">// Node equivalent:
+// Like Webpack DefinePlugin
+// process.env.VERSION at build time
+// Baked into the binary, not the env</div>
+      </div>
+
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">🔄</span>
+          <h4>Topological Sort (DAG)</h4>
+          <span class="go-badge">Algorithm</span>
+        </div>
+        <p>Step ordering: DFS-based topo-sort on <code>dependsOn</code> edges. Steps in the same wave have no edges between them — they run in parallel. Cycle = validation error.</p>
+        <div class="node-eq">// Node equivalent:
+// Like npm dependency resolution
+// or Webpack module graph ordering</div>
+      </div>
+    </div>
+
+    <h3>Complete Go → Node.js Mental Model</h3>
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Goroutines vs Worker Threads vs async/await <span class="chevron">▼</span>
+      </div>
+      <div class="accordion-body">
+        <p>Node.js has <strong>one thread</strong> (event loop) + optional Worker Threads for CPU work. Go has <strong>goroutines</strong> — lightweight cooperatively-scheduled "green threads" that are multiplexed across OS threads (GOMAXPROCS). traCtl uses goroutines to run multiple workflow steps truly in parallel — something that's hard to express cleanly in Node. The <code>sync.WaitGroup</code> is the Go equivalent of <code>Promise.all()</code> — you spin up N goroutines, wait for all to complete, then collect results.</p>
+      </div>
+    </div>
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Go maps are NOT safe for concurrent access <span class="chevron">▼</span>
+      </div>
+      <div class="accordion-body">
+        <p>In Node.js, you never think about concurrent map access because there's only one thread. In Go, if two goroutines write to the same <code>map[string]string</code> simultaneously, it panics at runtime with a "concurrent map writes" error. That's why <code>ExecutionContext</code> wraps all its maps in a <code>sync.RWMutex</code>. <code>RLock()</code> allows multiple concurrent readers. <code>Lock()</code> blocks until all readers/writers are done, then grants exclusive write access.</p>
+      </div>
+    </div>
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Why goja instead of a V8 binding? <span class="chevron">▼</span>
+      </div>
+      <div class="accordion-body">
+        <p>V8 is a C++ library. Binding it into a Go program is complex and creates a large cross-compilation dependency (hard to produce a WASM binary with V8 inside another WASM binary). <strong>goja</strong> is a pure-Go ES5+ JavaScript engine — no C dependencies, cross-compiles to any target Go supports (including WASM), and is fast enough for small scripts. The tradeoff is no ES module support and limited ES2020+ features. For hook scripts that just manipulate variables, this is fine.</p>
+      </div>
+    </div>
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        What does "no panic" mean in practice? <span class="chevron">▼</span>
+      </div>
+      <div class="accordion-body">
+        <p>Go's <code>panic()</code> is like throwing an uncaught error that unwinds the call stack. In production Go servers you typically add a <code>recover()</code> middleware to catch panics. traCtl's engine is designed to <strong>never panic</strong> in the critical path — every error is captured in a return value (<code>RunResult.ParseError</code>, <code>RunResult.ValidationError</code>, etc.) and propagated up gracefully. The exit code is 0 (all passed), 1 (assertions failed), or 2 (pipeline error — parse/validate/plan failed). This makes it reliable in CI scripts.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECURITY -->
+  <section id="security" class="section-anchor">
+    <h2><span class="icon">🔐</span> Security & Anti-patterns</h2>
+    <p class="subtitle">Honest assessment of the codebase — what's solid, what needs watching.</p>
+
+    <h3>What's Well Done</h3>
+    <div class="security-list">
+      <div class="security-item good">
+        <span class="sec-icon">✅</span>
+        <div class="sec-content">
+          <h4>JS Sandbox — No I/O Access</h4>
+          <p>Scripts run in goja with zero filesystem, network, or require access. The only injected APIs are tractl.setVar(), tractl.cancel(), tractl.random(). Cannot exfiltrate data or make HTTP calls.</p>
+        </div>
+      </div>
+      <div class="security-item good">
+        <span class="sec-icon">✅</span>
+        <div class="sec-content">
+          <h4>Credential Header Masking in Traces</h4>
+          <p>Authorization, X-API-Key, and similar headers are redacted in diagnostics output so tokens don't appear in trace logs.</p>
+        </div>
+      </div>
+      <div class="security-item good">
+        <span class="sec-icon">✅</span>
+        <div class="sec-content">
+          <h4>No Panics in Critical Path</h4>
+          <p>All errors are captured in RunResult return values. The CLI never crashes unexpectedly; it exits with a structured error message and code 2.</p>
+        </div>
+      </div>
+      <div class="security-item good">
+        <span class="sec-icon">✅</span>
+        <div class="sec-content">
+          <h4>Thread-Safe ExecutionContext</h4>
+          <p>sync.RWMutex protects all shared maps. Scripts work on immutable FrozenContext copies — no goroutine can corrupt another's state.</p>
+        </div>
+      </div>
+      <div class="security-item good">
+        <span class="sec-icon">✅</span>
+        <div class="sec-content">
+          <h4>Validation Before Execution</h4>
+          <p>The spec is fully validated (including cycle detection) before any HTTP requests are made. Malformed specs fail loudly at Stage 3, not mid-execution.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Things to Watch</h3>
+    <div class="security-list">
+      <div class="security-item warn">
+        <span class="sec-icon">⚠️</span>
+        <div class="sec-content">
+          <h4>Credential Masking Incomplete — Response Bodies</h4>
+          <p>Headers are masked in traces, but response body contents are not. If an endpoint returns a token in its response body and a diagnostic captures the body, the token appears in plaintext. Extend masking to body extraction targets marked as sensitive.</p>
+        </div>
+      </div>
+      <div class="security-item warn">
+        <span class="sec-icon">⚠️</span>
+        <div class="sec-content">
+          <h4>LocalAPI Has No Authentication</h4>
+          <p>The server on :7428 assumes a trusted local environment. It has permissive CORS (any origin). Any web page open in the user's browser can call it. Fine for a local dev tool; needs auth if ever exposed to a network.</p>
+        </div>
+      </div>
+      <div class="security-item warn">
+        <span class="sec-icon">⚠️</span>
+        <div class="sec-content">
+          <h4>No Rate Limiting on LocalAPI</h4>
+          <p>A malicious page (or runaway script) could hammer :7428 with thousands of workflow runs. Add a simple token bucket or request queue before exposing to production traffic.</p>
+        </div>
+      </div>
+      <div class="security-item warn">
+        <span class="sec-icon">⚠️</span>
+        <div class="sec-content">
+          <h4>Retry Backoff Has No Jitter</h4>
+          <p>Retry logic uses deterministic exponential backoff. Many clients retrying the same endpoint simultaneously will create synchronized load spikes. Add ±10% random jitter — standard practice (AWS SDK does this).</p>
+        </div>
+      </div>
+      <div class="security-item warn">
+        <span class="sec-icon">⚠️</span>
+        <div class="sec-content">
+          <h4>HTTP Client TLS Verification — Verify Default</h4>
+          <p>Confirm that the default HTTP client in executor does not set InsecureSkipVerify. Go's http.DefaultTransport is strict by default, but custom clients sometimes disable it for "dev convenience" and get merged as-is.</p>
+        </div>
+      </div>
+      <div class="security-item bad">
+        <span class="sec-icon">🔴</span>
+        <div class="sec-content">
+          <h4>Future: Env Var Storage Must Encrypt at Rest</h4>
+          <p>Phase 4 plans a workspace Store for environment variables (API keys, tokens). These MUST be encrypted at rest (OS keychain or AES-GCM with a derived key). Storing them as plaintext JSON on disk is a common mistake that leads to credential leaks.</p>
+        </div>
+      </div>
+      <div class="security-item bad">
+        <span class="sec-icon">🔴</span>
+        <div class="sec-content">
+          <h4>No Audit Trail</h4>
+          <p>There is no log of who ran which workflow when. Acceptable for a single-user CLI. A multi-user server mode (planned) MUST add structured audit logging before going to production.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Anti-patterns Observed</h3>
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Step Hooks Mutate Context After Execution — User Confusion Risk <span class="chevron">▼</span>
+      </div>
+      <div class="accordion-body">
+        <p>The <code>beforeStep</code> and <code>afterStep</code> hooks currently run <em>after</em> the scheduler has already executed the step (architectural limitation in the current scheduler). This means a <code>beforeStep</code> mutation won't actually affect the step it's "before". The code acknowledges this and is pending a scheduler refactor. Risk: developers writing hooks will find their mutations have no effect on the current step and debug for hours. Mitigation: document this clearly in the spec and add a warning log when beforeStep mutations are applied.</p>
+      </div>
+    </div>
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Variable Scope Shadowing — Silent Override <span class="chevron">▼</span>
+      </div>
+      <div class="accordion-body">
+        <p>A workflow-level variable with the same name as a spec-level variable silently wins. There's no warning when this happens. A developer who unknowingly uses the same variable name in two scopes will get surprising results. Best practice: prefix workflow variables (e.g., <code>wf_myVar</code>) or add a lint rule that warns on scope shadows.</p>
+      </div>
+    </div>
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Unresolved Variables Silently Become Empty Strings <span class="chevron">▼</span>
+      </div>
+      <div class="accordion-body">
+        <p>If you reference <code>${vars.typo}</code> and "typo" doesn't exist, the variable resolves to an empty string. The request is sent with an empty URL segment or blank header, and you get a confusing HTTP error instead of "variable not found". A strict mode that fails validation on undefined variable references would catch this early.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz" class="section-anchor">
+    <h2><span class="icon">🎯</span> Self-Check Quiz</h2>
+    <p class="subtitle">Test your understanding before your first PR. Answer these — if you're unsure, you know exactly what to ask.</p>
+
+    <div class="quiz-item" id="q1">
+      <div class="quiz-q">1. You write a step with <code>dependsOn: [step-a, step-b]</code>. What does this guarantee about execution order?</div>
+      <div class="quiz-options">
+        <div class="quiz-opt" onclick="answer(this,'q1',false)">step-a runs before step-b before this step (sequential chain)</div>
+        <div class="quiz-opt" onclick="answer(this,'q1',true)">step-a AND step-b must both complete before this step starts; step-a and step-b may run in parallel with each other</div>
+        <div class="quiz-opt" onclick="answer(this,'q1',false)">This step waits for step-a OR step-b (first to finish wins)</div>
+      </div>
+      <div class="quiz-explain" id="q1-exp">Correct. dependsOn is an AND condition — all listed steps must succeed. But step-a and step-b themselves may have no edge between them, so the scheduler runs them in parallel (same "wave"). The DAG only guarantees ordering at the edge boundary.</div>
+    </div>
+
+    <div class="quiz-item" id="q2">
+      <div class="quiz-q">2. An extract with <code>scope: workflow</code> vs <code>scope: step</code> — what's the difference?</div>
+      <div class="quiz-options">
+        <div class="quiz-opt" onclick="answer(this,'q2',false)">scope: workflow persists the value to disk; scope: step keeps it in memory</div>
+        <div class="quiz-opt" onclick="answer(this,'q2',true)">scope: workflow makes the extracted value available to all later steps in the same workflow; scope: step only makes it available within the extracting step's own result</div>
+        <div class="quiz-opt" onclick="answer(this,'q2',false)">There is no functional difference; scope is only for documentation</div>
+      </div>
+      <div class="quiz-explain" id="q2-exp">Correct. Scope controls where in the ExecutionContext the variable is written. workflow scope → workflowVars map → readable by later steps via ${steps.id.extracts.name}. step scope → only on the StepResult itself, not promoted to the shared context. Use workflow scope when a later step needs the value.</div>
+    </div>
+
+    <div class="quiz-item" id="q3">
+      <div class="quiz-q">3. You're in a JS hook script. You call <code>tractl.setVar("token", "abc")</code>. When does ExecutionContext actually get updated?</div>
+      <div class="quiz-options">
+        <div class="quiz-opt" onclick="answer(this,'q3',false)">Immediately — tractl.setVar is a live reference to the Go context</div>
+        <div class="quiz-opt" onclick="answer(this,'q3',true)">After the script finishes — mutations are collected in a MutationSet and applied in bulk back to the live context under a mutex lock</div>
+        <div class="quiz-opt" onclick="answer(this,'q3',false)">Never — scripts can only read context, not write to it</div>
+      </div>
+      <div class="quiz-explain" id="q3-exp">Correct. Scripts operate on a FrozenContext (immutable deep copy). tractl.setVar() accumulates mutations in the MutationSet. Only after the script returns does the sandbox.Execute() caller apply those mutations to the live ExecutionContext under a mutex. This prevents concurrent scripts from racing on the same map.</div>
+    </div>
+
+    <div class="quiz-item" id="q4">
+      <div class="quiz-q">4. What exit code does the CLI return if the spec file has a YAML syntax error?</div>
+      <div class="quiz-options">
+        <div class="quiz-opt" onclick="answer(this,'q4',false)">Exit 1 — the workflow "failed"</div>
+        <div class="quiz-opt" onclick="answer(this,'q4',true)">Exit 2 — a pipeline stage (parse) failed before any execution occurred</div>
+        <div class="quiz-opt" onclick="answer(this,'q4',false)">Exit 0 — traCtl never exits non-zero for errors, only for assertion failures</div>
+      </div>
+      <div class="quiz-explain" id="q4-exp">Correct. Exit code convention: 0 = all assertions passed, 1 = assertions failed (the workflow ran but checks failed), 2 = pipeline error (parse, validate, plan, or compile failed — the workflow never got to execute). This makes it easy to distinguish test failures from infrastructure/config errors in CI.</div>
+    </div>
+
+    <div class="quiz-item" id="q5">
+      <div class="quiz-q">5. You're building a feature that needs to call the engine from a new surface (e.g., a VS Code extension). What's the minimal thing you need to do?</div>
+      <div class="quiz-options">
+        <div class="quiz-opt" onclick="answer(this,'q5',false)">Rewrite the engine package to accept a new surface-specific Config type</div>
+        <div class="quiz-opt" onclick="answer(this,'q5',true)">Implement the IPlatform interface in the frontend's platform/ directory (if UI needed), or directly construct an engine.Config and call engine.Run() from Go (if no UI). The engine itself is surface-agnostic.</div>
+        <div class="quiz-opt" onclick="answer(this,'q5',false)">Fork cmd/server and modify it to accept VS Code requests</div>
+      </div>
+      <div class="quiz-explain" id="q5-exp">Correct. The engine is completely surface-agnostic — it just takes a Config struct. On the Go side, any caller can import internal/engine and call engine.Run(). On the frontend side, add a new platform adapter in platform/ that implements IPlatform. The React components never need to change — they call the IPlatform interface regardless of what's underneath.</div>
+    </div>
+
+    <div class="quiz-item" id="q6">
+      <div class="quiz-q">6. A step has <code>assertions[].severity: warning</code>. The assertion fails. What happens?</div>
+      <div class="quiz-options">
+        <div class="quiz-opt" onclick="answer(this,'q6',false)">The step is marked failed; dependent steps are blocked</div>
+        <div class="quiz-opt" onclick="answer(this,'q6',true)">The assertion failure is recorded and visible in output, but the step is NOT marked failed. Dependent steps proceed normally. The run still exits 0 if all error-severity assertions pass.</div>
+        <div class="quiz-opt" onclick="answer(this,'q6',false)">Warnings are ignored completely and don't appear in output</div>
+      </div>
+      <div class="quiz-explain" id="q6-exp">Correct. severity: warning is a soft check. It appears in the diagnostic output (so you can see it) but does not affect step state or dependent step scheduling. This is useful for "should have" checks that don't break the pipeline — e.g., checking a response header that's expected but not required.</div>
+    </div>
+
+    <div class="callout tip" style="margin-top: 24px;">
+      <p><strong>If you missed any:</strong> re-read the relevant section above, then try to explain it to a rubber duck. The goal is: after this guide, your questions about traCtl should be <em>precise</em> — not "how does execution work?" but "in the scheduler, does a step's whenCondition get evaluated before or after dependsOn resolution?"</p>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: '#161b22',
+      primaryColor: '#1c2230',
+      primaryTextColor: '#e6edf3',
+      primaryBorderColor: '#30363d',
+      lineColor: '#8b949e',
+      secondaryColor: '#0d1117',
+      tertiaryColor: '#1c2230',
+      edgeLabelBackground: '#161b22',
+      clusterBkg: '#1c2230',
+    }
+  });
+
+  // Tab switching
+  function switchTab(btn, paneId) {
+    const bar = btn.closest('.tab-bar');
+    const container = bar.closest('.tabs');
+    bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    container.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(paneId).classList.add('active');
+  }
+
+  // Accordion
+  function toggleAccordion(header) {
+    const body = header.nextElementSibling;
+    header.classList.toggle('open');
+    body.classList.toggle('open');
+  }
+
+  // Quiz
+  function answer(opt, qId, correct) {
+    const item = document.getElementById(qId);
+    if (item.querySelector('.correct') || item.querySelector('.wrong')) return; // already answered
+    opt.classList.add(correct ? 'correct' : 'wrong');
+    if (!correct) {
+      item.querySelectorAll('.quiz-opt').forEach(o => {
+        if (o !== opt) o.style.pointerEvents = 'none';
+      });
+    }
+    if (correct) {
+      item.querySelectorAll('.quiz-opt').forEach(o => {
+        if (o !== opt) o.style.opacity = '0.4';
+      });
+      document.getElementById(qId + '-exp').classList.add('show');
+    }
+  }
+
+  // Active nav highlight on scroll
+  const sections = document.querySelectorAll('section.section-anchor');
+  const navLinks = document.querySelectorAll('nav a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`nav a[href="#${e.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0% -70% 0%' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

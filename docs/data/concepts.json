@@ -1,0 +1,98 @@
+[
+  {
+    "id": "interfaces",
+    "icon": "🔌",
+    "title": "Interfaces (Implicit Satisfaction)",
+    "badge": "Go",
+    "desc": "If a struct has all the methods an interface declares, it implements it automatically — no <code>implements</code> keyword. This is how the engine injects mock dependencies in tests.",
+    "nodeEq": "// Node: TypeScript structural typing\ninterface Planner { plan(spec): ExecutionPlan }\nclass MyPlanner {\n  plan(spec) { ... } // satisfies Planner automatically\n}"
+  },
+  {
+    "id": "goroutines",
+    "icon": "🧵",
+    "title": "Goroutines vs async/await",
+    "badge": "Go",
+    "desc": "Goroutines are cheap green threads multiplexed across OS cores. traCtl uses them to run workflow steps truly in parallel — not cooperatively like Node.js event loop.",
+    "nodeEq": "// Node: Promise.all([step1(), step2()])\n// Go: go step1(); go step2()\n// + sync.WaitGroup to wait for both\n// Key diff: Go is truly parallel (multi-core)"
+  },
+  {
+    "id": "mutex",
+    "icon": "🔒",
+    "title": "sync.RWMutex",
+    "badge": "Go",
+    "desc": "Protects shared maps (stepResults, vars) from concurrent goroutine races. <code>RLock()</code> allows many simultaneous readers. <code>Lock()</code> is exclusive write access.",
+    "nodeEq": "// Node: N/A — single threaded, no races\n// Go is truly parallel so you MUST protect\n// shared state — the mutex is mandatory\n// Not optional 'best practice'"
+  },
+  {
+    "id": "embed",
+    "icon": "📦",
+    "title": "embed.FS — Binary Includes Files",
+    "badge": "Go",
+    "desc": "The compiled binary includes the entire <code>dist/</code> folder baked in via <code>//go:embed</code> directive. Deploy a single file — no external assets needed.",
+    "nodeEq": "// Node: like pkg or nexe bundling\n// frontend files into the executable\n// Similar to: __webpack_public_path__\n// but baked at Go compile time"
+  },
+  {
+    "id": "context",
+    "icon": "⏱️",
+    "title": "context.Context",
+    "badge": "Go",
+    "desc": "Passed as first arg to every async function. Carries cancellation signals and deadlines. When a parent timeout fires, all child operations cancel automatically via the same context.",
+    "nodeEq": "// Node: AbortController + AbortSignal\n// ctx.Done() === signal.aborted\n// context.WithTimeout(5s) ===\n//   AbortSignal.timeout(5000)"
+  },
+  {
+    "id": "channels",
+    "icon": "📢",
+    "title": "Channels as Semaphores",
+    "badge": "Go",
+    "desc": "A buffered channel of size N acts as a semaphore — only N goroutines can hold a slot simultaneously. traCtl uses this to cap concurrent script executions.",
+    "nodeEq": "// Node: p-limit(N)\nconst limit = pLimit(N)\nsteps.map(s => limit(() => run(s)))\n// Go: make(chan struct{}, N)\n// acquire: sem <- struct{}{}\n// release: <-sem"
+  },
+  {
+    "id": "errors",
+    "icon": "❌",
+    "title": "Error Handling (No throw)",
+    "badge": "Go",
+    "desc": "Go functions return <code>(value, error)</code>. You check every error explicitly — there's no try/catch. <code>golangci-lint</code> fails the build if you ignore an error.",
+    "nodeEq": "// Node analogy (await-to style):\nconst [err, result] = await to(doThing())\nif (err) return handleErr(err)\n// Go forces this pattern EVERYWHERE\n// No implicit exception propagation"
+  },
+  {
+    "id": "struct-tags",
+    "icon": "🏷️",
+    "title": "Struct Tags (JSON/YAML)",
+    "badge": "Go",
+    "desc": "Backtick annotations on struct fields control JSON/YAML key names and <code>omitempty</code> behaviour. Like <code>@JsonProperty</code> in Java or <code>@Expose</code> in class-transformer.",
+    "nodeEq": "// Node: class-transformer\n@Expose({ name: 'schema_version' })\nschemaVersion: number\n\n// Go:\nSchemaVersion int `yaml:\"schemaVersion\" json:\"schemaVersion,omitempty\"`"
+  },
+  {
+    "id": "di",
+    "icon": "💉",
+    "title": "Dependency Injection via Interfaces",
+    "badge": "Go",
+    "desc": "<code>engine.Config</code> has optional fields <code>Planner</code>, <code>Compiler</code>, <code>Evaluator</code>. In tests inject mocks; in production leave nil (defaults used). No DI framework needed.",
+    "nodeEq": "// Node: like NestJS @Injectable()\n// or passing jest.fn() mocks in tests\ncfg.planner = mockPlanner // test\ncfg.planner = nil         // production (uses real)"
+  },
+  {
+    "id": "wasm-bridge",
+    "icon": "🌊",
+    "title": "syscall/js (WASM Bridge)",
+    "badge": "Go",
+    "desc": "Go code compiled to WASM registers JavaScript-callable functions via <code>js.Global().Set()</code>. The bridge file makes Go engine functions available as <code>window.tractl.*</code> globals.",
+    "nodeEq": "// Node: like Rust wasm-bindgen\n// or N-API native addons\n// Registers Go fns as JS globals\n// window.tractl.run(doc) → Go engine"
+  },
+  {
+    "id": "ldflags",
+    "icon": "🔗",
+    "title": "Build Injection via -ldflags",
+    "badge": "Go",
+    "desc": "goreleaser injects <code>Version</code>, <code>Commit</code>, <code>BuildTime</code> into the binary at link time. No config file or env var at runtime — the value is baked into the binary.",
+    "nodeEq": "// Node: Webpack DefinePlugin\n// new webpack.DefinePlugin({\n//   'process.env.VERSION': '\"1.2.3\"'\n// })\n// Baked at build time, not runtime"
+  },
+  {
+    "id": "topo-sort",
+    "icon": "🔄",
+    "title": "Topological Sort (DAG)",
+    "badge": "Algorithm",
+    "desc": "Step ordering uses DFS-based topological sort on <code>dependsOn</code> edges. Steps with no edges between them form a 'wave' and run in parallel. Cycle = validation error.",
+    "nodeEq": "// Like npm dependency resolution\n// or Webpack module load ordering\n// DAG = Directed Acyclic Graph\n// Cycle detection: if you visit a\n// node twice during DFS → error"
+  }
+]

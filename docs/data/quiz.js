@@ -1,0 +1,154 @@
+window.QUIZ_DATA = [
+  {
+    "id": "q1",
+    "question": "You write a step with <code>dependsOn: [step-a, step-b]</code>. What does this guarantee?",
+    "options": [
+      {
+        "text": "step-a runs before step-b before this step (strict sequential chain)",
+        "correct": false
+      },
+      {
+        "text": "step-a AND step-b must both complete before this step; step-a and step-b may themselves run in parallel",
+        "correct": true
+      },
+      {
+        "text": "This step starts when step-a OR step-b finishes first (whichever is faster)",
+        "correct": false
+      }
+    ],
+    "explanation": "dependsOn is an AND condition \u2014 all listed steps must succeed. But step-a and step-b themselves may have no edge between them, so the scheduler runs them in the same wave (parallel). Only the boundary at <em>this</em> step is blocked."
+  },
+  {
+    "id": "q2",
+    "question": "An extract with <code>scope: workflow</code> vs <code>scope: step</code> \u2014 what's the practical difference?",
+    "options": [
+      {
+        "text": "scope:workflow persists to disk; scope:step is memory-only",
+        "correct": false
+      },
+      {
+        "text": "scope:workflow writes the value into the ExecutionContext's workflowVars map, making it available to all later steps via ${steps.id.extracts.name}; scope:step keeps it on the StepResult only",
+        "correct": true
+      },
+      {
+        "text": "There's no functional difference; scope is a documentation hint only",
+        "correct": false
+      }
+    ],
+    "explanation": "Scope controls where in the ExecutionContext the value is written. workflow \u2192 workflowVars map \u2192 readable by later steps. step \u2192 StepResult only, not promoted to the shared context. Always use workflow scope when a later step needs the value."
+  },
+  {
+    "id": "q3",
+    "question": "You're in a JS hook script. You call <code>tractl.setVar('token', 'abc')</code>. When does ExecutionContext actually get updated?",
+    "options": [
+      {
+        "text": "Immediately \u2014 tractl.setVar is a live reference into the Go ExecutionContext",
+        "correct": false
+      },
+      {
+        "text": "After the script finishes \u2014 mutations are queued in a MutationSet and applied in bulk under a mutex lock",
+        "correct": true
+      },
+      {
+        "text": "Never \u2014 scripts are read-only and cannot write to context",
+        "correct": false
+      }
+    ],
+    "explanation": "Scripts receive a FrozenContext (immutable deep copy). tractl.setVar() accumulates mutations in a MutationSet. Only after the script returns does the engine apply those mutations to the live ExecutionContext under a sync.Mutex. This prevents concurrent scripts from racing on the same map."
+  },
+  {
+    "id": "q4",
+    "question": "What exit code does the CLI return if the YAML file has a syntax error?",
+    "options": [
+      {
+        "text": "Exit 1 \u2014 the workflow 'failed'",
+        "correct": false
+      },
+      {
+        "text": "Exit 2 \u2014 a pipeline stage (parse) failed before any execution",
+        "correct": true
+      },
+      {
+        "text": "Exit 0 \u2014 traCtl never returns non-zero for config errors",
+        "correct": false
+      }
+    ],
+    "explanation": "Exit codes: 0 = all assertions passed, 1 = assertions failed (the workflow ran but checks failed), 2 = pipeline error (parse/validate/plan/compile failed \u2014 no execution happened). This lets CI scripts distinguish test failures from infrastructure/config problems."
+  },
+  {
+    "id": "q5",
+    "question": "You're adding a VS Code extension that calls the traCtl engine. What's the correct approach?",
+    "options": [
+      {
+        "text": "Fork cmd/tractl and modify it for VS Code IPC",
+        "correct": false
+      },
+      {
+        "text": "Run the local API server (cmd/localapi) and call localhost:7428 from the extension via HTTP fetch \u2014 the engine is already exposed as REST",
+        "correct": true
+      },
+      {
+        "text": "Import internal/engine directly into the VS Code extension's Go code",
+        "correct": false
+      }
+    ],
+    "explanation": "The local API surface (:7428) is purpose-built for exactly this use case \u2014 external tools calling the engine over HTTP. The extension makes standard fetch() calls to localhost:7428. Forking cmd/tractl would duplicate the engine unnecessarily. Importing internal/ packages violates the module boundary (internal packages can't be imported outside the module)."
+  },
+  {
+    "id": "q6",
+    "question": "An assertion has <code>severity: warning</code> and it fails. What happens to the step and to the run?",
+    "options": [
+      {
+        "text": "Step is marked failed; dependent steps are blocked; run exits 1",
+        "correct": false
+      },
+      {
+        "text": "Failure is recorded and visible in output, but the step is NOT marked failed; dependent steps proceed; run can still exit 0",
+        "correct": true
+      },
+      {
+        "text": "Warnings are silently ignored and don't appear in output",
+        "correct": false
+      }
+    ],
+    "explanation": "severity:warning is a soft check. It appears in diagnostic output so you can see it, but it doesn't affect step state or dependent step scheduling. Use it for 'should have' checks that shouldn't break the pipeline \u2014 e.g., an optional response header that's expected but not contractually required."
+  },
+  {
+    "id": "q7",
+    "question": "The cmd/server binary serves the web app. Does the Go engine code also live inside cmd/server?",
+    "options": [
+      {
+        "text": "Yes \u2014 cmd/server includes the engine so it can run workflows server-side",
+        "correct": false
+      },
+      {
+        "text": "No \u2014 cmd/server only serves static files. The engine runs in the browser via cmd/wasm (a separate .wasm binary the browser downloads)",
+        "correct": true
+      },
+      {
+        "text": "No \u2014 the engine only runs in cmd/localapi",
+        "correct": false
+      }
+    ],
+    "explanation": "cmd/server and cmd/wasm are separate binaries. cmd/server is a plain static file host with a /api/v1/status health endpoint \u2014 it has no engine logic. cmd/wasm is the Go engine compiled to WebAssembly. The browser downloads tractl.wasm and runs the engine locally. This is why there's no backend API call when you execute a workflow in the browser."
+  },
+  {
+    "id": "q8",
+    "question": "Why does ExecutionContext use sync.RWMutex? Can't you just use a regular map?",
+    "options": [
+      {
+        "text": "It's just a style preference; a regular map would work fine",
+        "correct": false
+      },
+      {
+        "text": "Go maps are NOT safe for concurrent reads+writes. Multiple goroutines (parallel steps) access the same map simultaneously, causing a runtime panic without a mutex",
+        "correct": true
+      },
+      {
+        "text": "Only needed on Windows; on Linux/Mac maps are thread-safe",
+        "correct": false
+      }
+    ],
+    "explanation": "In Node.js you never think about this (single-threaded event loop). In Go, if two goroutines write to the same map[string]string simultaneously, the runtime panics with 'concurrent map writes'. RLock() allows multiple simultaneous readers (parallel steps reading vars). Lock() is exclusive for writes (a step storing its result). This is a fundamental Go concurrency requirement \u2014 not optional."
+  }
+];

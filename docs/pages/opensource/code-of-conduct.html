@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../../">
+<link rel="stylesheet" href="style.css">
+<title>Code of Conduct — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <a href="pages/opensource/index.html">Open Source</a><span class="sep">/</span>
+      <span class="current">Code of Conduct</span>
+    </div>
+    <div class="page-title">Code of Conduct</div>
+    <div class="page-subtitle">Rendered from CODE_OF_CONDUCT.md — always in sync with the repo root file.</div>
+    <div id="coc-md"><p class="md-loading">Loading…</p></div>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+<script src="app.js"></script>
+<script>
+  initPage({ title: 'Code of Conduct' });
+  renderMarkdown('coc-md', '_raw/CODE_OF_CONDUCT.md');
+</script>
+</body>
+</html>

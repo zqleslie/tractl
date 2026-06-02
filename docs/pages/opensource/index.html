@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../../">
+<link rel="stylesheet" href="style.css">
+<title>Open Source — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <span class="current">Open Source</span>
+    </div>
+    <div class="page-title">Open Source</div>
+    <div class="page-subtitle">License, governance, community standards, and how the project is run.</div>
+
+    <div class="card-grid">
+      <a class="card" href="pages/opensource/license.html">
+        <h4>📄 License</h4>
+        <p>Apache License 2.0. Free to use, modify, and distribute with attribution.</p>
+      </a>
+      <a class="card" href="pages/opensource/code-of-conduct.html">
+        <h4>🤝 Code of Conduct</h4>
+        <p>Contributor Covenant v2.1. Expected behaviour, enforcement, reporting process.</p>
+      </a>
+      <a class="card" href="pages/opensource/security-policy.html">
+        <h4>🔐 Security Policy</h4>
+        <p>Responsible disclosure process, response timeline, what's in scope.</p>
+      </a>
+      <a class="card" href="pages/opensource/adrs.html">
+        <h4>📐 Architecture Decisions</h4>
+        <p>16 ADRs that govern all code. These are normative — read before contributing.</p>
+      </a>
+    </div>
+
+    <h2>Project Governance</h2>
+    <p>traCtl follows a maintainer-led governance model with a frozen architecture baseline.</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Document</th><th>Authority</th><th>What it controls</th></tr>
+        <tr><td>ADRs (<code>docs/adr/</code>)</td><td>Highest</td><td>Architecture decisions — cannot be overridden by code</td></tr>
+        <tr><td>Canonical specs (<code>docs/spec/</code>)</td><td>High</td><td>Wire formats, execution semantics</td></tr>
+        <tr><td>Terminology (<code>docs/spec/00_terminology.md</code>)</td><td>High</td><td>Vocabulary — no synonyms allowed</td></tr>
+        <tr><td>HLD (<code>docs/spec/02_hld.md</code>)</td><td>Medium</td><td>High-level design</td></tr>
+        <tr><td>Roadmap</td><td>Medium</td><td>Phase status and milestones</td></tr>
+        <tr><td>CONTRIBUTING.md</td><td>Standard</td><td>Day-to-day contribution process</td></tr>
+      </table>
+    </div>
+    <p>Conflicts resolve <strong>upward</strong> — if your code contradicts an ADR, the code is wrong, not the ADR. Open an <code>arch-conflict</code> issue if you believe an ADR needs updating.</p>
+
+    <h2>Dependency Notices</h2>
+    <p>traCtl includes third-party software. See <code>NOTICE</code> at the repo root for attribution. Key dependencies and their licences:</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Dependency</th><th>Licence</th><th>Used for</th></tr>
+        <tr><td>goja</td><td>MIT</td><td>JavaScript sandbox engine</td></tr>
+        <tr><td>gjson</td><td>MIT</td><td>JSONPath evaluation</td></tr>
+        <tr><td>ulid/v2</td><td>Apache 2.0</td><td>Unique ID generation</td></tr>
+        <tr><td>yaml.v3</td><td>MIT/Apache</td><td>YAML parsing</td></tr>
+        <tr><td>Wails v2</td><td>MIT</td><td>Desktop app framework</td></tr>
+        <tr><td>React</td><td>MIT</td><td>Frontend UI framework</td></tr>
+        <tr><td>Zustand</td><td>MIT</td><td>Frontend state management</td></tr>
+      </table>
+    </div>
+
+  </main>
+</div>
+<script src="app.js"></script>
+<script>initPage({ title: 'Open Source' });</script>
+</body>
+</html>

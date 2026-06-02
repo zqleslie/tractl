@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../">
+<link rel="stylesheet" href="style.css">
+<title>Go for JS Devs — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <span class="current">Go for JS Devs</span>
+    </div>
+    <div class="page-title">Go Concepts for JS Developers</div>
+    <div class="page-subtitle">Every Go pattern used in traCtl — mapped to its Node.js equivalent so you can read the codebase without a Go book.</div>
+
+    <div class="callout tip">
+      <p><strong>How to use this page:</strong> Each card shows a Go concept, where it's used in traCtl, and the Node.js equivalent. If you see something in the code you don't recognise, find the concept here first.</p>
+    </div>
+
+    <div id="concepts-grid" class="concept-grid">
+      <p class="md-loading">Loading…</p>
+    </div>
+
+    <h2>Key Differences That Trip JS Developers Up</h2>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">Go maps are NOT safe for concurrent access <em class="chevron">▼</em></div>
+      <div class="accordion-body">
+        <p>In Node.js you never think about concurrent map access — there's only one thread. In Go, if two goroutines write to the same <code>map[string]string</code> simultaneously, the runtime <strong>panics</strong> with "concurrent map writes". That's why <code>ExecutionContext</code> wraps all its maps in a <code>sync.RWMutex</code>. This is not optional best practice — it's required for correctness.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">Why goja instead of a Node.js/V8 binding? <em class="chevron">▼</em></div>
+      <div class="accordion-body">
+        <p>V8 is a C++ library. Embedding it into a Go program creates a large cross-compilation dependency — and you can't compile a WASM binary that contains another WASM runtime inside it. <strong>goja</strong> is a pure-Go ES5+ JavaScript engine: no C dependencies, cross-compiles to any target Go supports (including WASM), and is fast enough for small hook scripts. The tradeoff is no ES modules and limited ES2020+ features.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">What does "no panic" mean in practice? <em class="chevron">▼</em></div>
+      <div class="accordion-body">
+        <p>Go's <code>panic()</code> is like an uncaught exception that unwinds the stack. In production Go servers you add a <code>recover()</code> middleware. traCtl's engine is designed to <strong>never panic</strong> in the critical path — every error lands in <code>RunResult.ParseError</code>, <code>RunResult.ValidationError</code>, etc. Exit code 2 means "something in the pipeline failed" — useful in CI to distinguish a broken config file from a failing test.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">Go interfaces vs TypeScript interfaces — the key difference <em class="chevron">▼</em></div>
+      <div class="accordion-body">
+        <p>TypeScript uses structural typing but you still need to explicitly import and reference the interface type. Go interfaces are <strong>implicitly satisfied</strong> — if a struct has the right methods, it implements the interface automatically, with zero coupling between the struct and the interface definition. This is how the engine can accept mock implementations in tests without any changes to the production types.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">Go modules vs npm packages — what's internal/? <em class="chevron">▼</em></div>
+      <div class="accordion-body">
+        <p>In Go, a directory named <code>internal/</code> is enforced by the compiler — code inside it can only be imported by code in the same module (same <code>go.mod</code>). It's like <code>private</code> at the package level. The public SDK surface lives in <code>pkg/</code> (importable by anyone). This is why you'll never see <code>import "github.com/tractl/tractl/internal/engine"</code> in a downstream project — the compiler rejects it.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+<script src="data/concepts.js"></script>
+<script src="app.js"></script>
+<script>
+  initPage({ title: 'Go for JS Devs' });
+
+  async function loadConcepts() {
+    const items = await getData('CONCEPTS_DATA', 'data/concepts.json');
+    const grid = document.getElementById('concepts-grid');
+    grid.innerHTML = items.map(c => `
+      <div class="concept">
+        <div class="concept-header">
+          <span class="concept-icon">${c.icon}</span>
+          <h4>${c.title}</h4>
+          <span class="go-badge">${c.badge}</span>
+        </div>
+        <p>${c.desc}</p>
+        <div class="node-eq">${escHtml(c.nodeEq)}</div>
+      </div>`).join('');
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  loadConcepts();
+</script>
+</body>
+</html>
