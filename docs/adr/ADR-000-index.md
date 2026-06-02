@@ -48,6 +48,12 @@ Conflicts resolve upward.
 | [ADR-009](ADR-009-packaging-deployment-model.md) | Packaging & Deployment Model | Accepted | Deployment topology must not change canonical workflow semantics |
 | [ADR-010](ADR-010-documentation-governance-model.md) | Documentation Governance Model | Accepted | Normative hierarchy with upward conflict resolution |
 | [ADR-011](ADR-011-capability-contract-compatibility-model.md) | Capability Contract & Compatibility Model | Accepted | Capabilities are versioned semantic contracts, not symbolic labels |
+| [ADR-012](ADR-012-multi-surface-delivery-model.md) | Multi-Surface Delivery Model | Accepted | Same workflow definition, same execution semantics across all surfaces |
+| [ADR-013](ADR-013-traffic-acquisition-capture-architecture.md) | Traffic Acquisition & Capture Architecture | Accepted | Traffic capture is acquisition-layer concern, not execution-layer |
+| [ADR-014](ADR-014-observability-traffic-diagnostics-model.md) | Observability & Traffic Diagnostics Model | Accepted | Diagnostics are emitted as events; collection decoupled from execution |
+| [ADR-015](ADR-015-packaging-distribution-strategy.md) | Packaging & Distribution Strategy | Accepted | Single binary per surface; no runtime dependencies |
+| [ADR-016](ADR-016-ui-architecture-model.md) | UI Architecture Model | Accepted | Shared React in frontend/; transport-agnostic components; surface adapters in platform/ |
+| [ADR-017](ADR-017-request-dto-and-protocol-surface-contract.md) | Request DTO & Protocol Surface Contract | Accepted | RequestDef is the public API contract for single-request execution; Protocol field required pre-release |
 
 ---
 

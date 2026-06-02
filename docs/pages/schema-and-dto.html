@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../">
+<link rel="stylesheet" href="style.css">
+<title>Schema & DTOs — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <span class="current">Schema & DTOs</span>
+    </div>
+
+    <div class="page-title">Schema &amp; DTOs</div>
+    <div class="page-subtitle">Where the schema is defined, what DTOs exist on each surface, and how data moves between them.</div>
+
+    <div class="callout info">
+      <p><strong>Core rule (ADR-001):</strong> Every input — regardless of surface — is eventually normalised into a single canonical Go struct: <code>*spec.TraCtlSpec</code>. That struct is the only thing the engine ever executes. DTOs are surface-level conveniences; the spec is the source of truth.</p>
+    </div>
+
+    <div class="callout warn">
+      <p><strong>ADR-017 (accepted 2026-06-02):</strong> <code>RequestDef</code> is the public API contract for single-request execution — not just a frontend DTO. A <code>Protocol string</code> field is required before the first release. The frontend must own its TypeScript mapper and not route through the Go mapper. See <a href="pages/opensource/adrs.html">ADR-017</a> for the full decision.</p>
+    </div>
+
+    <!-- ── Schema definition ── -->
+    <h2>1. Where the Schema is Defined</h2>
+    <p>The schema has <strong>two authoritative sources</strong> that must stay in sync:</p>
+
+    <div class="card-grid-2">
+      <div class="card critical">
+        <h4>📄 Go structs — <code>internal/spec/spec.go</code></h4>
+        <p>The canonical in-memory representation. Every field has both <code>json:</code> and <code>yaml:</code> struct tags that define the exact wire format key names. This is the <strong>only</strong> place that controls what field names the YAML/JSON files accept.</p>
+        <div class="card-path">internal/spec/spec.go — ~350 lines, fully godoc'd</div>
+      </div>
+      <div class="card critical">
+        <h4>📋 Spec document — <code>docs/spec/tractl_spec.md</code></h4>
+        <p>The human-readable specification. Section numbers referenced in every godoc comment (e.g. <em>§7.1</em>). If code and spec disagree, the spec wins — open an <code>arch-conflict</code> issue.</p>
+        <div class="card-path">docs/spec/tractl_spec.md — normative, version-controlled</div>
+      </div>
+    </div>
+
+    <h3>Key types in <code>internal/spec/spec.go</code></h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Type</th><th>YAML/JSON key</th><th>What it represents</th></tr>
+        <tr><td><code>TraCtlSpec</code></td><td><em>document root</em></td><td>The entire workflow file. Contains capabilities, variables, and workflows list.</td></tr>
+        <tr><td><code>Workflow</code></td><td><code>workflows[]</code></td><td>One workflow: its steps, concurrency, failurePolicy, hooks, variables.</td></tr>
+        <tr><td><code>Step</code></td><td><code>steps[]</code></td><td>One step: kind, dependsOn, when, request/script, assertions, extracts, retry, timeout.</td></tr>
+        <tr><td><code>RequestDescriptor</code></td><td><code>request</code></td><td>Protocol, target URL, operation (HTTP method), headers, body.</td></tr>
+        <tr><td><code>Assertion</code></td><td><code>assertions[]</code></td><td>id, kind, op, target, expected, severity.</td></tr>
+        <tr><td><code>Extract</code></td><td><code>extracts[]</code></td><td>id, source, path, as (variable name), scope.</td></tr>
+        <tr><td><code>DiagnosticsConfig</code></td><td><code>diagnostics</code></td><td>Opt-in diagnostics: enabled, kinds, captureBody, retention.</td></tr>
+        <tr><td><code>Script</code></td><td><code>hooks.*</code></td><td>language, source (inline JS), inputs map.</td></tr>
+        <tr><td><code>RetryPolicy</code></td><td><code>retry</code></td><td>maxAttempts, backoff strategy, delay, retryOn conditions.</td></tr>
+      </table>
+    </div>
+
+    <h3>Struct tag convention</h3>
+    <pre><span class="co">// From internal/spec/spec.go — both tags always present</span>
+<span class="kw">type</span> <span class="ty">Step</span> <span class="kw">struct</span> {
+    ID        <span class="ty">string</span>   <span class="str">`json:"id"                  yaml:"id"`</span>
+    Kind      <span class="ty">string</span>   <span class="str">`json:"kind"                yaml:"kind"`</span>
+    DependsOn []<span class="ty">string</span> <span class="str">`json:"dependsOn,omitempty" yaml:"dependsOn,omitempty"`</span>
+    When      <span class="ty">string</span>   <span class="str">`json:"when,omitempty"      yaml:"when,omitempty"`</span>
+    <span class="co">// ULID is system-assigned by the parser — never authored</span>
+    ULID      <span class="ty">string</span>   <span class="str">`yaml:"-" json:"_ulid,omitempty"`</span>
+}</pre>
+
+    <!-- ── DTO layer ── -->
+    <h2>2. The DTO Layer — <code>internal/localapi/types.go</code></h2>
+    <p><code>RequestDef</code> is the DTO the frontend sends when a user builds a request in the UI. It is a <strong>UI-friendly representation</strong> — flat, editor-oriented — not the canonical spec format. The mapper converts it to a valid <code>TraCtlSpec</code> before running.</p>
+
+    <div class="callout warn">
+      <p><strong>RequestDef ≠ TraCtlSpec.</strong> RequestDef is optimised for what the Request Editor screen needs to display and edit. TraCtlSpec is optimised for execution. The mapper (<code>request_mapper.go</code>) translates between them.</p>
+    </div>
+
+    <div class="tabs">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(this,'tab-req')">RequestDef (DTO)</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-spec')">TraCtlSpec (canonical)</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-diff')">Key Differences</button>
+      </div>
+
+      <div id="tab-req" class="tab-pane active">
+        <p>Lives in <code>internal/localapi/types.go</code>. This is the <strong>public API contract</strong> for single-request execution — used by IDE plugins, external tools, and the frontend. <span class="tag blue">ADR-017</span></p>
+        <pre><span class="kw">type</span> <span class="ty">RequestDef</span> <span class="kw">struct</span> {
+    Protocol   <span class="ty">string</span>          <span class="str">`json:"protocol,omitempty"`</span> <span class="co">// ADR-017: default "http"</span>
+    ID         <span class="ty">string</span>          <span class="str">`json:"id"`</span>
+    Name       <span class="ty">string</span>          <span class="str">`json:"name"`</span>
+    Method     <span class="ty">string</span>          <span class="str">`json:"method"`</span>         <span class="co">// "GET", "POST", etc.</span>
+    URL        <span class="ty">string</span>          <span class="str">`json:"url"`</span>
+    Params     []<span class="ty">KVRow</span>         <span class="str">`json:"params"`</span>         <span class="co">// query params as rows</span>
+    Headers    []<span class="ty">KVRow</span>         <span class="str">`json:"headers"`</span>        <span class="co">// key/value pairs with enabled flag</span>
+    Body       *<span class="ty">BodyDef</span>        <span class="str">`json:"body"`</span>
+    Auth       *<span class="ty">AuthDef</span>        <span class="str">`json:"auth"`</span>
+    PreScript  <span class="ty">string</span>          <span class="str">`json:"preScript"`</span>      <span class="co">// JS run before request</span>
+    PostScript <span class="ty">string</span>          <span class="str">`json:"postScript"`</span>     <span class="co">// JS run after request</span>
+    Assertions []<span class="ty">AssertionDef</span>  <span class="str">`json:"assertions"`</span>
+    Extracts   []<span class="ty">ExtractDef</span>    <span class="str">`json:"extracts"`</span>
+    Settings   <span class="ty">RequestSettings</span> <span class="str">`json:"settings"`</span>       <span class="co">// timeout, failurePolicy, retry</span>
+    Env        map[<span class="ty">string</span>]<span class="ty">string</span> <span class="str">`json:"env"`</span>           <span class="co">// variable overrides</span>
+}
+
+<span class="kw">type</span> <span class="ty">KVRow</span> <span class="kw">struct</span> {
+    Enabled <span class="ty">bool</span>   <span class="str">`json:"enabled"`</span>   <span class="co">// toggled off rows are NOT sent</span>
+    Key     <span class="ty">string</span> <span class="str">`json:"key"`</span>
+    Value   <span class="ty">string</span> <span class="str">`json:"value"`</span>
+}</pre>
+      </div>
+
+      <div id="tab-spec" class="tab-pane">
+        <p>Lives in <code>internal/spec/spec.go</code>. Produced by the parser from YAML/JSON files, or built by the mapper from a <code>RequestDef</code>.</p>
+        <pre><span class="kw">type</span> <span class="ty">TraCtlSpec</span> <span class="kw">struct</span> {
+    SchemaVersion        <span class="ty">int</span>               <span class="co">// always 1</span>
+    Capabilities         []<span class="ty">string</span>           <span class="co">// ["protocol.http"]</span>
+    Variables            map[<span class="ty">string</span>]<span class="ty">string</span>
+    Workflows            []<span class="ty">Workflow</span>
+}
+
+<span class="kw">type</span> <span class="ty">Workflow</span> <span class="kw">struct</span> {
+    ID            <span class="ty">string</span>
+    Steps         []<span class="ty">Step</span>
+    FailurePolicy <span class="ty">FailurePolicy</span>   <span class="co">// "resilient" | "failFast"</span>
+    Concurrency   <span class="ty">int</span>
+    Hooks         *<span class="ty">WorkflowHooks</span>
+}
+
+<span class="kw">type</span> <span class="ty">Step</span> <span class="kw">struct</span> {
+    ID         <span class="ty">string</span>
+    Kind       <span class="ty">string</span>             <span class="co">// "request" | "script" | ...</span>
+    DependsOn  []<span class="ty">string</span>
+    Request    *<span class="ty">RequestDescriptor</span>
+    Assertions []<span class="ty">Assertion</span>
+    Extracts   []<span class="ty">Extract</span>
+    Retry      *<span class="ty">RetryPolicy</span>
+    Timeout    <span class="ty">string</span>             <span class="co">// ISO 8601, e.g. "PT30S"</span>
+    Hooks      *<span class="ty">StepHooks</span>
+}</pre>
+      </div>
+
+      <div id="tab-diff" class="tab-pane">
+        <div class="table-wrap">
+          <table>
+            <tr><th>Aspect</th><th>RequestDef (DTO)</th><th>TraCtlSpec (canonical)</th></tr>
+            <tr><td><strong>Headers</strong></td><td><code>[]KVRow{enabled, key, value}</code> — toggled rows excluded by mapper</td><td><code>map[string]string</code> — already filtered, ready for HTTP</td></tr>
+            <tr><td><strong>Method</strong></td><td>Top-level <code>Method</code> string</td><td>Nested inside <code>RequestDescriptor.Operation</code></td></tr>
+            <tr><td><strong>URL</strong></td><td>Top-level <code>URL</code> + separate <code>Params []KVRow</code></td><td>Single <code>RequestDescriptor.Target</code> with query string merged</td></tr>
+            <tr><td><strong>Scripts</strong></td><td>Flat <code>PreScript</code> / <code>PostScript</code> strings</td><td>Nested in <code>Step.Hooks.BeforeStep</code> / <code>AfterStep</code></td></tr>
+            <tr><td><strong>Timeout</strong></td><td><code>Settings.TimeoutMs</code> (milliseconds int)</td><td><code>Step.Timeout</code> as ISO 8601 (<code>"PT30S"</code>)</td></tr>
+            <tr><td><strong>Retry</strong></td><td><code>Settings.Retry</code> with <code>DelayMs</code> int</td><td><code>Step.Retry</code> with <code>Delay</code> ISO 8601 string</td></tr>
+            <tr><td><strong>Variables</strong></td><td>Flat <code>Env map[string]string</code></td><td><code>TraCtlSpec.Variables</code> map</td></tr>
+            <tr><td><strong>Scope</strong></td><td>Represents one request</td><td>Represents a full workflow document with one step</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Mapper ── -->
+    <h2>3. The Mapper — Two Separate Paths (ADR-017)</h2>
+    <div class="callout info">
+      <p><strong>ADR-017 §3:</strong> Two mapper paths serve two distinct caller populations. The Go mapper serves external HTTP callers. The TypeScript mapper serves the React frontend. They must produce equivalent output but are owned and maintained independently.</p>
+    </div>
+    <div class="card-grid-2">
+      <div class="card critical">
+        <h4>Go mapper — for external callers</h4>
+        <p><code>internal/localapi/request_mapper.go</code> — converts <code>RequestDef</code> JSON to a single-step YAML spec document. Serves IDE plugins, curl, CI scripts calling <code>POST /api/v1/run</code>.</p>
+      </div>
+      <div class="card frontend">
+        <h4>TypeScript mapper — for the frontend</h4>
+        <p><code>frontend/src/platform/mappers/requestDefToDocument.ts</code> — converts <code>RequestDef</code> to spec-shaped JSON, sends as <code>WorkflowRunRequest</code>. Frontend must NOT route through the Go mapper.</p>
+      </div>
+    </div>
+    <p><code>requestDefToDocument()</code> in <code>internal/localapi/request_mapper.go</code> converts a <code>RequestDef</code> into a <code>map[string]any</code> that the YAML marshaller turns into a full <code>TraCtlSpec</code>. It handles all the impedance mismatches shown above.</p>
+
+    <pre><span class="co">// Simplified flow inside requestDefToDocument()</span>
+
+<span class="co">// 1. Merge params into URL</span>
+target := req.URL + <span class="fn">buildQueryString</span>(req.Params)
+
+<span class="co">// 2. Filter disabled header rows</span>
+headers := <span class="fn">enabledKVMap</span>(req.Headers)  <span class="co">// map[string]string, only enabled=true rows</span>
+
+<span class="co">// 3. Convert timeoutMs → ISO 8601</span>
+timeout := fmt.Sprintf(<span class="str">"PT%dS"</span>, req.Settings.TimeoutMs/<span class="nu">1000</span>)
+
+<span class="co">// 4. Wrap pre/post scripts into step hooks</span>
+hooks := map[<span class="ty">string</span>]<span class="ty">any</span>{
+    <span class="str">"beforeStep"</span>: <span class="ty">Script</span>{Language: <span class="str">"js"</span>, Source: req.PreScript},
+    <span class="str">"afterStep"</span>:  <span class="ty">Script</span>{Language: <span class="str">"js"</span>, Source: req.PostScript},
+}
+
+<span class="co">// 5. Wrap into a one-step TraCtlSpec document</span>
+<span class="kw">return</span> map[<span class="ty">string</span>]<span class="ty">any</span>{
+    <span class="str">"schemaVersion"</span>: <span class="nu">1</span>,
+    <span class="str">"capabilities"</span>:  []<span class="ty">string</span>{<span class="str">"protocol.http"</span>},
+    <span class="str">"workflows"</span>: []map[<span class="ty">string</span>]<span class="ty">any</span>{{
+        <span class="str">"id"</span>: <span class="str">"run"</span>, <span class="str">"steps"</span>: []map[<span class="ty">string</span>]<span class="ty">any</span>{step},
+    }},
+}</pre>
+
+    <!-- ── Per-surface DTO flow ── -->
+    <h2>4. DTO Flow on Each Surface</h2>
+
+    <div class="tabs">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab(this,'tab-cli-dto')">CLI</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-wasm-dto')">Web WASM</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-desk-dto')">Desktop</button>
+        <button class="tab-btn" onclick="switchTab(this,'tab-api-dto')">Local API</button>
+      </div>
+
+      <div id="tab-cli-dto" class="tab-pane active">
+        <p><strong>No DTO.</strong> The CLI reads the raw YAML/JSON file bytes and passes them directly to the parser. The spec structs are populated by <code>yaml.Unmarshal</code> using the struct tags.</p>
+        <pre><span class="co">// cmd/tractl/run_command.go</span>
+bytes, _ := os.ReadFile(cfg.WorkflowFile)
+<span class="co">// bytes → parser.Parse() → *spec.TraCtlSpec → engine.Run()</span></pre>
+        <div class="callout tip"><p>No mapping step. File bytes → <code>*spec.TraCtlSpec</code> directly via the parser.</p></div>
+      </div>
+
+      <div id="tab-wasm-dto" class="tab-pane">
+        <p>The frontend sends a <strong>JSON-serialised <code>RequestDef</code></strong> as a string to <code>window.tractl.runRequest()</code>. The WASM handler deserialises it, calls <code>requestDefToDocument()</code> to convert it to a spec document string, then feeds that into the engine.</p>
+        <pre><span class="co">// Frontend (TypeScript)</span>
+<span class="kw">const</span> json = JSON.<span class="fn">stringify</span>(requestDef)  <span class="co">// RequestDef → JSON string</span>
+<span class="kw">const</span> result = <span class="kw">await</span> window.tractl.<span class="fn">runRequest</span>(json)
+
+<span class="co">// WASM handler (Go, cmd/wasm/handlers.go)</span>
+<span class="kw">var</span> req localapi.RequestDef
+json.<span class="fn">Unmarshal</span>([]byte(args[<span class="nu">0</span>].String()), &req)
+doc, _ := localapi.<span class="fn">RequestDefToYAML</span>(req)   <span class="co">// → YAML spec document</span>
+result := engine.<span class="fn">RunDocument</span>(doc, <span class="str">"yaml"</span>) <span class="co">// → engine executes it</span>
+<span class="kw">return</span> json.<span class="fn">Marshal</span>(localapi.<span class="fn">MapRunResult</span>(&result))</pre>
+        <p>Transport: <strong>JSON string over <code>syscall/js</code></strong> — no HTTP.</p>
+      </div>
+
+      <div id="tab-desk-dto" class="tab-pane">
+        <p>Identical logic to WASM but transported over <strong>Wails IPC</strong>. Wails automatically serialises Go method arguments and return values as JSON.</p>
+        <pre><span class="co">// Frontend (TypeScript)</span>
+<span class="kw">const</span> result = <span class="kw">await</span> window.wails.<span class="fn">RunRequest</span>(JSON.<span class="fn">stringify</span>(requestDef))
+
+<span class="co">// Go (cmd/desktop/app.go)</span>
+<span class="kw">func</span> (a *App) <span class="fn">RunRequest</span>(reqJSON <span class="ty">string</span>) <span class="ty">string</span> {
+    <span class="kw">var</span> req localapi.RequestDef
+    json.<span class="fn">Unmarshal</span>([]byte(reqJSON), &req)
+    doc, _ := localapi.<span class="fn">RequestDefToYAML</span>(req)
+    result := a.eng.<span class="fn">RunDocument</span>(doc, <span class="str">"yaml"</span>)
+    b, _ := json.<span class="fn">Marshal</span>(localapi.<span class="fn">MapRunResult</span>(&result))
+    <span class="kw">return</span> <span class="ty">string</span>(b)
+}</pre>
+        <p>Transport: <strong>Wails IPC (JSON over WebView bridge)</strong> — no HTTP.</p>
+      </div>
+
+      <div id="tab-api-dto" class="tab-pane">
+        <p>The frontend POSTs a JSON body containing a <code>RequestDef</code>. The handler in <code>handler_run.go</code> deserialises it and follows the same mapper path.</p>
+        <pre><span class="co">// Frontend (TypeScript)</span>
+<span class="fn">fetch</span>(<span class="str">'http://localhost:7428/api/v1/run'</span>, {
+  method: <span class="str">'POST'</span>,
+  body: JSON.<span class="fn">stringify</span>(requestDef)   <span class="co">// RequestDef as JSON body</span>
+})
+
+<span class="co">// Go (internal/localapi/handler_run.go)</span>
+<span class="kw">var</span> req RequestDef
+json.<span class="fn">NewDecoder</span>(r.Body).<span class="fn">Decode</span>(&req)
+doc, _ := <span class="fn">RequestDefToYAML</span>(req)          <span class="co">// RequestDef → YAML spec doc</span>
+result := eng.<span class="fn">RunDocument</span>(doc, <span class="str">"yaml"</span>)  <span class="co">// engine executes it</span>
+<span class="fn">jsonResponse</span>(w, <span class="nu">200</span>, <span class="fn">MapRunResult</span>(&result))</pre>
+        <p>Transport: <strong>HTTP POST JSON body to <code>:7428</code></strong>.</p>
+      </div>
+    </div>
+
+    <!-- ── Full flow diagram ── -->
+    <h2>5. Full Data Flow Diagram</h2>
+    <div class="diagram-wrap">
+      <div class="mermaid">
+flowchart TD
+    YF["📄 YAML/JSON File\n(authored by user)"]
+    RD["RequestDef\ninternal/localapi/types.go"]
+    TSRD["TypeScript RequestDef\nfrontend/src/types/requestDef.ts"]
+    MAPPER["request_mapper.go\nrequestDefToDocument()"]
+    DOCSTR["YAML doc string\n(one-step TraCtlSpec)"]
+    PARSER["parser\ninternal/parser"]
+    SPEC["*spec.TraCtlSpec\ninternal/spec/spec.go\nCANONICAL"]
+    ENGINE["engine.Run()"]
+    RESULT["RunResult\n→ MapRunResult()\n→ JSON response"]
+
+    YF -->|"CLI: file bytes"| PARSER
+    TSRD -->|"JSON serialise"| RD
+    RD --> MAPPER --> DOCSTR --> PARSER
+    PARSER --> SPEC --> ENGINE --> RESULT
+
+    style SPEC fill:#1a2520,stroke:#3fb950,color:#e6edf3
+    style ENGINE fill:#1c2230,stroke:#58a6ff,color:#e6edf3
+      </div>
+    </div>
+
+    <!-- ── TypeScript types ── -->
+    <h2>6. TypeScript Types (Frontend)</h2>
+    <p>The frontend has its own TypeScript equivalents of the Go types. These must be kept in sync manually when the Go types change.</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>TypeScript file</th><th>Mirrors Go type</th><th>Used by</th></tr>
+        <tr><td><code>types/requestDef.ts</code></td><td><code>localapi.RequestDef</code> + all sub-types</td><td>Request Editor screen, all platform adapters</td></tr>
+        <tr><td><code>types/workflow.ts</code></td><td><code>WorkflowRunSummary</code>, <code>StepResult</code></td><td>Execution store, Run History screen</td></tr>
+        <tr><td><code>components/request-editor/tractlSpecDocument</code></td><td><code>spec.Assertion</code>, <code>spec.Extract</code></td><td>Assertion and extract panels in the editor</td></tr>
+      </table>
+    </div>
+    <div class="callout warn">
+      <p><strong>No code generation.</strong> TypeScript types are hand-maintained mirrors of the Go types. If you add a field to <code>localapi.RequestDef</code> in Go, you must also add it to <code>types/requestDef.ts</code> — there is no automatic sync.</p>
+    </div>
+
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="app.js"></script>
+<script>
+  initPage({ title: 'Schema & DTOs' });
+  initTabs();
+</script>
+</body>
+</html>

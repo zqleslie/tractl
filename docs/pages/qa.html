@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="../">
+<link rel="stylesheet" href="style.css">
+<title>Q&amp;A — traCtl Dev Docs</title>
+</head>
+<body>
+<div id="site-header"></div>
+<div class="site-layout">
+  <nav id="site-nav"></nav>
+  <main>
+
+    <div class="breadcrumb">
+      <a href="index.html">Home</a><span class="sep">/</span>
+      <span class="current">Q&amp;A</span>
+    </div>
+
+    <div class="page-title">Developer Q&amp;A</div>
+    <div class="page-subtitle">Real questions from real onboarding. Precise answers with file references.</div>
+
+    <div class="callout info">
+      <p>Questions are grouped by topic. Each answer links to the relevant source file or doc page. If your question isn't here, open a GitHub Discussion — not an issue.</p>
+    </div>
+
+    <!-- ── Schema & DTOs ── -->
+    <h2>Schema &amp; DTOs</h2>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Why are there two separate structs — <code>RequestDef</code> and <code>TraCtlSpec</code>? Why not one? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p><strong>They serve different purposes at different layers.</strong></p>
+        <p><code>RequestDef</code> (<code>internal/localapi/types.go</code>) is the UI/API surface model — flat, HTTP-centric, designed for what a form or IDE plugin sends. It has an <code>enabled</code> flag on header rows, timeout in milliseconds, flat <code>PreScript</code>/<code>PostScript</code> strings.</p>
+        <p><code>TraCtlSpec</code> (<code>internal/spec/spec.go</code>) is the execution model — nested, protocol-neutral, designed for what the engine runs. Headers are a filtered <code>map[string]string</code>, timeout is ISO 8601, scripts are nested inside <code>StepHooks</code>.</p>
+        <p>If they were one struct, the engine would need to know about disabled rows and millisecond timeouts. The mapper (<code>request_mapper.go</code>) is the explicit translation boundary between them. See <a href="pages/schema-and-dto.html">Schema &amp; DTOs</a> for the full breakdown.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Why does <code>KVRow</code> have an <code>enabled</code> field? The spec doesn't have one. <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>UI ergonomics. The Request Editor lets users toggle a header or param row off without deleting it — useful when debugging ("disable this header and re-run"). The <code>enabled: false</code> row is preserved in the store so it can be toggled back on.</p>
+        <p>The mapper in <code>request_mapper.go</code> calls <code>enabledKVMap()</code> which filters out any row where <code>enabled == false</code> before building the <code>RequestDescriptor.Headers map[string]string</code>. The engine never sees disabled rows.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Why is the mapper in Go and not TypeScript? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>The Local API (<code>:7428</code>) is a public HTTP surface consumed by external tools — IDE plugins, curl scripts, CI tools — that are not TypeScript. Those callers send a <code>RequestDef</code> JSON and need the Go mapper to convert it to a spec document.</p>
+        <p>However, the React frontend <em>should not</em> go through the Go mapper. It already has TypeScript types and can map to a spec-shaped JSON object itself, then send it as a <code>WorkflowRunRequest</code>. This eliminates the manual sync between <code>localapi.RequestDef</code> (Go) and <code>types/requestDef.ts</code> (TypeScript).</p>
+        <p><strong>Correct split:</strong> Go mapper serves external HTTP callers. TypeScript mapper serves the frontend. They own their own conversion logic.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        What is <code>WorkflowRunRequest.Document</code>? Is it a file path? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>No — it is the <strong>raw content</strong> of the YAML/JSON file as a string. Not a path.</p>
+        <p>There are two separate run endpoints for this reason:</p>
+        <ul>
+          <li><code>POST /api/v1/run</code> — accepts a <strong>file path</strong>; Go reads the file from disk. Only usable when Go has filesystem access (Local API, Desktop, CLI).</li>
+          <li><code>POST /api/v1/workflows/run</code> — accepts the <strong>document content</strong> as a string. Works on all surfaces including WASM (where Go has no filesystem access).</li>
+        </ul>
+        <p>The word "document" in traCtl always means the spec content, not a file container. Same terminology used in ADR-001.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Will <code>RequestDef</code> need to change when GraphQL or gRPC is added? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p><strong>Decided — ADR-017 (2026-06-02).</strong> A <code>Protocol string</code> field is added to <code>RequestDef</code> before the first release. Default is <code>"http"</code> when empty — fully backward-compatible.</p>
+        <p>Protocol classification per ADR-017:</p>
+        <ul>
+          <li><strong>REST</strong> — no change. <code>protocol: "http"</code>.</li>
+          <li><strong>OData</strong> — no change. It is REST with <code>$filter</code>/<code>$select</code> query params.</li>
+          <li><strong>GraphQL</strong> — <code>encoding: "graphql"</code> added to <code>BodyDef</code> pre-release. Structured body <code>{query, variables, operationName}</code>.</li>
+          <li><strong>JSON-RPC</strong> — no change. Use <code>encoding: "json"</code> with envelope as content.</li>
+          <li><strong>SOAP</strong> — deferred to v1.1. Requires <code>encoding: "xml"</code> + XPath extractor.</li>
+          <li><strong>MCP</strong> — <code>extensionCall</code> step kind (Phase 4+). Not a <code>RequestDef</code> concern.</li>
+        </ul>
+        <p>Adding <code>Protocol</code> after v1 would be a breaking API change for every IDE plugin and external tool. Adding it now with a default of <code>"http"</code> future-proofs the contract permanently.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Why does <code>RequestDescriptor</code> use <code>Operation</code> instead of <code>Method</code>? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>Protocol neutrality. "Method" is an HTTP concept (GET, POST, DELETE). Other protocols use different terminology:</p>
+        <ul>
+          <li>HTTP → <code>operation: GET</code></li>
+          <li>gRPC → <code>operation: /UserService/GetUser</code></li>
+          <li>GraphQL → <code>operation: query</code> or <code>mutation</code></li>
+          <li>WebSocket → <code>operation: connect</code></li>
+        </ul>
+        <p><code>Operation</code> is the protocol-neutral field that carries whatever the protocol calls its action. The spec comment reads: "the optional protocol-level operation name". Using <code>Method</code> would hard-code HTTP semantics into what is meant to be a universal execution model.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        There is no code generation between Go types and TypeScript types. What is the risk? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>Manual sync risk. If you add a field to <code>localapi.RequestDef</code> in Go and forget to add it to <code>frontend/src/types/requestDef.ts</code>, the frontend silently ignores it (TypeScript gets <code>undefined</code>) and Go gets the zero value (empty string, 0, nil). No compile error, no runtime panic — just wrong behaviour that only shows up in testing.</p>
+        <p><strong>Mitigation today:</strong> The PR checklist in CONTRIBUTING.md requires updating TypeScript types when Go types change. There is no automated check.</p>
+        <p><strong>Long-term fix:</strong> Generate TypeScript types from Go structs using a tool like <a href="https://github.com/nicholasgasior/gsfmt" target="_blank">tygo</a> or a custom generator. This is not yet implemented — worth tracking as a future improvement.</p>
+      </div>
+    </div>
+
+    <!-- ── Engine & Pipeline ── -->
+    <h2>Engine &amp; Pipeline</h2>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        When does the UI use <code>RequestDef</code> vs <code>WorkflowRunRequest</code>? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>Two completely separate execution paths:</p>
+        <ul>
+          <li><strong>Request Editor screen</strong> — user builds one request in the UI form. Frontend constructs a <code>RequestDef</code> from form state. Calls <code>tractl.runRequest()</code> or <code>POST /api/v1/run</code>. The Go mapper wraps it into a one-step spec doc.</li>
+          <li><strong>WorkflowCanvas screen / running a YAML file</strong> — frontend has the full document content as a string. Sends <code>WorkflowRunRequest{ document: yamlString }</code>. Calls <code>tractl.run()</code> or <code>POST /api/v1/workflows/run</code>. No mapper involved — parser handles it directly.</li>
+        </ul>
+        <p><code>RequestDef</code> is never used when running a workflow file. <code>WorkflowRunRequest</code> is never used when running a single UI-built request.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Why can't a step depend on a step in a different workflow? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p><code>dependsOn</code> within a step only accepts IDs of other steps <em>in the same workflow</em>. Cross-workflow dependencies are declared at the workflow level — <code>workflow.dependsOn: [other-workflow-id]</code>.</p>
+        <p>This is by design: each workflow has its own <code>ExecutionContext</code> with isolated variable scopes. A step in workflow B cannot read extracted variables from workflow A's steps directly. Workflow-level <code>dependsOn</code> guarantees ordering but not variable sharing — that would require spec-scoped extracts (<code>scope: spec</code>).</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Why does the engine never panic? What happens on a parse error? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>The engine is designed to be called from any surface — CLI, WASM, Desktop, HTTP server. A panic in a server crashes the process. A panic in a WASM binary crashes the browser tab. So all errors are captured in return values instead.</p>
+        <p>Error fields in <code>RunResult</code> are mutually exclusive — only one can be non-empty:</p>
+        <ul>
+          <li><code>ParseError</code> — YAML/JSON syntax or format error</li>
+          <li><code>ValidationError</code> — spec is valid syntax but semantically wrong (cycle, missing field)</li>
+          <li><code>PlanError</code> — engine can't build an execution plan (unsupported capability)</li>
+        </ul>
+        <p>If any of these is non-empty, <code>Workflows</code> is empty — nothing executed. Exit code 2 on the CLI. The surface decides how to display the error.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        What is the difference between <code>failurePolicy: resilient</code> and <code>failFast</code>? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>Both mark the failed step as failed. The difference is what happens to other steps:</p>
+        <ul>
+          <li><strong>resilient (default)</strong> — passively skips steps that <em>depend on</em> the failed step. Independent branches (no edge to the failed step) continue running. The workflow finishes with a mix of passed, failed, and skipped steps.</li>
+          <li><strong>failFast</strong> — actively cancels the entire transitive dependency subgraph of the failed step AND all remaining unstarted steps. The workflow stops as fast as possible.</li>
+        </ul>
+        <p>Use <code>resilient</code> when you want maximum diagnostic coverage (see everything that fails). Use <code>failFast</code> when a failed step makes all subsequent results meaningless (e.g. auth step failed — no point testing anything else).</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        If two steps both extract into the same variable name at workflow scope, which wins? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>The step that runs <strong>last</strong> wins. Extracts are written to <code>ExecutionContext.workflowVars</code> under a mutex — last write wins, no conflict error is raised.</p>
+        <p>This is a silent overwrite — there is no warning. If two parallel steps both extract into <code>vars.token</code> at workflow scope, the result is non-deterministic depending on which step finishes last.</p>
+        <p><strong>Best practice:</strong> use unique variable names per step, or extract with <code>scope: step</code> and reference via <code>${steps.stepId.extracts.name}</code> instead of relying on workflow-scope variable names for values that change per step.</p>
+      </div>
+    </div>
+
+    <!-- ── Surfaces ── -->
+    <h2>Surfaces &amp; Platform Adapter</h2>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        <code>cmd/server</code> and <code>cmd/localapi</code> both exist. Why aren't they one binary? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>They do different things:</p>
+        <ul>
+          <li><code>cmd/server</code> — serves the React SPA as static files. Has no engine logic. When the browser loads the app, it downloads <code>tractl.wasm</code> and the engine runs <em>inside the browser</em>.</li>
+          <li><code>cmd/localapi</code> — runs the engine server-side on <code>:7428</code>. No frontend. External tools (IDE plugins, scripts) call it via HTTP.</li>
+        </ul>
+        <p>They are separate binaries because they serve different audiences. <code>cmd/server</code> is for hosting the web UI. <code>cmd/localapi</code> is for tooling integration. You might run both at the same time: server hosting the UI, and localapi for the VS Code extension.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Why does the WASM surface call <code>tractl.run()</code> instead of making an HTTP request? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>Go compiled to WebAssembly runs as a thread <em>inside the browser tab</em>. It can't make outbound HTTP requests to itself — there is no server to call. Instead, <code>cmd/wasm/bridge.go</code> registers Go functions as JavaScript globals (<code>window.tractl.*</code>) using <code>syscall/js</code>.</p>
+        <p>When the frontend calls <code>await window.tractl.run(doc, "yaml")</code>, it is calling the Go engine function directly — in the same process, in the same tab, with no network round-trip. This means the engine runs fully offline and no workflow data leaves the user's machine.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        How does the platform adapter know which surface it's running on? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p><code>frontend/src/platform/index.ts</code> detects the surface at runtime in this order:</p>
+        <ol>
+          <li>If <code>window.wails</code> is defined → Desktop surface (Wails injected it)</li>
+          <li>If <code>localhost:7428</code> responds to a status ping → Local API surface</li>
+          <li>Otherwise → Web WASM surface (default)</li>
+        </ol>
+        <p>All three export the same <code>IPlatform</code> interface. React components never check which surface they're on — they call <code>platform.run()</code> and the correct adapter handles transport.</p>
+      </div>
+    </div>
+
+    <!-- ── Contributing ── -->
+    <h2>Contributing &amp; Architecture</h2>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        I found a bug where the ADR says one thing and the code does another. Which is wrong? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p><strong>The code is wrong.</strong> ADRs are the highest authority in the normative hierarchy (ADR-010). If code contradicts an ADR, the code must change — not the ADR.</p>
+        <p>Open a GitHub issue labelled <code>arch-conflict</code>. Do not work around the ADR in your PR. Do not silently "fix" the code to match what seems logical — the ADR may have context that isn't obvious from the code alone. Maintainers will review promptly.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Can I import <code>internal/engine</code> in my own Go project? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>No. Go enforces the <code>internal/</code> boundary at compile time — packages inside <code>internal/</code> can only be imported by code within the same module (<code>github.com/tractl/tractl</code>).</p>
+        <p>The public SDK surface lives in <code>pkg/</code>. When the capability contract layer (Phase 4+) is complete, external Go projects will import from <code>pkg/capability</code>. For now, external tools should use the Local API HTTP surface (<code>:7428</code>) instead of attempting Go package imports.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        Why does the planner and compiler exist as separate stages? Why not combine them? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>ADR-003 explicitly requires them to be separate concerns. The planner answers "what should execute and in what order" — it resolves capability contracts, activates environments, analyses dependencies, and determines execution strategy. The compiler answers "how should it execute" — it selects runtimes, pre-compiles regex patterns, and binds payloads.</p>
+        <p>Separating them means: the planner output (<code>ExecutionPlan</code>) is a declarative description of intent that can be inspected, logged, or passed to different compilers. The compiler output (<code>CompiledPlan</code>) is an opaque executable artifact. You can validate the plan without compiling it. You can compile the same plan differently for different targets. Merging them would collapse this flexibility.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        What is TOON? Why a third format when YAML and JSON already exist? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>TOON is traCtl's own human-readable authoring format. It is a strict subset of YAML — same parser, same struct tags — but with tighter rules: no YAML 1.1 boolean pitfalls (<code>yes/no/on/off</code> are bare strings in TOON, not booleans), stricter escape sequences, no document separators (<code>---</code>).</p>
+        <p>The motivation: YAML's implicit type coercion has bitten teams before (a value of <code>yes</code> silently becoming <code>true</code>). TOON keeps YAML's readability while eliminating the ambiguous corners. It is the long-term preferred authoring format — YAML is the default for the alpha because it is more familiar.</p>
+        <p>All three formats produce equivalent <code>*spec.TraCtlSpec</code> after normalisation. Choosing a format is an authoring preference, not an execution difference.</p>
+      </div>
+    </div>
+
+    <div class="accordion">
+      <div class="accordion-header" onclick="toggleAccordion(this)">
+        What is a ULID and why does every spec entity get one? <em class="chevron">▼</em>
+      </div>
+      <div class="accordion-body">
+        <p>A ULID (Universally Unique Lexicographically Sortable Identifier) is assigned by the parser to every workflow, step, assertion, and extract. The <code>ULID</code> field in each struct has <code>yaml:"-"</code> (never in the file) and <code>json:"_ulid,omitempty"</code> (visible in API responses).</p>
+        <p>ULIDs serve two purposes: stable correlation of diagnostics events to spec entities across a run (the same ULID appears in trace events, assertion results, and extract results), and reproducible run identification when a fixed <code>TraceID</code> is provided (deterministic seed for <code>tractl.random()</code> and <code>tractl.now()</code> in scripts).</p>
+        <p>Authors never write ULIDs — they are system-assigned at parse time and must never be committed to workflow files.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+<script src="app.js"></script>
+<script>initPage({ title: 'Q&A' });</script>
+</body>
+</html>
