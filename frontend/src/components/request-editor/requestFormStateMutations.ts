@@ -46,6 +46,7 @@ export function addAssertionRow(rows: AssertionRowModel[]): AssertionRowModel[] 
       id: createRowId('assertion'),
       kind: 'status',
       operator: 'equals',
+      target: '',
       expected: '200',
       severity: 'error',
     },

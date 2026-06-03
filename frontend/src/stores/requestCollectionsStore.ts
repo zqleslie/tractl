@@ -23,6 +23,7 @@ type RequestCollectionsState = {
   renameFolder: (id: string, name: string) => void
   removeFolder: (id: string) => void
   saveRequest: (folderId: string, state: RequestState, name?: string) => string
+  updateItem: (id: string, state: RequestState) => void
   removeItem: (id: string) => void
   getItemsByFolder: (folderId: string) => SavedRequestItem[]
 }
@@ -65,6 +66,14 @@ export const useRequestCollectionsStore = create<RequestCollectionsState>()(
         set((s) => ({ items: [item, ...s.items] }))
         return item.id
       },
+      updateItem: (id, state) =>
+        set((s) => ({
+          items: s.items.map((item) =>
+            item.id === id
+              ? { ...item, state: { ...state }, savedAt: new Date().toISOString() }
+              : item,
+          ),
+        })),
       removeItem: (id) =>
         set((state) => ({
           items: state.items.filter((item) => item.id !== id),

@@ -54,6 +54,43 @@ func TestBuild_JSONBody(t *testing.T) {
 	}
 }
 
+func TestBuild_FormBody_MapStringInterface(t *testing.T) {
+	// JSON deserialization always produces map[string]interface{}, not map[string]string.
+	// This is the path taken by the WASM engine when the spec arrives as JSON string.
+	ec := mustNewEC(t, "wf", nil, nil, nil)
+	eval := runtime.NewExpressionEvaluator(runtime.NewVariableResolver(ec), ec)
+	b := NewRequestBuilder(eval)
+	step := &compiler.CompiledStep{Request: &compiler.CompiledRequest{
+		Target: "http://x", Method: "POST",
+		Body: &compiler.CompiledBody{Encoding: "form", Content: map[string]interface{}{"username": "alice", "role": "admin"}},
+	}}
+	req, err := b.Build(context.Background(), step)
+	if err != nil {
+		t.Fatalf("unexpected error for map[string]interface{} form content: %v", err)
+	}
+	if req.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
+		t.Fatalf("expected urlencoded content-type, got: %s", req.Header.Get("Content-Type"))
+	}
+}
+
+func TestBuild_FormBody_MapStringString(t *testing.T) {
+	// Covers direct Go construction (e.g. localapi path or future callers).
+	ec := mustNewEC(t, "wf", nil, nil, nil)
+	eval := runtime.NewExpressionEvaluator(runtime.NewVariableResolver(ec), ec)
+	b := NewRequestBuilder(eval)
+	step := &compiler.CompiledStep{Request: &compiler.CompiledRequest{
+		Target: "http://x", Method: "POST",
+		Body: &compiler.CompiledBody{Encoding: "form", Content: map[string]string{"username": "alice"}},
+	}}
+	req, err := b.Build(context.Background(), step)
+	if err != nil {
+		t.Fatalf("unexpected error for map[string]string form content: %v", err)
+	}
+	if req.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
+		t.Fatalf("expected urlencoded content-type, got: %s", req.Header.Get("Content-Type"))
+	}
+}
+
 func TestMaskHeaders_Authorization(t *testing.T) {
 	m := NewCredentialMasker()
 	h := http.Header{}

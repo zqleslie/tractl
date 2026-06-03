@@ -135,6 +135,13 @@ export function useRequestEditor() {
         createWorkspaceRequest(requestId, pendingHistoryEntry?.method ?? 'GET')
 
       if (pendingRequestItem) {
+        clearPendingRequestItem()
+        if (existing) {
+          setMethod(existing.method)
+          setUrl(existing.url)
+          setDraft(requestStateToDraft(existing))
+          return
+        }
         const saved = {
           ...pendingRequestItem.state,
           id: requestId,
@@ -144,11 +151,11 @@ export function useRequestEditor() {
         setUrl(saved.url)
         setDraft(requestStateToDraft(saved))
         upsertWorkspaceRequest(saved)
-        clearPendingRequestItem()
         return
       }
 
       if (pendingHistoryEntry) {
+        upsertWorkspaceRequest({ ...request, url: pendingHistoryEntry.url, method: pendingHistoryEntry.method })
         setMethod(pendingHistoryEntry.method)
         setUrl(pendingHistoryEntry.url)
         if (pendingHistoryEntry.result) {
@@ -396,12 +403,17 @@ export function useRequestEditor() {
     setResultsOpen((open) => !open)
   }, [])
 
+  const collectionItemId = requestId.startsWith('collection-')
+    ? requestId.slice('collection-'.length)
+    : null
+
   return {
     method,
     url,
     draft,
     fileId,
     requestName,
+    collectionItemId,
     activeConfigTab,
     activeResultTab,
     resultsOpen,

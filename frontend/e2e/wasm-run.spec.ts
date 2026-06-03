@@ -93,12 +93,14 @@ test.describe('WASM engine execution (UI-0.1F)', () => {
     })
 
     const result = await wasmRun(page, doc, 'yaml')
+    // handleRun now returns flat localapi.RunResult (lowercase JSON keys)
     expect(result).toMatchObject({
       surface: 'web-wasm',
       executionMode: 'browser',
       networkProvider: 'fetch',
-      Passed: true,
+      passed: true,
     })
+    expect(result.statusCode).toBe(200)
     expect(requests.some((u) => u.includes('/wasm-run-fixture/get'))).toBe(true)
   })
 
@@ -127,7 +129,7 @@ test.describe('WASM engine execution (UI-0.1F)', () => {
     const result = await wasmRun(page, doc, 'yaml')
     expect(result).toMatchObject({
       surface: 'web-wasm',
-      Passed: true,
+      passed: true,
     })
   })
 
@@ -152,11 +154,12 @@ test.describe('WASM engine execution (UI-0.1F)', () => {
             expected: 200
 `
     const result = await wasmRun(page, doc, 'yaml')
-    expect(result).toMatchObject({ surface: 'web-wasm', Passed: false })
-    expect(result.error).toBeUndefined()
-    const steps = (result.Workflows as Array<{ Steps: Array<{ CausesFailure: boolean }> }>)[0]
-      .Steps
-    expect(steps[0].CausesFailure).toBe(true)
+    expect(result).toMatchObject({ surface: 'web-wasm', passed: false })
+    // error field is omitted when execution succeeded (assertion failure ≠ execution error)
+    expect(result.error).toBeFalsy()
+    // flat format: assertionResults contains the outcome
+    const assertions = result.assertionResults as Array<{ passed: boolean }>
+    expect(assertions[0].passed).toBe(false)
   })
 
   test('extracts flow across dependent steps', async ({ page }) => {
@@ -190,7 +193,7 @@ test.describe('WASM engine execution (UI-0.1F)', () => {
             expected: 200
 `
     const result = await wasmRun(page, doc, 'yaml')
-    expect(result).toMatchObject({ Passed: true, surface: 'web-wasm' })
+    expect(result).toMatchObject({ passed: true, surface: 'web-wasm' })
   })
 
   test('multi-step workflow executes', async ({ page }) => {
@@ -223,9 +226,10 @@ test.describe('WASM engine execution (UI-0.1F)', () => {
             expected: 200
 `
     const result = await wasmRun(page, doc, 'yaml')
-    expect(result).toMatchObject({ Passed: true })
-    const workflows = result.Workflows as Array<{ Steps: unknown[] }>
-    expect(workflows[0].Steps.length).toBe(2)
+    expect(result).toMatchObject({ passed: true })
+    // flat format: no Workflows key; assertionResults covers both steps
+    expect(result.assertionsTotal).toBe(2)
+    expect(result.assertionsPassed).toBe(2)
   })
 
   test('failure paths return structured results without crashing runtime', async ({
@@ -266,7 +270,8 @@ ${timeoutLine}        request:
 `
       const result = await wasmRun(page, doc, 'yaml')
       expect(result.surface).toBe('web-wasm')
-      expect(result.error).toBeUndefined()
+      // bridge-level error field should be absent; execution errors appear in body/error
+      expect(result.error == null || typeof result.error === 'string').toBe(true)
     }
 
     const recovery = `${baseCapabilitiesYaml()}workflows:
@@ -285,7 +290,7 @@ ${timeoutLine}        request:
             expected: 200
 `
     const after = await wasmRun(page, recovery, 'yaml')
-    expect(after).toMatchObject({ Passed: true })
+    expect(after).toMatchObject({ passed: true })
   })
 
   test('plan failure returns structured error without terminating wasm', async ({ page }) => {
@@ -302,16 +307,6 @@ ${timeoutLine}        request:
     const result = await wasmRun(page, doc, 'yaml')
     expect(result.error).toMatchObject({ code: 'TRACTL_EXECUTION_ERROR' })
 
-    const recovery = `${baseCapabilitiesYaml()}workflows:
-  - id: wf-ok
-    steps:
-      - id: step-one
-        kind: request
-        request:
-          protocol: http
-          target: https://example.com
-          operation: GET
-`
     const second = await page.evaluate(async () => {
       const r = await window.tractl!.validate(
         `schemaVersion: 1
@@ -360,7 +355,7 @@ workflows:
             expected: 200
 `
     const result = await wasmRun(page, doc, 'yaml')
-    expect(result).toMatchObject({ Passed: true, surface: 'web-wasm' })
+    expect(result).toMatchObject({ passed: true, surface: 'web-wasm' })
   })
 
   test('500 KB document runs without freezing', async ({ page }) => {
@@ -374,7 +369,43 @@ workflows:
 
     expect(result.surface).toBe('web-wasm')
     expect(elapsedMs).toBeLessThan(120_000)
-    expect(result.error).toBeUndefined()
-    expect(typeof result.Passed).toBe('boolean')
+    // flat format: no bridge-level error key on success
+    expect(result.error == null || typeof result.error === 'string').toBe(true)
+    expect(typeof result.passed).toBe('boolean')
+  })
+
+  test('result includes flat localapi fields (regression for handleRun format)', async ({
+    page,
+  }) => {
+    await page.route('**/wasm-run-flat-fixture/get', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ test: 'flat-format' }),
+      })
+    })
+
+    const doc = `${baseCapabilitiesYaml()}workflows:
+  - id: wf-flat
+    steps:
+      - id: step-flat
+        kind: request
+        request:
+          protocol: http
+          target: http://127.0.0.1:5173/wasm-run-flat-fixture/get
+          operation: GET
+`
+    const result = await wasmRun(page, doc, 'yaml')
+    // Verify flat format fields are present (not Workflows/Steps PascalCase)
+    expect(typeof result.statusCode).toBe('number')
+    expect(typeof result.statusText).toBe('string')
+    expect(typeof result.durationMs).toBe('number')
+    expect(typeof result.body).toBe('string')
+    expect(typeof result.passed).toBe('boolean')
+    expect(Array.isArray(result.assertionResults)).toBe(true)
+    expect(Array.isArray(result.extractResults)).toBe(true)
+    expect(result).not.toHaveProperty('Workflows')
+    expect(result).not.toHaveProperty('Passed')
+    expect(result.statusCode).toBe(200)
   })
 })

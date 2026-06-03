@@ -99,12 +99,17 @@ export type TractlWasmValidateResult =
   | TractlWasmValidateFailure
   | TractlWasmValidateBridgeFailure
 
-/** Engine run success — canonical RunResult fields plus WASM metadata (UI-0.1F). */
+/**
+ * Engine run success — WASM metadata fields present in all successful run responses (UI-0.1F).
+ *
+ * handleRun returns a flat localapi.RunResult (lowercase keys: passed, statusCode, …).
+ * The workflow canvas adapter reads the engine format (Workflows, Steps, PascalCase) via
+ * run.Workflows. Both shapes satisfy this type because the base is Record<string, unknown>.
+ */
 export type TractlWasmRunSuccess = Record<string, unknown> & {
   surface: string
   executionMode: string
   networkProvider: string
-  Passed: boolean
 }
 
 /** Engine or bridge failure for run (UI-0.1F). */

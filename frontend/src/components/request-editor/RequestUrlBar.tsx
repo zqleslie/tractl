@@ -16,10 +16,12 @@ export type RequestUrlBarProps = {
   url: string
   canRun: boolean
   isRunning: boolean
+  isSaved: boolean
   onMethodChange: (method: HttpMethod) => void
   onUrlChange: (url: string) => void
   onRun: () => void
   onSaveToCollection: () => void
+  onUpdate: () => void
 }
 
 export function RequestUrlBar({
@@ -27,10 +29,12 @@ export function RequestUrlBar({
   url,
   canRun,
   isRunning,
+  isSaved,
   onMethodChange,
   onUrlChange,
   onRun,
   onSaveToCollection,
+  onUpdate,
 }: RequestUrlBarProps) {
   const [sendMenuOpen, setSendMenuOpen] = useState(false)
   const sendMenuRef = useRef<HTMLDivElement | null>(null)
@@ -126,14 +130,25 @@ export function RequestUrlBar({
         ) : null}
       </div>
 
-      <Button
-        variant="secondary"
-        className="h-9 shrink-0 px-4"
-        data-testid="request-save-collection"
-        onClick={onSaveToCollection}
-      >
-        Save
-      </Button>
+      {isSaved ? (
+        <Button
+          variant="secondary"
+          className="h-9 shrink-0 px-4"
+          data-testid="request-update-collection"
+          onClick={onUpdate}
+        >
+          Update
+        </Button>
+      ) : (
+        <Button
+          variant="secondary"
+          className="h-9 shrink-0 px-4"
+          data-testid="request-save-collection"
+          onClick={onSaveToCollection}
+        >
+          Save
+        </Button>
+      )}
     </div>
   )
 }

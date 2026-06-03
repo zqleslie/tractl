@@ -8,12 +8,20 @@ import { SaveToCollectionDialog } from '@/components/sidebar/SaveToCollectionDia
 import { UrlBar } from '@/components/shell/UrlBar'
 import { useRequestEditorShortcuts } from '@/hooks/useRequestEditorShortcuts'
 import { cn } from '@/lib/cn'
+import { useRequestCollectionsStore } from '@/stores/requestCollectionsStore'
 import { useUiStore } from '@/stores/uiStore'
 
 export function RequestEditor() {
   const editor = useRequestEditor()
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const updateCollectionItem = useRequestCollectionsStore((s) => s.updateItem)
   const setRequestsSidebarView = useUiStore((s) => s.setRequestsSidebarView)
+
+  const handleUpdate = () => {
+    if (!editor.collectionItemId) return
+    updateCollectionItem(editor.collectionItemId, editor.getRequestState())
+    useUiStore.getState().updateActiveRequestTab({ isDirty: false })
+  }
   const resultLayout = useUiStore((state) => state.editorLayout)
   const editorSplitRatio = useUiStore((state) => state.editorSplitRatio)
   const setEditorSplitRatio = useUiStore((state) => state.setEditorSplitRatio)
@@ -53,7 +61,9 @@ export function RequestEditor() {
         onMethodChange={editor.setMethod}
         onUrlChange={editor.setUrl}
         onRun={() => void editor.runRequest()}
+        isSaved={editor.collectionItemId !== null}
         onSaveToCollection={() => setSaveDialogOpen(true)}
+        onUpdate={handleUpdate}
       />
 
       <SaveToCollectionDialog
@@ -63,6 +73,7 @@ export function RequestEditor() {
         onClose={() => setSaveDialogOpen(false)}
         onSaved={() => {
           setSaveDialogOpen(false)
+          useUiStore.getState().updateActiveRequestTab({ isDirty: false })
           setRequestsSidebarView('collections')
           useUiStore.getState().setSidebarTab('requests')
           useUiStore.getState().setSidebarCollapsed(false)

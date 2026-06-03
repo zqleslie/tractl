@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -55,17 +56,22 @@ func (b *RequestBuilder) Build(ctx context.Context, step *compiler.CompiledStep)
 			}
 			bodyReader = bytes.NewReader(bs)
 		case "form":
-			// expect map[string]string
+			// JSON-deserialized content arrives as map[string]interface{};
+			// direct Go construction may produce map[string]string.
 			vals := url.Values{}
-			if m, ok := step.Request.Body.Content.(map[string]string); ok {
+			switch m := step.Request.Body.Content.(type) {
+			case map[string]string:
 				for k, v := range m {
 					vals.Set(k, v)
 				}
-				bodyReader = strings.NewReader(vals.Encode())
-			} else {
-				// unsupported form content shape
-				return nil, errors.New("unsupported form content")
+			case map[string]interface{}:
+				for k, v := range m {
+					vals.Set(k, fmt.Sprintf("%v", v))
+				}
+			default:
+				return nil, errors.New("unsupported form content: expected key-value pairs")
 			}
+			bodyReader = strings.NewReader(vals.Encode())
 		default:
 			// no body
 		}

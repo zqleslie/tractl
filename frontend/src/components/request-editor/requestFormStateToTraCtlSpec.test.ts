@@ -46,4 +46,34 @@ describe('requestFormStateToTraCtlSpec', () => {
       'https://api.example.com/items?limit=10',
     )
   })
+
+  it('builds form body from enabled formRows', () => {
+    const draft = createEmptyRequestFormState()
+    draft.body.encoding = 'Form data'
+    draft.body.formRows = [
+      { id: 'r1', enabled: true, key: 'username', value: 'alice', type: 'text' },
+      { id: 'r2', enabled: true, key: 'role', value: 'admin', type: 'text' },
+      { id: 'r3', enabled: false, key: 'ignored', value: 'yes', type: 'text' },
+      { id: 'r4', enabled: true, key: '', value: 'no-key', type: 'text' },
+    ]
+
+    const spec = requestFormStateToTraCtlSpec('POST', 'https://httpbin.org/post', draft)
+    const body = spec.workflows[0]?.steps[0]?.request.body
+
+    expect(body?.encoding).toBe('form')
+    expect(body?.content).toEqual({ username: 'alice', role: 'admin' })
+  })
+
+  it('omits the body when all form rows are disabled or empty', () => {
+    const draft = createEmptyRequestFormState()
+    draft.body.encoding = 'Form data'
+    draft.body.formRows = [
+      { id: 'r1', enabled: false, key: 'username', value: 'alice', type: 'text' },
+      { id: 'r2', enabled: true, key: '', value: 'value', type: 'text' },
+    ]
+
+    const spec = requestFormStateToTraCtlSpec('POST', 'https://httpbin.org/post', draft)
+
+    expect(spec.workflows[0]?.steps[0]?.request.body).toBeUndefined()
+  })
 })

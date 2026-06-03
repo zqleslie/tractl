@@ -302,20 +302,24 @@ export const useUiStore = create<UiState>()(
       openRequestItem: (item) =>
         set((s) => {
           const tabId = `collection-${item.id}`
-          const existing = s.tabs.some((tab) => tab.id === tabId)
+          const alreadyOpen = s.tabs.some((tab) => tab.id === tabId)
+          if (alreadyOpen) {
+            return {
+              activeTabId: tabId,
+              activeScreen: 'request',
+            }
+          }
           return {
-            tabs: existing
-              ? s.tabs
-              : [
-                  ...s.tabs,
-                  {
-                    id: tabId,
-                    type: 'request',
-                    title: item.name,
-                    method: item.state.method,
-                    isDirty: false,
-                  },
-                ],
+            tabs: [
+              ...s.tabs,
+              {
+                id: tabId,
+                type: 'request',
+                title: item.name,
+                method: item.state.method,
+                isDirty: false,
+              },
+            ],
             activeTabId: tabId,
             activeScreen: 'request',
             pendingRequestItem: item,
@@ -342,6 +346,7 @@ export const useUiStore = create<UiState>()(
         tabs: state.tabs,
         activeTabId: state.activeTabId,
         activeScreen: state.activeScreen,
+        requestEditorKey: state.requestEditorKey,
         requestsSidebarView: state.requestsSidebarView,
         requestsHistoryShowAll: state.requestsHistoryShowAll,
       }),

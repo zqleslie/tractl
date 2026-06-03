@@ -95,6 +95,7 @@ export type AssertionRowModel = {
   id: string
   kind: string
   operator: string
+  target: string
   expected: string
   severity: AssertionSeverity
 }
