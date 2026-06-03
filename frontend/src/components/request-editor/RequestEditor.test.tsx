@@ -159,6 +159,7 @@ describe('AssertionsPanel', () => {
               id: 'a1',
               kind: 'status',
               operator: 'equals',
+              target: '',
               expected: '200',
               severity: 'error',
             },

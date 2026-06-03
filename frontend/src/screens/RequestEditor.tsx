@@ -71,8 +71,9 @@ export function RequestEditor() {
         defaultName={editor.requestName}
         getRequestState={editor.getRequestState}
         onClose={() => setSaveDialogOpen(false)}
-        onSaved={() => {
+        onSaved={(itemId) => {
           setSaveDialogOpen(false)
+          editor.setSavedCollectionItemId(itemId)
           useUiStore.getState().updateActiveRequestTab({ isDirty: false })
           setRequestsSidebarView('collections')
           useUiStore.getState().setSidebarTab('requests')

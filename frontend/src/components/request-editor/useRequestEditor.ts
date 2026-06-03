@@ -403,9 +403,15 @@ export function useRequestEditor() {
     setResultsOpen((open) => !open)
   }, [])
 
+  const [savedCollectionItemId, setSavedCollectionItemId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setSavedCollectionItemId(null)
+  }, [requestId])
+
   const collectionItemId = requestId.startsWith('collection-')
     ? requestId.slice('collection-'.length)
-    : null
+    : savedCollectionItemId
 
   return {
     method,
@@ -414,6 +420,7 @@ export function useRequestEditor() {
     fileId,
     requestName,
     collectionItemId,
+    setSavedCollectionItemId,
     activeConfigTab,
     activeResultTab,
     resultsOpen,

@@ -10,10 +10,12 @@ describe('RequestUrlBar', () => {
         url="https://api.example.com/health"
         canRun
         isRunning={false}
+        isSaved={false}
         onMethodChange={vi.fn()}
         onUrlChange={vi.fn()}
         onRun={vi.fn()}
         onSaveToCollection={vi.fn()}
+        onUpdate={vi.fn()}
       />,
     )
 
@@ -32,10 +34,12 @@ describe('RequestUrlBar', () => {
         url=""
         canRun={false}
         isRunning={false}
+        isSaved={false}
         onMethodChange={vi.fn()}
         onUrlChange={vi.fn()}
         onRun={vi.fn()}
         onSaveToCollection={vi.fn()}
+        onUpdate={vi.fn()}
       />,
     )
 
@@ -54,10 +58,12 @@ describe('RequestUrlBar', () => {
         url="https://api.example.com/users"
         canRun
         isRunning={false}
+        isSaved={false}
         onMethodChange={onMethodChange}
         onUrlChange={onUrlChange}
         onRun={onRun}
         onSaveToCollection={onSaveToCollection}
+        onUpdate={vi.fn()}
       />,
     )
 
@@ -76,5 +82,32 @@ describe('RequestUrlBar', () => {
 
     fireEvent.click(screen.getByTestId('request-save-collection'))
     expect(onSaveToCollection).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows Update button and calls onUpdate when isSaved is true', () => {
+    const onUpdate = vi.fn()
+    const onSaveToCollection = vi.fn()
+
+    render(
+      <RequestUrlBar
+        method="GET"
+        url="https://api.example.com/users"
+        canRun
+        isRunning={false}
+        isSaved={true}
+        onMethodChange={vi.fn()}
+        onUrlChange={vi.fn()}
+        onRun={vi.fn()}
+        onSaveToCollection={onSaveToCollection}
+        onUpdate={onUpdate}
+      />,
+    )
+
+    expect(screen.getByTestId('request-update-collection')).toBeInTheDocument()
+    expect(screen.queryByTestId('request-save-collection')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('request-update-collection'))
+    expect(onUpdate).toHaveBeenCalledTimes(1)
+    expect(onSaveToCollection).not.toHaveBeenCalled()
   })
 })

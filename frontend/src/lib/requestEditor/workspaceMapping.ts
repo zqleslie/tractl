@@ -160,6 +160,7 @@ export function requestStateToDraft(state: RequestState): RequestFormState {
       id: row.id,
       kind: row.kind,
       operator: row.op,
+      target: '',
       expected: row.expected,
       severity: row.severity,
     })),
