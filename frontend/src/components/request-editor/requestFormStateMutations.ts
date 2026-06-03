@@ -7,7 +7,7 @@ import type {
 
 let rowCounter = 0
 
-export function createRowId(prefix: string): string {
+function createRowId(prefix: string): string {
   rowCounter += 1
   return `${prefix}-${rowCounter}`
 }

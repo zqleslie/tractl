@@ -1,30 +1,80 @@
-import type { TraCtlSpecDocument } from '@/components/request-editor/tractlSpecDocument'
 import { looksLikeViteDevShell } from '@/components/request-editor/normalizeRequestUrl'
 import type { AssertionResultRow, ExtractResultRow, RequestRunResult } from '@/platform/localApi/types'
 import type { EngineRunResult } from '@/platform/web/workflowRunAdapter'
 import {
   isTractlWasmRunSuccess,
   loadTractlWasmRuntime,
-  type TractlWasmParseFormat,
   type TractlWasmRunResult,
 } from '@/platform/web/wasm/loadTractlWasmRuntime'
+import type { RequestDef } from '@/types/requestDef'
 
-export const REQUEST_EDITOR_WASM_FORMAT: TractlWasmParseFormat = 'json'
-
-export async function runRequestInWasm(
-  spec: TraCtlSpecDocument,
-): Promise<RequestRunResult> {
+export async function runRequestDefInWasm(def: RequestDef): Promise<RequestRunResult> {
   await loadTractlWasmRuntime()
-
-  if (!window.tractl?.run) {
+  if (!window.tractl?.runRequest) {
     return mapWasmFailure('TRACTL_WASM_UNAVAILABLE', 'WASM runtime is not ready')
   }
+  const result = await window.tractl.runRequest(JSON.stringify(def))
+  if (!isTractlWasmRunSuccess(result)) {
+    return mapWasmFailure(result.error.code, result.error.message)
+  }
+  return mapLocalapiRunResult(result as unknown as LocalapiRunResult)
+}
 
-  const result = await window.tractl.run(
-    JSON.stringify(spec),
-    REQUEST_EDITOR_WASM_FORMAT,
-  )
-  return mapWasmRunResultToRequestRunResult(result)
+// localapi.RunResult shape — camelCase JSON tags from internal/localapi/types.go.
+type LocalapiRunResult = {
+  statusCode: number
+  statusText: string
+  durationMs: number
+  body: string
+  headers: Record<string, string>
+  timing: { dns: number; tcp: number; tls: number; ttfb: number; transfer: number; total: number; unit: string }
+  assertionResults: Array<{ id: string; kind: string; op: string; expected: string; received: string; passed: boolean; severity: string }>
+  extractResults: Array<{ id: string; variableName: string; scope: string; resolvedValue: string }>
+  assertionsPassed: number
+  assertionsTotal: number
+  passed: boolean
+  error?: string
+}
+
+function mapLocalapiRunResult(r: LocalapiRunResult): RequestRunResult {
+  const contentType = r.headers?.['content-type'] ?? 'application/json'
+  return {
+    passed: r.passed,
+    statusCode: r.statusCode ?? 0,
+    statusText: r.statusText ?? '',
+    durationMs: r.timing?.total ?? r.durationMs ?? 0,
+    body: r.body ?? '',
+    contentType,
+    headers: r.headers ?? {},
+    timing: {
+      dns: r.timing?.dns ?? 0,
+      tcp: r.timing?.tcp ?? 0,
+      tls: r.timing?.tls ?? 0,
+      ttfb: r.timing?.ttfb ?? 0,
+      transfer: r.timing?.transfer ?? 0,
+      total: r.timing?.total ?? 0,
+      unit: 'ms',
+    },
+    assertionResults: (r.assertionResults ?? []).map((ar) => ({
+      id: ar.id,
+      kind: ar.kind,
+      op: ar.op,
+      expected: ar.expected,
+      received: ar.received,
+      passed: ar.passed,
+      severity: (ar.severity === 'warning' ? 'warning' : 'error') as 'error' | 'warning',
+    })),
+    extractResults: (r.extractResults ?? []).map((ex) => ({
+      id: ex.id,
+      variable: ex.variableName,
+      value: ex.resolvedValue,
+      scope: ex.scope,
+    })),
+    assertionsPassed: r.assertionsPassed ?? 0,
+    assertionsTotal: r.assertionsTotal ?? 0,
+    timeline: [],
+    error: r.error || undefined,
+  }
 }
 
 export function mapWasmRunResultToRequestRunResult(
@@ -50,11 +100,6 @@ export function mapWasmRunResultToRequestRunResult(
   }
 
   return mapped
-}
-
-function normMs(v: number | undefined): number {
-  if (!v) return 0
-  return v > 1_000_000 ? Math.round(v / 1_000_000) : Math.round(v)
 }
 
 function buildStatusText(code: number | undefined): string {
@@ -103,7 +148,7 @@ function mapEngineRunResultToRequestRunResult(run: EngineRunResult): RequestRunR
     tls: tl?.TLSMs ?? 0,
     ttfb: tl?.TTFBMs ?? 0,
     transfer: tl?.TransferMs ?? 0,
-    total: tl?.TotalMs ?? normMs(diagWf?.Duration),
+    total: tl?.TotalMs ?? diagWf?.Duration ?? 0,
     unit: 'ms' as const,
   }
 

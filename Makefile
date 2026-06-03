@@ -40,7 +40,7 @@ DOCKER_TAG  ?= $(VERSION)
         dev dev-web dev-desktop dev-cli dev-localapi dev-frontend-web \
         test test-verbose test-cover test-race test-phase1 test-integration test-e2e \
         test-frontend test-frontend-e2e \
-        embed-stub vet fmt fmt-check lint vuln check check-full \
+        embed-stub vet fmt fmt-check lint staticcheck deadcode vuln check check-full \
         setup workspace \
         release release-snapshot \
         docker docker-web docker-ci \
@@ -98,8 +98,10 @@ help:
 	@echo "    make fmt                   format all Go code"
 	@echo "    make fmt-check             check formatting (CI use)"
 	@echo "    make lint                  run golangci-lint"
+	@echo "    make staticcheck           run staticcheck (SA, S1, ST1 checks)"
+	@echo "    make deadcode              run deadcode (unreachable function analysis)"
 	@echo "    make vuln                  run govulncheck (stdlib + module vulnerabilities)"
-	@echo "    make check                 vet + fmt-check + lint + vuln + test (CI gate)"
+	@echo "    make check                 vet + fmt-check + lint + staticcheck + deadcode + vuln + test (CI gate)"
 	@echo "    make check-full            check + test-race + integration + e2e"
 	@echo ""
 	@echo "  Release"
@@ -292,14 +294,28 @@ fmt-check:
 lint: embed-stub
 	golangci-lint run ./...
 
+# staticcheck: runs the full suite of SA (bugs), S1 (simplifications), and ST1
+# (style) checks. Skips node_modules which contain a stray Go package.
+staticcheck: embed-stub
+	@command -v staticcheck >/dev/null 2>&1 || go install honnef.co/go/tools/cmd/staticcheck@latest
+	staticcheck ./...
+
+# deadcode: whole-program reachability analysis from each binary entry point.
+# We list packages explicitly to avoid frontend/node_modules which contains a
+# stray Go file. Run a second pass targeting the WASM entry point.
+DEADCODE_PKGS := $(MODULE)/cmd/... $(MODULE)/internal/... $(MODULE)/pkg/...
+deadcode: embed-stub
+	@command -v deadcode >/dev/null 2>&1 || go install golang.org/x/tools/cmd/deadcode@latest
+	deadcode -filter $(MODULE) $(DEADCODE_PKGS)
+	GOOS=js GOARCH=wasm deadcode -filter $(MODULE) ./cmd/wasm/...
+
 # vuln: scan for known vulnerabilities in dependencies and stdlib (CI + pre-commit).
 vuln: embed-stub
 	@command -v govulncheck >/dev/null 2>&1 || go install golang.org/x/vuln/cmd/govulncheck@latest
 	govulncheck ./...
 
 # check: the minimum CI quality gate.
-# Matches the original: vet + fmt-check + lint + vuln + test.
-check: vet fmt-check lint vuln test
+check: vet fmt-check lint staticcheck deadcode vuln test
 
 # check-full: the complete gate before a release or major merge.
 check-full: check test-race test-integration test-e2e

@@ -1,3 +1,5 @@
+import type { AssertionSeverity, FailurePolicy } from '@/types/requestDef'
+export type { AssertionSeverity, FailurePolicy }
 export type ConfigTab =
   | 'params'
   | 'headers'
@@ -23,7 +25,6 @@ export type AuthType = 'None' | 'Bearer token' | 'Basic auth' | 'API key'
 
 export type RetryStrategy = 'None' | 'Fixed' | 'Linear' | 'Exponential'
 
-export type FailurePolicy = 'resilient' | 'failFast'
 
 export type ConfigTabDefinition = {
   id: ConfigTab
@@ -81,21 +82,6 @@ export type RequestAuthState = {
   placement?: 'header' | 'query'
 }
 
-export type AssertionDef = {
-  id: string
-  kind: string
-  op: string
-  expected: string
-  severity: 'error' | 'warning'
-}
-
-export type ExtractDef = {
-  id: string
-  source: string
-  path: string
-  variableName: string
-  scope: string
-}
 
 export type RetryConfig = {
   strategy: 'fixed' | 'linear' | 'exponential'
@@ -104,7 +90,6 @@ export type RetryConfig = {
   backoffFactor?: number
 }
 
-export type AssertionSeverity = 'error' | 'warning'
 
 export type AssertionRowModel = {
   id: string

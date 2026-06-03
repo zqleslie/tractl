@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
+import { useClickOutside } from '@/hooks/useClickOutside'
 import { IconCommand, IconMoon, IconSun } from '@tabler/icons-react'
 import { Button, EnvPill } from '@/components/primitives'
-import {
-  isDuplicateEnvironmentName,
-  useEnvironmentStore,
-} from '@/stores/environmentStore'
+import { isDuplicateEnvironmentName } from '@/stores/environmentStore'
+import { useActiveEnvironment } from '@/stores/useActiveEnvironment'
 import { useUiStore } from '@/stores/uiStore'
 
 export function Topbar() {
@@ -12,40 +11,16 @@ export function Topbar() {
   const setTheme = useUiStore((state) => state.setTheme)
   const setActiveScreen = useUiStore((state) => state.setActiveScreen)
   const setCommandPaletteOpen = useUiStore((state) => state.setCommandPaletteOpen)
-  const environments = useEnvironmentStore((state) => state.environments)
-  const activeEnvironmentId = useEnvironmentStore(
-    (state) => state.activeEnvironmentId,
-  )
-  const setActiveEnvironment = useEnvironmentStore(
-    (state) => state.setActiveEnvironment,
-  )
-  const createEnvironment = useEnvironmentStore((state) => state.createEnvironment)
+  const { environments, activeEnvironment, setActiveEnvironment, createEnvironment } = useActiveEnvironment()
   const [envMenuOpen, setEnvMenuOpen] = useState(false)
   const [newEnvironmentName, setNewEnvironmentName] = useState('')
   const envMenuRef = useRef<HTMLDivElement | null>(null)
 
-  const activeEnvironment =
-    environments.find((environment) => environment.id === activeEnvironmentId) ??
-    null
-  const duplicateNewName = isDuplicateEnvironmentName(
-    environments,
-    newEnvironmentName,
-  )
+  const duplicateNewName = isDuplicateEnvironmentName(environments, newEnvironmentName)
   const canCreateEnvironment =
     newEnvironmentName.trim().length > 0 && !duplicateNewName
 
-  useEffect(() => {
-    if (!envMenuOpen) return undefined
-
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!envMenuRef.current?.contains(event.target as Node)) {
-        setEnvMenuOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', closeOnOutsideClick)
-    return () => document.removeEventListener('mousedown', closeOnOutsideClick)
-  }, [envMenuOpen])
+  useClickOutside(envMenuRef, () => setEnvMenuOpen(false), envMenuOpen)
 
   const cycleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light')

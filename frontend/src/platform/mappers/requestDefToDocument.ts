@@ -1,12 +1,12 @@
 /**
- * requestDefToDocument — TypeScript mapper for single-request execution (ADR-017 §3).
+ * requestDefToDocument — spec preview utility (ADR-017 §3 amendment 2026-06-02 B).
  *
- * Converts a RequestDef to a spec-shaped JSON string suitable for sending as
- * WorkflowRunRequest.document. Produces equivalent output to the Go mapper
- * (internal/localapi/request_mapper.go) for the same input.
+ * Converts a RequestDef to a spec-shaped JSON object for display in the code view.
+ * This is a PRESENTATION utility only. It MUST NOT be used on the execution path.
  *
- * The frontend MUST use this mapper; it MUST NOT route single-request execution
- * through the Go mapper (ADR-017 §3).
+ * Execution: RequestDef → window.tractl.runRequest() → Go: RunRequestDef() → engine.
+ * The Go mapper (internal/localapi/request_mapper.go) is the sole transformation
+ * path for all delivery surfaces including WASM.
  */
 
 import type {

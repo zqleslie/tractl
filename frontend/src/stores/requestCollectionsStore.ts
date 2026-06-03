@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { RequestState } from '@/components/request-editor/requestState'
 
-export type CollectionFolder = {
+type CollectionFolder = {
   id: string
   name: string
   createdAt: string

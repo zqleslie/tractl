@@ -54,7 +54,7 @@ async function requestJson<T>(
   return (await response.json()) as T
 }
 
-export async function getApiStatus(): Promise<ApiStatusResponse> {
+async function getApiStatus(): Promise<ApiStatusResponse> {
   return requestJson<ApiStatusResponse>('/api/v1/status')
 }
 
@@ -74,16 +74,6 @@ export async function saveRequestFile(
     path: saved.path,
     updatedAt: saved.modifiedAt,
   }
-}
-
-export async function writeWorkspaceFile(
-  path: string,
-  content: string,
-): Promise<FileWriteResponse> {
-  return requestJson<FileWriteResponse>(`/api/v1/files/${encodeFilePath(path)}`, {
-    method: 'POST',
-    body: JSON.stringify({ content }),
-  })
 }
 
 export async function runRequestFile(

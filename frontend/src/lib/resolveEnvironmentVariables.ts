@@ -1,7 +1,8 @@
 import type { TraCtlSpecDocument } from '@/components/request-editor/tractlSpecDocument'
 import type { EnvironmentVariables } from '@/stores/environmentStore'
+import type { RequestDef } from '@/types/requestDef'
 
-export const ENV_VARIABLE_MISSING_CODE = 'TRACTL_ENV_VARIABLE_MISSING'
+const ENV_VARIABLE_MISSING_CODE = 'TRACTL_ENV_VARIABLE_MISSING'
 
 export type EnvironmentResolutionResult<T> = {
   value: T
@@ -162,6 +163,48 @@ export function resolveTraCtlSpecEnvironmentVariables(
   return {
     value: { ...document, workflows },
     missing: uniqueSorted(missing),
+  }
+}
+
+export function resolveRequestDefEnvironmentVariables(
+  def: RequestDef,
+  variables: EnvironmentVariables,
+): EnvironmentResolutionResult<RequestDef> {
+  const allMissing: string[] = []
+
+  const resolvedUrl = resolveEnvironmentUrl(def.url, variables)
+  allMissing.push(...resolvedUrl.missing)
+
+  const resolvedParams = (def.params ?? []).map((row) => {
+    if (!row.enabled) return row
+    const result = resolveEnvironmentString(row.value, variables)
+    allMissing.push(...result.missing)
+    return { ...row, value: result.value }
+  })
+
+  const resolvedHeaders = (def.headers ?? []).map((row) => {
+    if (!row.enabled) return row
+    const result = resolveEnvironmentString(row.value, variables)
+    allMissing.push(...result.missing)
+    return { ...row, value: result.value }
+  })
+
+  let resolvedBody = def.body
+  if (def.body && def.body.encoding !== 'none') {
+    const result = resolveEnvironmentString(def.body.content ?? '', variables)
+    allMissing.push(...result.missing)
+    resolvedBody = { ...def.body, content: result.value }
+  }
+
+  return {
+    value: {
+      ...def,
+      url: resolvedUrl.value,
+      params: resolvedParams,
+      headers: resolvedHeaders,
+      body: resolvedBody,
+    },
+    missing: uniqueSorted(allMissing),
   }
 }
 

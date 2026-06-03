@@ -75,11 +75,6 @@ export type WorkflowRunDocumentInput = {
 /** engine.RunResult JSON from POST /api/v1/workflows/run (same shape as WASM run success). */
 export type EngineWorkflowRunResult = Record<string, unknown>
 
-export type FileWriteInput = {
-  path: string
-  content: string
-}
-
 export type FileWriteResponse = {
   path: string
   modifiedAt: string

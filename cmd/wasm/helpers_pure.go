@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/tractl/tractl/internal/engine"
+	"github.com/tractl/tractl/internal/localapi"
 	"github.com/tractl/tractl/internal/validation"
 	"github.com/tractl/tractl/internal/version"
 )
@@ -49,10 +50,54 @@ func runResultPayload(result *engine.RunResult) (map[string]any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal run result: %w", err)
 	}
+	convertDiagnosticDurationsToMs(payload)
 	payload["surface"] = surfaceName
 	payload["executionMode"] = executionMode
 	payload["networkProvider"] = networkProvider
 	return payload, nil
+}
+
+// convertDiagnosticDurationsToMs walks the diagnostics section of a serialised
+// engine.RunResult payload and converts Duration values from nanoseconds to
+// milliseconds in-place. diagnostics.WorkflowRecord.Duration and StepRecord.Duration
+// are time.Duration fields with no json tag, so json.Marshal emits them as raw int64
+// nanoseconds under the key "Duration". TypeScript receives milliseconds after this call.
+func convertDiagnosticDurationsToMs(payload map[string]any) {
+	diag, ok := payload["diagnostics"].(map[string]any)
+	if !ok {
+		return
+	}
+	convertDurationField(diag)
+	workflows, _ := diag["Workflows"].([]any)
+	for _, wfAny := range workflows {
+		wf, ok := wfAny.(map[string]any)
+		if !ok {
+			continue
+		}
+		convertDurationField(wf)
+		steps, _ := wf["Steps"].([]any)
+		for _, stepAny := range steps {
+			step, ok := stepAny.(map[string]any)
+			if !ok {
+				continue
+			}
+			convertDurationField(step)
+		}
+	}
+}
+
+// convertDurationField converts the "Duration" field in m from nanoseconds to
+// milliseconds using integer division. json.Unmarshal decodes int64 as float64.
+func convertDurationField(m map[string]any) {
+	v, ok := m["Duration"]
+	if !ok {
+		return
+	}
+	ns, ok := v.(float64)
+	if !ok || ns <= 0 {
+		return
+	}
+	m["Duration"] = int64(ns) / 1_000_000
 }
 
 // requireSupportedFormat returns a TRACTL_WASM_INVALID_FORMAT bridge error when format
@@ -123,6 +168,25 @@ func jsonSafeObject(value any) (map[string]any, error) {
 	}
 
 	return result, nil
+}
+
+// runRequestFromJSON unmarshals a RequestDef JSON string, calls RunRequestDef,
+// and returns a JS-safe result map or a bridgeError map on failure.
+// Extracted from handleRunRequest to allow testing without syscall/js.
+func runRequestFromJSON(jsonStr string) map[string]any {
+	var def localapi.RequestDef
+	if err := json.Unmarshal([]byte(jsonStr), &def); err != nil {
+		return bridgeError("TRACTL_WASM_INVALID_ARGUMENT", err.Error())
+	}
+	result, err := localapi.RunRequestDef(def)
+	if err != nil {
+		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
+	}
+	payload, err := jsonSafeObject(result)
+	if err != nil {
+		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
+	}
+	return payload
 }
 
 // preview returns the first previewRuneLimit runes of the document.

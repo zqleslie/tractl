@@ -1,4 +1,3 @@
-import { createEmptyRequestFormState } from '@/components/request-editor/createEmptyRequestFormState'
 import type { RequestState } from '@/components/request-editor/requestState'
 import type {
   AuthType,
@@ -229,17 +228,4 @@ export function draftToRequestState(
       failurePolicy: draft.settings.failurePolicy,
     },
   }
-}
-
-export function createWorkspaceRequestState(
-  id: string,
-  method: HttpMethod = 'GET',
-): RequestState {
-  return draftToRequestState(
-    id,
-    'Untitled request',
-    method,
-    '',
-    createEmptyRequestFormState(),
-  )
 }

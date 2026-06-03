@@ -1,36 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createEmptyRequestFormState } from '@/components/request-editor/createEmptyRequestFormState'
-import {
-  addAssertionRow,
-  addExtractRow,
-  addKeyValueRow,
-  countPopulatedRows,
-  patchDraft,
-  removeAssertionRow,
-  removeExtractRow,
-  removeKeyValueRow,
-  updateAssertionRow,
-  updateExtractRow,
-  updateKeyValueRow,
-} from '@/components/request-editor/requestFormStateMutations'
-import { requestFormStateToTraCtlSpec } from '@/components/request-editor/requestFormStateToTraCtlSpec'
+import { countPopulatedRows } from '@/components/request-editor/requestFormStateMutations'
 import { validateRequestRunUrl } from '@/components/request-editor/normalizeRequestUrl'
 import {
   formatMissingEnvironmentVariables,
-  resolveTraCtlSpecEnvironmentVariables,
+  resolveRequestDefEnvironmentVariables,
 } from '@/lib/resolveEnvironmentVariables'
 import type {
-  AssertionRowModel,
   ConfigTab,
-  ExtractRowModel,
-  KeyValueRow,
-  RequestAuthDraft,
-  RequestBodyDraft,
   RequestFormState,
-  RequestScriptDraft,
-  RequestSettingsDraft,
   ResultTab,
 } from '@/components/request-editor/types'
+import { buildFieldControllers } from '@/components/request-editor/useRequestEditorFields'
 import type { HttpMethod } from '@/components/primitives'
 import { getRequestExecutionRunner } from '@/platform/requestExecution/getRequestExecutionRunner'
 import { LocalApiUnavailableError } from '@/platform/localApi/client'
@@ -38,7 +19,6 @@ import type { RequestRunResult } from '@/platform/localApi/types'
 import { WasmRuntimeUnavailableError } from '@/platform/web/requestExecutionRunner'
 import { useEnvironmentStore } from '@/stores/environmentStore'
 import { requestRunResultToExecutionResult } from '@/lib/execution/mapRunResults'
-import { syncContentTypeHeader } from '@/lib/requestEditor/contentTypeHeader'
 import {
   draftToRequestState,
   requestStateToDraft,
@@ -286,14 +266,13 @@ export function useRequestEditor() {
   )
 
   const recordHistoryResult = useCallback(
-    (result: RequestRunResult, document: ReturnType<typeof requestFormStateToTraCtlSpec>) => {
+    (result: RequestRunResult) => {
       recordRunHistoryEntry({
         requestName,
         method,
         url,
         result,
         sourceType: 'request',
-        document,
       })
     },
     [method, requestName, url],
@@ -331,9 +310,9 @@ export function useRequestEditor() {
     setResultsOpen(true)
 
     try {
-      const document = requestFormStateToTraCtlSpec(method, url, draft, requestName)
-      const resolved = resolveTraCtlSpecEnvironmentVariables(
-        document,
+      const request = draftToRequestState(requestId, requestName, method, url, draft)
+      const resolved = resolveRequestDefEnvironmentVariables(
+        request as unknown as RequestDef,
         activeEnvironment?.variables ?? {},
       )
       if (resolved.missing.length > 0) {
@@ -345,39 +324,29 @@ export function useRequestEditor() {
         setRunResult(result)
         setExecutionResult(requestRunResultToExecutionResult(result))
         setRunError(result.error ?? null)
-        recordHistoryResult(result, document)
+        recordHistoryResult(result)
         return
       }
 
-      const resolvedTarget =
-        resolved.value.workflows[0]?.steps[0]?.request.target ?? url
-      const urlError = validateRequestRunUrl(resolvedTarget)
+      const urlError = validateRequestRunUrl(resolved.value.url)
       if (urlError) {
         setRunError(urlError)
         setRunResult(null)
         return
       }
 
-      const request = draftToRequestState(
-        requestId,
-        requestName,
-        method,
-        resolvedTarget,
-        draft,
-      )
-
       if (requestRunner.supportsPersistence) {
         await requestRunner.checkAvailable()
         const saved = await requestRunner.saveRequest({
           id: fileId,
           name: requestName,
-          request: request as unknown as RequestDef,
+          request: resolved.value,
         })
         if (saved?.path) setFileId(saved.path)
         updateActiveRequestTab({ isDirty: false })
       }
       const result = await requestRunner.runRequest({
-        request: request as unknown as RequestDef,
+        request: resolved.value,
         fileId,
         name: requestName,
       })
@@ -389,7 +358,7 @@ export function useRequestEditor() {
         setRunError(result.error)
         setExecutionError(result.error)
       }
-      recordHistoryResult(result, resolved.value)
+      recordHistoryResult(result)
     } catch (error) {
       const message =
         error instanceof LocalApiUnavailableError
@@ -470,121 +439,7 @@ export function useRequestEditor() {
     setActiveResultTab,
     toggleResultsPanel,
     runRequest,
-    params: {
-      rows: draft.params,
-      add: () =>
-        updateDraft((current) =>
-          patchDraft(current, { params: addKeyValueRow(current.params, 'param') }),
-        ),
-      update: (id: string, patch: Partial<Omit<KeyValueRow, 'id'>>) =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            params: updateKeyValueRow(current.params, id, patch),
-          }),
-        ),
-      remove: (id: string) =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            params: removeKeyValueRow(current.params, id),
-          }),
-        ),
-    },
-    headers: {
-      rows: draft.headers,
-      replace: (rows: KeyValueRow[]) =>
-        updateDraft((current) => patchDraft(current, { headers: rows })),
-      add: () =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            headers: addKeyValueRow(current.headers, 'header'),
-          }),
-        ),
-      update: (id: string, patch: Partial<Omit<KeyValueRow, 'id'>>) =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            headers: updateKeyValueRow(current.headers, id, patch),
-          }),
-        ),
-      remove: (id: string) =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            headers: removeKeyValueRow(current.headers, id),
-          }),
-        ),
-    },
-    body: {
-      value: draft.body,
-      update: (patch: Partial<RequestBodyDraft>) =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            body: { ...current.body, ...patch },
-            headers: syncContentTypeHeader(current.headers, patch, current.body),
-          }),
-        ),
-    },
-    auth: {
-      value: draft.auth,
-      update: (patch: Partial<RequestAuthDraft>) =>
-        updateDraft((current) =>
-          patchDraft(current, { auth: { ...current.auth, ...patch } }),
-        ),
-    },
-    scripts: {
-      value: draft.scripts,
-      update: (patch: Partial<RequestScriptDraft>) =>
-        updateDraft((current) =>
-          patchDraft(current, { scripts: { ...current.scripts, ...patch } }),
-        ),
-    },
-    assertions: {
-      rows: draft.assertions,
-      add: () =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            assertions: addAssertionRow(current.assertions),
-          }),
-        ),
-      update: (id: string, patch: Partial<Omit<AssertionRowModel, 'id'>>) =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            assertions: updateAssertionRow(current.assertions, id, patch),
-          }),
-        ),
-      remove: (id: string) =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            assertions: removeAssertionRow(current.assertions, id),
-          }),
-        ),
-    },
-    extracts: {
-      rows: draft.extracts,
-      add: () =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            extracts: addExtractRow(current.extracts),
-          }),
-        ),
-      update: (id: string, patch: Partial<Omit<ExtractRowModel, 'id'>>) =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            extracts: updateExtractRow(current.extracts, id, patch),
-          }),
-        ),
-      remove: (id: string) =>
-        updateDraft((current) =>
-          patchDraft(current, {
-            extracts: removeExtractRow(current.extracts, id),
-          }),
-        ),
-    },
-    settings: {
-      value: draft.settings,
-      update: (patch: Partial<RequestSettingsDraft>) =>
-        updateDraft((current) =>
-          patchDraft(current, { settings: { ...current.settings, ...patch } }),
-        ),
-    },
+    ...buildFieldControllers(draft, updateDraft),
   }
 }
 

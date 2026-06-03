@@ -1,2 +1,2 @@
-export { ActionCard, type ActionCardProps } from './ActionCard'
-export { RecentList, type RecentListProps } from './RecentList'
+export { ActionCard } from './ActionCard'
+export { RecentList } from './RecentList'

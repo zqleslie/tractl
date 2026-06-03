@@ -112,7 +112,7 @@ function durationMsFromDiagnostics(
   if (!step) return 0
 
   if (typeof step.Duration === 'number' && step.Duration > 0) {
-    return normalizeDurationMs(step.Duration)
+    return step.Duration
   }
 
   const timeline = step.Requests?.[0]?.Timeline
@@ -123,12 +123,6 @@ function durationMsFromDiagnostics(
   return 0
 }
 
-function normalizeDurationMs(value: number): number {
-  if (value > 1_000_000) {
-    return Math.round(value / 1_000_000)
-  }
-  return Math.round(value)
-}
 
 function parseDiagnosticsTime(value: string | undefined): number | undefined {
   if (!value?.trim()) return undefined
@@ -256,10 +250,10 @@ function workflowDurationMs(
     (entry) => entry.WorkflowID === workflow?.WorkflowID,
   )
   if (diagnosticWorkflow && typeof diagnosticWorkflow.Duration === 'number') {
-    return normalizeDurationMs(diagnosticWorkflow.Duration)
+    return diagnosticWorkflow.Duration
   }
   if (diagnostics && typeof diagnostics.Duration === 'number') {
-    return normalizeDurationMs(diagnostics.Duration)
+    return diagnostics.Duration
   }
   return stepResults.reduce((sum, step) => sum + (step.durationMs ?? 0), 0)
 }

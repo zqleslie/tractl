@@ -1,0 +1,12 @@
+{
+  "ignoreExports": [
+    {
+      "file": "src/platform/localApi/types.ts",
+      "exports": ["RunRequestInput"]
+    },
+    {
+      "file": "src/platform/requestExecution/types.ts",
+      "exports": ["RunRequestInput"]
+    }
+  ]
+}

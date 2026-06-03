@@ -9,12 +9,3 @@ export async function runRequest(payload: RequestDef): Promise<RunResult> {
   return requestRunResultToExecutionResult(result)
 }
 
-export async function saveRequestFile(
-  payload: { path: string; content: string },
-): Promise<{ path: string; updatedAt: string }> {
-  const saved = await apiPost<{ path: string; modifiedAt: string }>(
-    `/files/${payload.path}`,
-    { content: payload.content },
-  )
-  return { path: saved.path, updatedAt: saved.modifiedAt }
-}

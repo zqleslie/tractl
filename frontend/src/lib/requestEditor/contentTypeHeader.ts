@@ -1,4 +1,4 @@
-import type { BodyEncoding, KeyValueRow, RequestBodyDraft } from '@/components/request-editor/types'
+import type { KeyValueRow, RequestBodyDraft } from '@/components/request-editor/types'
 
 const CONTENT_TYPE_KEY = 'content-type'
 
@@ -91,12 +91,3 @@ export function syncContentTypeHeader(
   return upsertContentTypeHeader(headers, contentType)
 }
 
-export function contentTypeForEncoding(encoding: BodyEncoding): string | null {
-  return contentTypeForBody({
-    encoding,
-    value: '',
-    formRows: [],
-    rawContentType: 'text/plain',
-    binaryFile: '',
-  })
-}

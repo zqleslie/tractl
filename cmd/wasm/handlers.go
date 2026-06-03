@@ -165,19 +165,7 @@ func handleRunRequest(this js.Value, args []js.Value) any {
 	if len(args) != 1 || args[0].Type() != js.TypeString {
 		return bridgeError("TRACTL_WASM_INVALID_ARGUMENT", "runRequest expects one JSON string argument")
 	}
-	var def localapi.RequestDef
-	if err := json.Unmarshal([]byte(args[0].String()), &def); err != nil {
-		return bridgeError("TRACTL_WASM_INVALID_ARGUMENT", err.Error())
-	}
-	result, err := localapi.RunRequestDef(def)
-	if err != nil {
-		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
-	}
-	payload, err := jsonSafeObject(result)
-	if err != nil {
-		return bridgeError("TRACTL_EXECUTION_ERROR", err.Error())
-	}
-	return payload
+	return runRequestFromJSON(args[0].String())
 }
 
 // handleLayout accepts a JSON array of StepRef and returns WorkflowLayoutResponse.

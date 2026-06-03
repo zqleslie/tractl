@@ -1,37 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import {
-  RUN_HISTORY_MAX_ENTRIES,
-  useRunHistoryStore,
-  type RunHistoryEntry,
-} from '@/stores/runHistoryStore'
+import { RUN_HISTORY_MAX_ENTRIES, useRunHistoryStore } from '@/stores/runHistoryStore'
+import { makeHistoryEntry } from '@/test/historyFixtures'
 
-function makeEntry(index: number): RunHistoryEntry {
-  return {
+const makeEntry = (index: number) =>
+  makeHistoryEntry({
     id: `entry-${index}`,
     timestamp: new Date().toISOString(),
     requestName: `Request ${index}`,
-    method: 'GET',
     url: `https://example.com/${index}`,
-    statusCode: 200,
-    durationMs: 1,
-    outcome: 'success',
-    result: {
-      passed: true,
-      durationMs: 1,
-      statusCode: 200,
-      statusText: '200',
-      contentType: 'application/json',
-      body: '{}',
-      headers: {},
-      timing: { dns: 0, tcp: 0, tls: 0, ttfb: 0, transfer: 0, total: 1, unit: 'ms' },
-      assertionResults: [],
-      extractResults: [],
-      assertionsPassed: 0,
-      assertionsTotal: 0,
-      timeline: [],
-    },
-  }
-}
+  })
 
 describe('runHistoryStore', () => {
   beforeEach(() => {

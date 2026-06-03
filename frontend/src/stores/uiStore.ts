@@ -4,12 +4,12 @@ import type { HttpMethod } from '@/components/primitives'
 import type { RunHistoryEntry } from '@/stores/runHistoryStore'
 import type { SavedRequestItem } from '@/stores/requestCollectionsStore'
 
-export type RequestsSidebarView = 'history' | 'collections'
+type RequestsSidebarView = 'history' | 'collections'
 
-export type Theme = 'light' | 'dark' | 'system'
+type Theme = 'light' | 'dark' | 'system'
 export type UiScale = 'compact' | 'default' | 'comfortable'
 /** Spec alias — same values as {@link UiScale} (comfortable | default | compact). */
-export type Density = UiScale
+type Density = UiScale
 export type SidebarTab =
   | 'requests'
   | 'workflows'
@@ -25,7 +25,7 @@ export type AppScreen =
   | 'environments'
 export type EditorLayout = 'stacked' | 'side-by-side'
 /** Spec alias for {@link EditorLayout}. */
-export type ResultLayout = EditorLayout
+type ResultLayout = EditorLayout
 export type WorkspaceTabType = 'request' | 'workflow'
 
 export type WorkspaceTab = {
@@ -94,6 +94,73 @@ type UiState = {
   setRequestsHistoryShowAll: (showAll: boolean) => void
 }
 
+function applyToggleSidebarTab(
+  state: UiState,
+  sidebarTab: SidebarTab,
+): Partial<UiState> {
+  const togglingSame = state.sidebarTab === sidebarTab
+  const nextCollapsed = togglingSame ? !state.sidebarCollapsed : false
+
+  if (sidebarTab === 'workflows' && state.activeScreen === 'request' && !togglingSame) {
+    const tabId = `workflow-${state.activeWorkflowId ?? 'draft'}`
+    const existing = state.tabs.some((tab) => tab.id === tabId)
+    return {
+      sidebarTab,
+      sidebarCollapsed: true,
+      activeScreen: 'workflow',
+      activeTabId: tabId,
+      tabs: existing
+        ? state.tabs
+        : [
+            ...state.tabs,
+            {
+              id: tabId,
+              type: 'workflow',
+              title: state.activeWorkflowId ?? 'Untitled workflow',
+              method: 'WF',
+              isDirty: false,
+              workflowId: state.activeWorkflowId,
+            },
+          ],
+    }
+  }
+
+  return { sidebarTab, sidebarCollapsed: nextCollapsed }
+}
+
+function applyActivateTab(state: UiState, tabId: string): Partial<UiState> {
+  const tab = state.tabs.find((candidate) => candidate.id === tabId)
+  if (!tab) return state
+  return {
+    activeTabId: tab.id,
+    activeScreen: tab.type === 'request' ? 'request' : 'workflow',
+    activeWorkflowId:
+      tab.type === 'workflow' ? (tab.workflowId ?? null) : state.activeWorkflowId,
+  }
+}
+
+function applyCloseTab(state: UiState, tabId: string): Partial<UiState> {
+  const tabIndex = state.tabs.findIndex((tab) => tab.id === tabId)
+  if (tabIndex === -1) return state
+
+  const tabs = state.tabs.filter((tab) => tab.id !== tabId)
+  if (state.activeTabId !== tabId) return { tabs }
+
+  const nextTab = tabs[Math.min(tabIndex, tabs.length - 1)] ?? null
+  return {
+    tabs,
+    activeTabId: nextTab?.id ?? null,
+    activeScreen:
+      nextTab?.type === 'request'
+        ? 'request'
+        : nextTab?.type === 'workflow'
+          ? 'workflow'
+          : 'fast-start',
+    activeWorkflowId:
+      nextTab?.type === 'workflow' ? (nextTab.workflowId ?? null) : state.activeWorkflowId,
+  }
+}
+
 export const useUiStore = create<UiState>()(
   persist(
     (set, get) => ({
@@ -135,43 +202,7 @@ export const useUiStore = create<UiState>()(
       toggleActivityBarExpanded: () =>
         set((state) => ({ activityBarExpanded: !state.activityBarExpanded })),
       toggleSidebarTab: (sidebarTab) =>
-        set((state) => {
-          const togglingSame = state.sidebarTab === sidebarTab
-          const nextCollapsed = togglingSame ? !state.sidebarCollapsed : false
-
-          if (
-            sidebarTab === 'workflows' &&
-            state.activeScreen === 'request' &&
-            !togglingSame
-          ) {
-            const tabId = `workflow-${state.activeWorkflowId ?? 'draft'}`
-            const existing = state.tabs.some((tab) => tab.id === tabId)
-            return {
-              sidebarTab,
-              sidebarCollapsed: true,
-              activeScreen: 'workflow',
-              activeTabId: tabId,
-              tabs: existing
-                ? state.tabs
-                : [
-                    ...state.tabs,
-                    {
-                      id: tabId,
-                      type: 'workflow',
-                      title: state.activeWorkflowId ?? 'Untitled workflow',
-                      method: 'WF',
-                      isDirty: false,
-                      workflowId: state.activeWorkflowId,
-                    },
-                  ],
-            }
-          }
-
-          return {
-            sidebarTab,
-            sidebarCollapsed: nextCollapsed,
-          }
-        }),
+        set((state) => applyToggleSidebarTab(state, sidebarTab)),
       setEditorLayout: (editorLayout) => set({ editorLayout }),
       setResultLayout: (editorLayout) => set({ editorLayout }),
       setEditorSplitRatio: (editorSplitRatio) => set({ editorSplitRatio }),
@@ -189,41 +220,8 @@ export const useUiStore = create<UiState>()(
       setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
       setKeyboardShortcutsOpen: (keyboardShortcutsOpen) =>
         set({ keyboardShortcutsOpen }),
-      activateTab: (tabId) =>
-        set((state) => {
-          const tab = state.tabs.find((candidate) => candidate.id === tabId)
-          if (!tab) return state
-          return {
-            activeTabId: tab.id,
-            activeScreen: tab.type === 'request' ? 'request' : 'workflow',
-            activeWorkflowId:
-              tab.type === 'workflow' ? (tab.workflowId ?? null) : state.activeWorkflowId,
-          }
-        }),
-      closeTab: (tabId) =>
-        set((state) => {
-          const tabIndex = state.tabs.findIndex((tab) => tab.id === tabId)
-          if (tabIndex === -1) return state
-
-          const tabs = state.tabs.filter((tab) => tab.id !== tabId)
-          if (state.activeTabId !== tabId) return { tabs }
-
-          const nextTab = tabs[Math.min(tabIndex, tabs.length - 1)] ?? null
-          return {
-            tabs,
-            activeTabId: nextTab?.id ?? null,
-            activeScreen:
-              nextTab?.type === 'request'
-                ? 'request'
-                : nextTab?.type === 'workflow'
-                  ? 'workflow'
-                  : 'fast-start',
-            activeWorkflowId:
-              nextTab?.type === 'workflow'
-                ? (nextTab.workflowId ?? null)
-                : state.activeWorkflowId,
-          }
-        }),
+      activateTab: (tabId) => set((state) => applyActivateTab(state, tabId)),
+      closeTab: (tabId) => set((state) => applyCloseTab(state, tabId)),
       updateActiveRequestTab: (patch) =>
         set((state) => {
           if (!state.activeTabId) return state

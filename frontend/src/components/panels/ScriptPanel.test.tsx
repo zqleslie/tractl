@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { ScriptPanel } from '@/components/panels/ScriptPanel'
+import { ScriptPanel } from '@/components/request-editor/shared/ScriptPanel'
 
 describe('ScriptPanel', () => {
   it('copies context chip token to clipboard', async () => {

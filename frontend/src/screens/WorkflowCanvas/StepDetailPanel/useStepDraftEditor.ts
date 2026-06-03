@@ -1,90 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createEmptyRequestFormState } from '@/components/request-editor/createEmptyRequestFormState'
-import {
-  addAssertionRow,
-  addExtractRow,
-  addKeyValueRow,
-  countPopulatedRows,
-  removeAssertionRow,
-  removeExtractRow,
-  removeKeyValueRow,
-  updateAssertionRow,
-  updateExtractRow,
-  updateKeyValueRow,
-} from '@/components/request-editor/requestFormStateMutations'
-import type {
-  AssertionRowModel,
-  ExtractRowModel,
-  KeyValueRow,
-  RequestAuthDraft,
-  RequestBodyDraft,
-  RequestFormState,
-  RequestScriptDraft,
-} from '@/components/request-editor/types'
+import { countPopulatedRows } from '@/components/request-editor/requestFormStateMutations'
+import { buildFieldControllers } from '@/components/request-editor/useRequestEditorFields'
+import type { RequestFormState } from '@/components/request-editor/types'
 import type { HttpMethod } from '@/components/primitives'
 import { useWorkflowCanvasStore } from '@/stores/workflowCanvasStore'
 import type { WorkflowStep } from '@/types/workflow'
 
-export interface StepDraftEditorSlice {
+export type StepDraftEditorSlice = {
   stepId: string
   setStepId: (id: string) => void
   commitStepId: () => void
-
   method: HttpMethod
   url: string
   setMethod: (method: HttpMethod) => void
   setUrl: (url: string) => void
-
-  params: {
-    rows: KeyValueRow[]
-    add: () => void
-    update: (id: string, patch: Partial<Omit<KeyValueRow, 'id'>>) => void
-    remove: (id: string) => void
-  }
-
-  headers: {
-    rows: KeyValueRow[]
-    add: () => void
-    update: (id: string, patch: Partial<Omit<KeyValueRow, 'id'>>) => void
-    remove: (id: string) => void
-  }
-
-  body: {
-    value: RequestBodyDraft
-    update: (patch: Partial<RequestBodyDraft>) => void
-  }
-
-  auth: {
-    value: RequestAuthDraft
-    update: (patch: Partial<RequestAuthDraft>) => void
-  }
-
-  scripts: {
-    value: RequestScriptDraft
-    update: (patch: Partial<RequestScriptDraft>) => void
-  }
-
-  assertions: {
-    rows: AssertionRowModel[]
-    add: () => void
-    update: (id: string, patch: Partial<Omit<AssertionRowModel, 'id'>>) => void
-    remove: (id: string) => void
-  }
-
-  extracts: {
-    rows: ExtractRowModel[]
-    add: () => void
-    update: (id: string, patch: Partial<Omit<ExtractRowModel, 'id'>>) => void
-    remove: (id: string) => void
-  }
-
-  tabCounts: {
-    params: number
-    headers: number
-    assertions: number
-    extracts: number
-  }
-}
+  tabCounts: { params: number; headers: number; assertions: number; extracts: number }
+} & ReturnType<typeof buildFieldControllers>
 
 function createInitialStepDraft(step: WorkflowStep): RequestFormState {
   const draft = createEmptyRequestFormState()
@@ -184,102 +116,7 @@ export function useStepDraftEditor(step: WorkflowStep): StepDraftEditorSlice {
     url,
     setMethod,
     setUrl,
-    params: {
-      rows: draft.params,
-      add: () =>
-        updateDraft((current) => ({
-          ...current,
-          params: addKeyValueRow(current.params, 'param'),
-        })),
-      update: (id, patch) =>
-        updateDraft((current) => ({
-          ...current,
-          params: updateKeyValueRow(current.params, id, patch),
-        })),
-      remove: (id) =>
-        updateDraft((current) => ({
-          ...current,
-          params: removeKeyValueRow(current.params, id),
-        })),
-    },
-    headers: {
-      rows: draft.headers,
-      add: () =>
-        updateDraft((current) => ({
-          ...current,
-          headers: addKeyValueRow(current.headers, 'header'),
-        })),
-      update: (id, patch) =>
-        updateDraft((current) => ({
-          ...current,
-          headers: updateKeyValueRow(current.headers, id, patch),
-        })),
-      remove: (id) =>
-        updateDraft((current) => ({
-          ...current,
-          headers: removeKeyValueRow(current.headers, id),
-        })),
-    },
-    body: {
-      value: draft.body,
-      update: (patch) =>
-        updateDraft((current) => ({
-          ...current,
-          body: { ...current.body, ...patch },
-        })),
-    },
-    auth: {
-      value: draft.auth,
-      update: (patch) =>
-        updateDraft((current) => ({
-          ...current,
-          auth: { ...current.auth, ...patch },
-        })),
-    },
-    scripts: {
-      value: draft.scripts,
-      update: (patch) =>
-        updateDraft((current) => ({
-          ...current,
-          scripts: { ...current.scripts, ...patch },
-        })),
-    },
-    assertions: {
-      rows: draft.assertions,
-      add: () =>
-        updateDraft((current) => ({
-          ...current,
-          assertions: addAssertionRow(current.assertions),
-        })),
-      update: (id, patch) =>
-        updateDraft((current) => ({
-          ...current,
-          assertions: updateAssertionRow(current.assertions, id, patch),
-        })),
-      remove: (id) =>
-        updateDraft((current) => ({
-          ...current,
-          assertions: removeAssertionRow(current.assertions, id),
-        })),
-    },
-    extracts: {
-      rows: draft.extracts,
-      add: () =>
-        updateDraft((current) => ({
-          ...current,
-          extracts: addExtractRow(current.extracts),
-        })),
-      update: (id, patch) =>
-        updateDraft((current) => ({
-          ...current,
-          extracts: updateExtractRow(current.extracts, id, patch),
-        })),
-      remove: (id) =>
-        updateDraft((current) => ({
-          ...current,
-          extracts: removeExtractRow(current.extracts, id),
-        })),
-    },
     tabCounts,
+    ...buildFieldControllers(draft, updateDraft),
   }
 }

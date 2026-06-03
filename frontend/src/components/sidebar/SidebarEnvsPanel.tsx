@@ -3,22 +3,12 @@ import { SidebarAction } from '@/components/sidebar/SidebarAction'
 import { SidebarListItem } from '@/components/sidebar/SidebarListItem'
 import { SidebarSection } from '@/components/sidebar/SidebarSection'
 import { cn } from '@/lib/cn'
-import { useEnvironmentStore } from '@/stores/environmentStore'
+import { useActiveEnvironment } from '@/stores/useActiveEnvironment'
 import { useUiStore } from '@/stores/uiStore'
 
 export function SidebarEnvsPanel() {
-  const environments = useEnvironmentStore((state) => state.environments)
-  const activeEnvironmentId = useEnvironmentStore(
-    (state) => state.activeEnvironmentId,
-  )
-  const setActiveEnvironment = useEnvironmentStore(
-    (state) => state.setActiveEnvironment,
-  )
+  const { environments, activeEnvironmentId, activeEnvironment, setActiveEnvironment } = useActiveEnvironment()
   const setActiveScreen = useUiStore((state) => state.setActiveScreen)
-
-  const activeEnvironment =
-    environments.find((environment) => environment.id === activeEnvironmentId) ??
-    null
   const activeVariables = Object.entries(activeEnvironment?.variables ?? {}).sort(
     ([left], [right]) => left.localeCompare(right),
   )

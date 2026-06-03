@@ -32,11 +32,11 @@ describe('mapRunResult', () => {
           },
         ],
         diagnostics: {
-          Duration: 120_000_000,
+          Duration: 120,
           Workflows: [
             {
               WorkflowID: 'wf-auth-billing',
-              Duration: 120_000_000,
+              Duration: 120,
               Steps: [
                 {
                   StepID: 'step-auth',

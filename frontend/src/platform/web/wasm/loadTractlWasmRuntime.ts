@@ -3,20 +3,20 @@
  * Loads /wasm_exec.js + /tractl.wasm; exposes metadata, echo, parse, validate, and run APIs.
  */
 
-export type WasmRuntimeState = 'idle' | 'loading' | 'ready' | 'error'
+type WasmRuntimeState = 'idle' | 'loading' | 'ready' | 'error'
 
-export interface WasmRuntimeStatus {
+interface WasmRuntimeStatus {
   state: WasmRuntimeState
   error?: string
 }
 
-export interface TractlWasmVersion {
+interface TractlWasmVersion {
   surface: string
   runtime: string
   version: string
 }
 
-export interface TractlWasmCapabilities {
+interface TractlWasmCapabilities {
   surface: string
   networkProvider: string
   supports: string[]
@@ -29,7 +29,7 @@ export interface TractlWasmError {
 }
 
 /** Successful echo payload from the WASM bridge (UI-0.1C). */
-export interface TractlWasmEchoSuccess {
+interface TractlWasmEchoSuccess {
   surface: string
   received: true
   length: number
@@ -37,17 +37,12 @@ export interface TractlWasmEchoSuccess {
 }
 
 /** Structured bridge failure (invalid args, panic recovery, etc.). */
-export interface TractlWasmEchoFailure {
+interface TractlWasmEchoFailure {
   error: TractlWasmError
 }
 
-export type TractlWasmEchoResult = TractlWasmEchoSuccess | TractlWasmEchoFailure
+type TractlWasmEchoResult = TractlWasmEchoSuccess | TractlWasmEchoFailure
 
-export function isTractlWasmEchoSuccess(
-  result: TractlWasmEchoResult,
-): result is TractlWasmEchoSuccess {
-  return 'received' in result && result.received === true
-}
 
 /** Canonical spec document returned by the parser pipeline (UI-0.1D). */
 export type TractlWasmParsedSpec = Record<string, unknown>
@@ -137,7 +132,7 @@ export function isTractlWasmValidateFailure(
   return 'valid' in result && result.valid === false && 'errors' in result
 }
 
-export interface TractlWasmGlobal {
+interface TractlWasmGlobal {
   version: () => TractlWasmVersion
   capabilities: () => TractlWasmCapabilities
   /** Promise-based document echo; no parser/validator/engine calls. */
@@ -155,6 +150,12 @@ export interface TractlWasmGlobal {
    * blocking the syscall/js callback thread during net/http fetch.
    */
   run: (document: string, format: TractlWasmParseFormat) => Promise<TractlWasmRunResult>
+  /**
+   * Full engine pipeline for a single request (ADR-017 §3 amendment 2026-06-02 B).
+   * Accepts RequestDef JSON. Go-side RunRequestDef() handles all spec construction.
+   * Use this instead of run() for single-request execution from the editor.
+   */
+  runRequest: (requestDefJson: string) => Promise<TractlWasmRunResult>
 }
 
 declare global {
@@ -175,9 +176,6 @@ const TRACTL_WAIT_MS = 10_000
 
 let runtimeStatus: WasmRuntimeStatus = { state: 'idle' }
 
-export function getTractlWasmRuntimeStatus(): WasmRuntimeStatus {
-  return runtimeStatus
-}
 
 export function isTractlWasmRuntimeReady(): boolean {
   return runtimeStatus.state === 'ready' && typeof window.tractl !== 'undefined'

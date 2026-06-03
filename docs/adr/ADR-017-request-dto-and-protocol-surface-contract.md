@@ -383,3 +383,195 @@ as the storage format.
   to the step assembly function)
 - External YAML authors must be aware that `auth` is an editor abstraction; in YAML
   the resolved header is the canonical form
+
+---
+
+## Amendment — 2026-06-02 (B)
+
+Amended by: Go Is the Sole Transformation Layer — TypeScript Is Presentation Only
+
+### Context
+
+ADR-017 §3 (original) stated: "The React frontend MUST own its own TypeScript mapper
+that converts `RequestDef` to a spec-shaped JSON object."
+
+ADR-017 Amendment 2026-06-02 extended this, declaring the TypeScript mapper
+`requestFormStateToTraCtlSpec()` as the single serialization path for both
+single-request and workflow step execution on the WASM surface.
+
+Both decisions were incorrect. The TypeScript mapper was doing business logic that
+belongs exclusively in Go:
+
+- ISO 8601 duration formatting (`timeoutMs: 30000 → "PT30S"`)
+- Auth resolution (bearer/basic/apikey credentials → `Authorization` header)
+- GraphQL body serialization (`query`/`variables`/`operationName` envelope)
+- Form row encoding (KVRow[] → `application/x-www-form-urlencoded`)
+
+This logic already exists in the Go mapper (`requestDefToDocument()` in
+`internal/localapi/request_mapper.go`). The TypeScript mapper was a second
+implementation of the same logic, introducing:
+
+1. **Parity risk** — subtle behavioural differences (e.g. `Math.round` vs integer
+   division for timeout conversion) that produce different spec documents from the
+   same user input depending on which surface ran the request.
+
+2. **Future surface cost** — every new delivery surface (mobile, IDE extension,
+   desktop companion) would need to reimplement the same transformation logic.
+   The engine result is consistent; the input construction is not.
+
+3. **Wrong responsibility** — TypeScript's job is to render UI, manage local state,
+   and translate form state into a `RequestDef` DTO. Spec document construction is
+   an engine concern, not a presentation concern.
+
+The WASM surface was the specific driver: because the browser runs Go compiled to
+WebAssembly, there is no reason to build the spec document in TypeScript before
+calling the engine. The Go code is already there, inside the WASM bundle.
+
+### Decision
+
+#### §3 Superseded — Go Owns All Transformation Logic for All Surfaces
+
+The original §3 and the 2026-06-02 §3 extension are both superseded by this
+amendment.
+
+**The Go mapper is the single transformation path for all delivery surfaces,
+including WASM.**
+
+The role of the TypeScript layer is strictly:
+
+1. **Collect user input** — form state (`RequestFormState`)
+2. **Translate to `RequestDef`** — thin field mapping only: rename UI encoding labels
+   (`'JSON'` → `'json'`, `'Form data'` → `'form'`), pass numeric values as-is
+   (`timeoutMs: 30000`, not `"PT30S"`). No duration formatting. No auth injection.
+   No protocol-specific body construction.
+3. **Dispatch to the appropriate transport** — Wails binding (Desktop), WASM bridge
+   (Web Tier 1), or HTTP (Web Tier 2). The transport receives `RequestDef` JSON.
+4. **Display results exactly as the engine produces them** — no reformatting of
+   engine output in TypeScript.
+
+**The WASM bridge MUST expose a `runRequest` entry point** that accepts `RequestDef`
+JSON, calls Go's `RunRequestDef()` internally (which calls `requestDefToDocument()`
+and then the engine), and returns the `RunResult` JSON.
+
+```
+Web WASM (corrected):
+  RequestFormState
+    → [thin TS: form state → RequestDef]
+    → window.tractl.runRequest(JSON.stringify(requestDef))
+        → Go (WASM): localapi.RunRequestDef(def)
+            → requestDefToDocument(def)     ← all logic here, in Go
+            → engine.RunDocument(spec)
+            → RunResult
+
+Desktop:
+  RequestFormState
+    → [thin TS: form state → RequestDef]
+    → Wails.RunRequestDef(requestDef)
+        → Go: localapi.RunRequestDef(def)
+            → requestDefToDocument(def)
+            → engine.RunDocument(spec)
+            → RunResult
+
+Server / external callers (unchanged):
+  RequestDef → POST /api/v1/run
+    → Go: localapi.RunRequestDef(def)
+        → requestDefToDocument(def)
+        → engine.RunDocument(spec)
+        → RunResult
+```
+
+All three paths call the same Go function. Duration formatting, auth injection,
+GraphQL serialisation, and all other spec construction logic live in exactly one
+place.
+
+#### TypeScript Presentation Boundary
+
+The following MUST be in TypeScript (presentation and storage):
+
+- Form state management (`RequestFormState`, Zustand stores)
+- Thin `RequestFormState → RequestDef` field mapping (no business logic)
+- Transport dispatch (`RequestDef` JSON to Wails / WASM bridge / HTTP fetch)
+- Result rendering (display what the engine returns, unchanged)
+- Local persistence (IndexedDB for Web Tier 1, auto-save coordination)
+- Code view / spec preview — `requestDefToDocumentObject` is permitted here
+  because showing the user a preview of the generated spec is a presentation
+  concern, not an execution concern. It MUST NOT be on the execution code path.
+
+The following MUST NOT be in TypeScript:
+
+- ISO 8601 duration formatting
+- Auth credential resolution into headers
+- Protocol-specific body serialisation (GraphQL, form encoding, multipart)
+- Any logic that is also present in `request_mapper.go`
+
+#### `requestDefToDocument.ts` Scope Restriction
+
+`frontend/src/platform/mappers/requestDefToDocument.ts` is retained for the code
+view / spec preview use case only. It MUST NOT be imported by any execution runner
+(`webRequestExecutionRunner`, `desktopRequestExecutionRunner`, or any future runner).
+Its role is: given a `RequestDef`, show the user what spec YAML the engine will
+receive. It is a display utility, not a transformation pipeline.
+
+#### Protocol Support Is Deferred to Go
+
+Protocol-specific handling (GraphQL body envelope, form encoding, multipart
+boundaries, future SOAP XML) is implemented in Go only — in `requestDefToDocument()`
+and its helpers. TypeScript sends `body.encoding: "graphql"` and `body.content`
+as-is in the `RequestDef`; Go handles what that means at execution time.
+
+This directly resolves the concern that added protocol support would require
+parallel TypeScript implementations. It never will. Protocols are added in Go
+once and available on all surfaces immediately.
+
+#### Consistency Invariant
+
+The following invariant MUST hold across all delivery surfaces:
+
+> For any `RequestDef` value, `localapi.RunRequestDef(def)` on any surface
+> (CLI, Desktop, Web WASM, Web Server) produces semantically equivalent
+> `RunResult` output. Surface-level differences (CORS, socket timing availability)
+> are declared exceptions per ADR-012, not behavioural differences in request
+> construction.
+
+### Consequences
+
+**Positive:**
+
+- Single transformation implementation in Go — no parity risk between surfaces
+- New delivery surfaces (mobile, IDE extension) send `RequestDef` JSON and get
+  consistent results without implementing any mapping logic
+- Protocol support (GraphQL, SOAP, future) added in Go once, available everywhere
+- TypeScript codebase is smaller and has a clear, bounded responsibility
+- The existing `RunRequestDef()` function in `mapper.go` is already correct —
+  this amendment primarily removes TypeScript code, not adds Go code
+
+**Tradeoffs:**
+
+- WASM bridge requires a new `runRequest` entry point — small Go addition
+- `requestDefToDocument.ts` remains in the codebase for preview use, creating
+  a risk that future engineers use it on the execution path — the import boundary
+  stated above is the guard against this
+- The `requestFormStateToTraCtlSpec()` TypeScript mapper, and the related
+  `requestDefToDocumentObject()` function, are demoted from execution-path code
+  to preview utilities — any tests that were validating execution semantics via
+  these functions need to be reframed as preview tests
+
+### Superseded Content
+
+The following is superseded by this amendment:
+
+- ADR-017 §3 original: "The React frontend MUST own its own TypeScript mapper
+  that converts `RequestDef` to a spec-shaped JSON object and sends it as
+  `WorkflowRunRequest`. The frontend MUST NOT route single-request execution
+  through the Go mapper."
+- ADR-017 Amendment 2026-06-02 §3 extension: "The TypeScript mapper
+  `requestFormStateToTraCtlSpec()` MUST be the single serialization path for both
+  cases."
+- ADR-017 original Tradeoffs: "Two mapper implementations (Go and TypeScript) must
+  produce equivalent output" and "TypeScript mapper is a new maintenance surface
+  with no Go-side test coverage" — both eliminated by this amendment.
+- ADR-017 original Alternatives Considered: "Single mapper in Go, frontend always
+  routes through it: rejected. Couples the frontend to the Go mapper." — this
+  rejection is itself reversed. The frontend does route through the Go mapper; it
+  does so via the WASM bridge `runRequest` entry point, which is not a coupling
+  problem because the bridge is the defined interface between the two layers.

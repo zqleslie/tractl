@@ -7,7 +7,9 @@ package main
 import (
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/tractl/tractl/internal/diagnostics"
 	"github.com/tractl/tractl/internal/engine"
 	"github.com/tractl/tractl/internal/validation"
 )
@@ -248,6 +250,94 @@ func TestValidateDocument_UnknownFormat(t *testing.T) {
 	_, err := validateDocument("content: 1", "toml")
 	if err == nil {
 		t.Error("validateDocument: expected error for unknown format, got nil")
+	}
+}
+
+func TestHandleRunRequest_InvalidJSON(t *testing.T) {
+	result := runRequestFromJSON("{not valid json}")
+	errMap, ok := result["error"].(map[string]any)
+	if !ok {
+		t.Fatal("runRequestFromJSON: missing 'error' key for invalid JSON input")
+	}
+	if errMap["code"] != "TRACTL_WASM_INVALID_ARGUMENT" {
+		t.Errorf("runRequestFromJSON: code = %q, want TRACTL_WASM_INVALID_ARGUMENT", errMap["code"])
+	}
+}
+
+func TestHandleRunRequest_ValidDef(t *testing.T) {
+	// A minimal RequestDef with a reachable URL. The engine will attempt a real
+	// HTTP call; since this runs in a standard Go test (not WASM/browser), the
+	// net/http transport is available. We only verify the result shape, not the
+	// HTTP outcome, so any network error also produces a RunResult-shaped error response.
+	def := `{"id":"test","name":"test","method":"GET","url":"https://httpbin.org/status/200"}`
+	result := runRequestFromJSON(def)
+	// Must not be a bridge-level argument error.
+	if errMap, hasErr := result["error"].(map[string]any); hasErr {
+		if errMap["code"] == "TRACTL_WASM_INVALID_ARGUMENT" {
+			t.Fatalf("runRequestFromJSON: got argument error for valid def: %v", errMap["message"])
+		}
+		// Network errors produce TRACTL_EXECUTION_ERROR — acceptable in CI without network.
+		t.Logf("runRequestFromJSON: execution error (network may be unavailable): %v", errMap["message"])
+		return
+	}
+	if _, ok := result["statusCode"]; !ok {
+		t.Error("runRequestFromJSON: result missing 'statusCode' key — expected RunResult shape")
+	}
+}
+
+func TestRunResultPayload_DiagnosticDurationsInMs(t *testing.T) {
+	result := &engine.RunResult{
+		Passed: true,
+		Workflows: []engine.WorkflowOutcome{
+			{WorkflowID: "wf-1", Passed: true},
+		},
+		Diagnostics: &diagnostics.ExecutionRecord{
+			Duration: 1 * time.Second,
+			Workflows: []diagnostics.WorkflowRecord{
+				{
+					WorkflowID: "wf-1",
+					Duration:   500 * time.Millisecond,
+					Steps: []diagnostics.StepRecord{
+						{
+							StepID:   "step-1",
+							Duration: 200 * time.Millisecond,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	payload, err := runResultPayload(result)
+	if err != nil {
+		t.Fatalf("runResultPayload: unexpected error: %v", err)
+	}
+
+	diag, ok := payload["diagnostics"].(map[string]any)
+	if !ok {
+		t.Fatal("runResultPayload: missing diagnostics key")
+	}
+
+	wfs, _ := diag["Workflows"].([]any)
+	if len(wfs) == 0 {
+		t.Fatal("runResultPayload: diagnostics.Workflows is empty")
+	}
+	wf, _ := wfs[0].(map[string]any)
+
+	wfDuration, _ := wf["Duration"].(int64)
+	if wfDuration != 500 {
+		t.Errorf("workflow Duration = %d ms, want 500 ms (got nanoseconds if %d)", wfDuration, wfDuration)
+	}
+
+	steps, _ := wf["Steps"].([]any)
+	if len(steps) == 0 {
+		t.Fatal("runResultPayload: diagnostics.Workflows[0].Steps is empty")
+	}
+	step, _ := steps[0].(map[string]any)
+
+	stepDuration, _ := step["Duration"].(int64)
+	if stepDuration != 200 {
+		t.Errorf("step Duration = %d ms, want 200 ms (got nanoseconds if %d)", stepDuration, stepDuration)
 	}
 }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { IconCheck, IconChevronRight, IconX } from '@tabler/icons-react'
-import type { AssertionResult as AssertionResultModel } from '@/stores/executionStore'
+import type { AssertionResultItem as AssertionResultModel } from '@/stores/executionStore'
 
 export type AssertionResultProps = {
   results: AssertionResultModel[]

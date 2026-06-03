@@ -2,7 +2,7 @@ import { create } from 'zustand'
 
 export type RunState = 'idle' | 'running' | 'success' | 'error'
 
-export type AssertionResult = {
+export type AssertionResultItem = {
   id: string
   kind: string
   op: string
@@ -12,7 +12,7 @@ export type AssertionResult = {
   severity: 'error' | 'warning'
 }
 
-export type ExtractResult = {
+export type ExtractResultItem = {
   id: string
   variableName: string
   scope: 'workflow' | 'spec' | 'step'
@@ -36,8 +36,8 @@ export type RunResult = {
   body: string
   headers: Record<string, string>
   timing: RunTiming
-  assertionResults: AssertionResult[]
-  extractResults: ExtractResult[]
+  assertionResults: AssertionResultItem[]
+  extractResults: ExtractResultItem[]
   assertionsPassed: number
   assertionsTotal: number
 }

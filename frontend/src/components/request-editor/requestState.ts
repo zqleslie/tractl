@@ -1,7 +1,6 @@
 import type { HttpMethod } from '@/components/primitives'
 import type { AssertionDef, ExtractDef, RequestDef } from '@/types/requestDef'
 import type {
-  FormRow,
   KVRow,
   RequestAuthState,
   RequestBodyState,
@@ -28,4 +27,3 @@ export type RequestState = Omit<
   }
 }
 
-export type { AssertionDef, ExtractDef, FormRow, KVRow, RetryConfig }

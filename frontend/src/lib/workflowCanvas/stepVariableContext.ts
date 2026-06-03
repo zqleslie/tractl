@@ -1,4 +1,3 @@
-import type { TraCtlExtract } from '@/components/request-editor/tractlSpecDocument'
 import type { WorkflowStep } from '@/types/workflow'
 
 const EXPRESSION_REF_RE = /\$\{([^}]+)\}/g
@@ -84,7 +83,7 @@ export function parseVariableReferences(value: string): string[] {
   return ordered
 }
 
-export function formatWorkflowVariableReference(key: string): string {
+function formatWorkflowVariableReference(key: string): string {
   return `vars.${key}`
 }
 
@@ -100,8 +99,4 @@ export function workflowVariableRows(
       value,
       reference: formatWorkflowVariableReference(key),
     }))
-}
-
-export function extractReferenceLabel(extract: TraCtlExtract, stepId: string): string {
-  return `steps.${stepId}.extracts.${extract.id}`
 }

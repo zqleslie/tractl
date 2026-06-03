@@ -305,3 +305,32 @@ is not permitted.
 `RequestFormState` and `requestFormStateToTraCtlSpec()` are the single authoring
 and serialization path for both single requests and workflow steps. The mapper MUST
 NOT be forked or duplicated for the workflow step case.
+
+---
+
+## Index Update — 2026-06-02 (B)
+
+### Amended ADRs
+
+| ADR | Amendment Summary |
+|-----|-------------------|
+| [ADR-017](ADR-017-request-dto-and-protocol-surface-contract.md) | §3 superseded: Go is the sole transformation layer for all surfaces including WASM. TypeScript is presentation and thin DTO only. WASM bridge gains `runRequest(requestDefJson)` entry point. `requestDefToDocumentObject` demoted to preview utility, banned from execution path. Protocol support (GraphQL etc.) implemented in Go only — never in TypeScript. Reverses original §3 rejection of "single mapper in Go." |
+
+### Updated Core Invariants Cross-Reference
+
+**Go is the sole transformation layer (ADR-017 amendment 2026-06-02 B):**
+`localapi.RunRequestDef(def)` is the single spec-document construction path for
+all delivery surfaces — CLI, Desktop, Web WASM, Web Server, and any future surface.
+Duration formatting, auth injection, and protocol-specific body handling live in
+Go only. TypeScript sends `RequestDef` JSON and receives `RunResult` JSON.
+
+**TypeScript presentation boundary (ADR-017 amendment 2026-06-02 B):**
+TypeScript is permitted to: collect form state, perform thin `RequestFormState →
+RequestDef` field mapping (no business logic), dispatch to transport, render
+results as-is, and manage local storage. TypeScript MUST NOT format durations,
+inject auth headers, or perform protocol-specific body construction.
+
+**Consistency invariant (ADR-017 amendment 2026-06-02 B):**
+For any `RequestDef`, `RunRequestDef()` produces semantically equivalent output
+on all surfaces. Surface exceptions (CORS, socket timing) are declared in ADR-012,
+not introduced by input construction differences.

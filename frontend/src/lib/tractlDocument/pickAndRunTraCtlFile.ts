@@ -1,5 +1,5 @@
 import { inferDocumentFormat } from '@/lib/tractlDocument/inferDocumentFormat'
-import { pickTextFile, readFileAsText } from '@/lib/tractlDocument/pickTextFile'
+import { readFileAsText } from '@/lib/tractlDocument/pickTextFile'
 import { runTraCtlDocument } from '@/lib/tractlDocument/runDocument'
 import type { RunDocumentResult } from '@/lib/tractlDocument/runDocument'
 import { parseAndValidateDocument } from '@/lib/tractlDocument/parseValidateDocument'
@@ -50,13 +50,3 @@ export async function runSelectedTraCtlFile(
   }
 }
 
-export async function pickAndRunTraCtlFile(
-  environmentVariables: Record<string, string>,
-): Promise<PickRunFileResult> {
-  const file = await pickTextFile()
-  if (!file) {
-    return { ok: false, cancelled: true }
-  }
-
-  return runSelectedTraCtlFile(file, environmentVariables)
-}

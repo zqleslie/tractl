@@ -4,12 +4,6 @@ import { createEmptyRequestFormState } from '@/components/request-editor/createE
 import type { HttpMethod } from '@/components/primitives'
 import type { RequestState } from '@/components/request-editor/requestState'
 
-export type WorkspaceTab = {
-  id: string
-  type: 'request' | 'workflow'
-  isDirty: boolean
-  request?: RequestState
-}
 
 type WorkspaceStore = {
   requests: Record<string, RequestState>

@@ -1,4 +1,4 @@
-import type { ExtractResult as ExtractResultModel } from '@/stores/executionStore'
+import type { ExtractResultItem as ExtractResultModel } from '@/stores/executionStore'
 
 export type ExtractResultProps = {
   results: ExtractResultModel[]

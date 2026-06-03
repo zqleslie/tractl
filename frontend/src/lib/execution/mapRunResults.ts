@@ -44,10 +44,6 @@ export function mapFlatRunResult(raw: GoRunResult): RequestRunResult {
   }
 }
 
-export function timelineToTiming(result: RequestRunResult): RunResult['timing'] {
-  return result.timing
-}
-
 export function requestRunResultToExecutionResult(
   result: RequestRunResult,
 ): RunResult {
@@ -75,38 +71,5 @@ export function requestRunResultToExecutionResult(
     })),
     assertionsPassed: result.assertionsPassed,
     assertionsTotal: result.assertionsTotal,
-  }
-}
-
-export function executionResultToRequestRunResult(
-  result: RunResult,
-): RequestRunResult {
-  return {
-    passed: result.assertionsPassed >= result.assertionsTotal,
-    durationMs: result.durationMs,
-    statusCode: result.statusCode,
-    statusText: result.statusText,
-    body: result.body,
-    contentType: result.headers?.['content-type'] ?? 'application/json',
-    headers: result.headers,
-    timing: { ...result.timing, unit: 'ms' as const },
-    assertionResults: result.assertionResults.map((row) => ({
-      id: row.id,
-      kind: row.kind,
-      op: row.op,
-      expected: row.expected,
-      received: row.received,
-      passed: row.passed,
-      severity: row.severity,
-    })),
-    extractResults: result.extractResults.map((row) => ({
-      id: row.id,
-      variable: row.variableName,
-      value: row.resolvedValue ?? '',
-      scope: row.scope,
-    })),
-    assertionsPassed: result.assertionsPassed,
-    assertionsTotal: result.assertionsTotal,
-    timeline: [],
   }
 }

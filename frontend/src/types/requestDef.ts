@@ -91,23 +91,6 @@ export interface RequestDef {
   env?: Record<string, string>
 }
 
-export interface AssertionResult {
-  id: string
-  kind: string
-  op: string
-  expected: string
-  received: string
-  passed: boolean
-  severity: AssertionSeverity
-}
-
-export interface ExtractResult {
-  id: string
-  variableName: string
-  scope: ExtractScope
-  resolvedValue: string
-  error?: string
-}
 
 export interface TimingResult {
   dns: number
@@ -119,16 +102,3 @@ export interface TimingResult {
   unit: 'ms'
 }
 
-export interface RunResult {
-  statusCode: number
-  statusText: string
-  durationMs: number
-  body: string
-  headers: Record<string, string>
-  timing: TimingResult
-  assertionResults: AssertionResult[]
-  extractResults: ExtractResult[]
-  assertionsPassed: number
-  assertionsTotal: number
-  error?: string
-}

@@ -95,20 +95,14 @@ function classifyEdgeType(
  * @throws If a dependency references an unknown step id.
  * @throws If a cycle (including a self-reference) is detected.
  */
-export function computeDagLayout(steps: LayoutStep[]): DagLayout {
-  if (steps.length === 0) {
-    return {
-      nodes: [],
-      edges: [],
-      branchBars: [],
-      groupDividers: [],
-      canvasWidth: 0,
-      canvasHeight: 0,
-      groupCount: 0,
-    };
-  }
+interface Cell { g: number; r: number; ids: string[] }
 
-  // --- Step 1: validate input ---------------------------------------------
+function buildGraph(steps: LayoutStep[]): {
+  indexById: Map<string, number>;
+  stepById: (id: string) => LayoutStep;
+  byInputIndex: (a: string, b: string) => number;
+  childrenOf: Map<string, string[]>;
+} {
   const indexById = new Map<string, number>();
   steps.forEach((step, i) => indexById.set(step.id, i));
 
@@ -121,10 +115,8 @@ export function computeDagLayout(steps: LayoutStep[]): DagLayout {
   }
 
   const stepById = (id: string): LayoutStep => steps[indexById.get(id)!]!;
-  const byInputIndex = (a: string, b: string): number =>
-    indexById.get(a)! - indexById.get(b)!;
+  const byInputIndex = (a: string, b: string): number => indexById.get(a)! - indexById.get(b)!;
 
-  // Children of each step, recorded in input order for determinism.
   const childrenOf = new Map<string, string[]>();
   for (const step of steps) childrenOf.set(step.id, []);
   for (const step of steps) {
@@ -133,35 +125,35 @@ export function computeDagLayout(steps: LayoutStep[]): DagLayout {
     }
   }
 
-  // Cycle detection via DFS over the "depends on" direction. A self-reference
-  // (A -> A) lands the node in the visiting set during its own traversal.
+  // Cycle detection via DFS. A self-reference lands the node in the visiting set.
   const visited = new Set<string>();
   const visiting = new Set<string>();
   const detectCycle = (id: string): void => {
     if (visited.has(id)) return;
-    if (visiting.has(id)) {
-      throw new Error(`Cycle detected involving step: ${id}`);
-    }
+    if (visiting.has(id)) throw new Error(`Cycle detected involving step: ${id}`);
     visiting.add(id);
-    for (const depId of allDependsOn(stepById(id))) {
-      detectCycle(depId);
-    }
+    for (const depId of allDependsOn(stepById(id))) detectCycle(depId);
     visiting.delete(id);
     visited.add(id);
   };
   for (const step of steps) detectCycle(step.id);
 
-  // --- Step 2: topological sort (Kahn) -> row assignment ------------------
+  return { indexById, stepById, byInputIndex, childrenOf };
+}
+
+function assignRows(
+  steps: LayoutStep[],
+  stepById: (id: string) => LayoutStep,
+  childrenOf: Map<string, string[]>,
+  byInputIndex: (a: string, b: string) => number,
+): Map<string, number> {
   const inDegree = new Map<string, number>();
   for (const step of steps) inDegree.set(step.id, allDependsOn(step).length);
 
   const row = new Map<string, number>();
   const queue: string[] = [];
   for (const step of steps) {
-    if (allDependsOn(step).length === 0) {
-      row.set(step.id, 0);
-      queue.push(step.id);
-    }
+    if (allDependsOn(step).length === 0) { row.set(step.id, 0); queue.push(step.id); }
   }
   queue.sort(byInputIndex);
 
@@ -181,15 +173,18 @@ export function computeDagLayout(steps: LayoutStep[]): DagLayout {
       }
     }
   }
+  return row;
+}
 
-  // --- Step 3: column group assignment (independent root detection) -------
+function assignGroups(
+  steps: LayoutStep[],
+  childrenOf: Map<string, string[]>,
+): { group: Map<string, number>; groupCount: number } {
   const roots = steps.filter((step) => allDependsOn(step).length === 0);
   const groupCount = roots.length;
   const rootGroup = new Map<string, number>();
   roots.forEach((rootStep, i) => rootGroup.set(rootStep.id, i));
 
-  // Roots are processed in ascending group order, so the lowest (leftmost)
-  // group claims any node reachable from multiple roots.
   const group = new Map<string, number>();
   for (const rootStep of roots) {
     const g = rootGroup.get(rootStep.id)!;
@@ -203,123 +198,136 @@ export function computeDagLayout(steps: LayoutStep[]): DagLayout {
       }
     }
   }
+  return { group, groupCount };
+}
 
-  // --- Step 4: column index within (group, row) ---------------------------
-  interface Cell {
-    g: number;
-    r: number;
-    ids: string[];
-  }
-  const cells = new Map<string, Cell>();
+function buildCells(
+  steps: LayoutStep[],
+  group: Map<string, number>,
+  row: Map<string, number>,
+  byInputIndex: (a: string, b: string) => number,
+): { cells: Map<string, Cell>; col: Map<string, number>; cellKey: (g: number, r: number) => string } {
   const cellKey = (g: number, r: number): string => `${g}:${r}`;
+  const cells = new Map<string, Cell>();
   for (const step of steps) {
     const g = group.get(step.id)!;
     const r = row.get(step.id)!;
     const key = cellKey(g, r);
     let cell = cells.get(key);
-    if (!cell) {
-      cell = { g, r, ids: [] };
-      cells.set(key, cell);
-    }
+    if (!cell) { cell = { g, r, ids: [] }; cells.set(key, cell); }
     cell.ids.push(step.id);
   }
-
   const col = new Map<string, number>();
   for (const cell of cells.values()) {
     cell.ids.sort(byInputIndex);
     cell.ids.forEach((id, c) => col.set(id, c));
   }
+  return { cells, col, cellKey };
+}
 
-  const rowWidthOf = (n: number): number => n * CARD_W + (n - 1) * H_GAP;
-
-  // --- Step 5: group x offsets --------------------------------------------
+function computeGroupOffsets(
+  cells: Map<string, Cell>,
+  groupCount: number,
+): { groupWidth: number[]; groupXStart: number[] } {
+  const rowWidthOf = (n: number) => n * CARD_W + (n - 1) * H_GAP;
   const groupWidth: number[] = new Array<number>(groupCount).fill(0);
   for (const cell of cells.values()) {
     const width = rowWidthOf(cell.ids.length);
     if (width > groupWidth[cell.g]!) groupWidth[cell.g] = width;
   }
-
   const groupXStart: number[] = new Array<number>(groupCount).fill(0);
   groupXStart[0] = GROUP_PADDING;
   for (let i = 1; i < groupCount; i++) {
-    groupXStart[i] =
-      groupXStart[i - 1]! + groupWidth[i - 1]! + DIVIDER_WIDTH + GROUP_PADDING;
+    groupXStart[i] = groupXStart[i - 1]! + groupWidth[i - 1]! + DIVIDER_WIDTH + GROUP_PADDING;
   }
+  return { groupWidth, groupXStart };
+}
 
-  // --- Step 6: pixel positions --------------------------------------------
+function placeNodes(
+  steps: LayoutStep[],
+  group: Map<string, number>,
+  row: Map<string, number>,
+  col: Map<string, number>,
+  cells: Map<string, Cell>,
+  cellKey: (g: number, r: number) => string,
+  groupWidth: number[],
+  groupXStart: number[],
+): { nodes: DagNode[]; nodeById: Map<string, DagNode> } {
+  const rowWidthOf = (n: number) => n * CARD_W + (n - 1) * H_GAP;
   const nodes: DagNode[] = steps.map((step) => {
     const g = group.get(step.id)!;
     const r = row.get(step.id)!;
     const c = col.get(step.id)!;
     const cell = cells.get(cellKey(g, r))!;
-    const rowWidth = rowWidthOf(cell.ids.length);
-    const xOffset = (groupWidth[g]! - rowWidth) / 2;
+    const xOffset = (groupWidth[g]! - rowWidthOf(cell.ids.length)) / 2;
     const x = groupXStart[g]! + xOffset + c * (CARD_W + H_GAP);
     const y = r * (CARD_H + V_GAP);
     return { stepId: step.id, x, y, row: r, col: c, columnGroup: g };
   });
   const nodeById = new Map<string, DagNode>();
   for (const node of nodes) nodeById.set(node.stepId, node);
+  return { nodes, nodeById };
+}
 
-  // --- Step 7: classify edges ---------------------------------------------
+function buildEdges(
+  steps: LayoutStep[],
+  childrenOf: Map<string, string[]>,
+): DagEdge[] {
   const edges: DagEdge[] = [];
-  const pushEdge = (
-    parentId: string,
-    childStep: LayoutStep,
-    dependencyKind: DependencyKind,
-  ) => {
-    const stepParentCount = allDependsOn(childStep).length;
-    const parentChildCount = childrenOf.get(parentId)!.length;
-    edges.push({
-      fromId: parentId,
-      toId: childStep.id,
-      edgeType: classifyEdgeType(parentChildCount, stepParentCount),
-      dependencyKind,
-    });
-  };
-
   for (const step of steps) {
     for (const parentId of step.dependsOn) {
-      pushEdge(parentId, step, 'explicit');
+      edges.push({
+        fromId: parentId, toId: step.id,
+        edgeType: classifyEdgeType(childrenOf.get(parentId)!.length, allDependsOn(step).length),
+        dependencyKind: 'explicit',
+      });
     }
     const explicit = new Set(step.dependsOn);
     for (const parentId of step.implicitDependsOn ?? []) {
       if (explicit.has(parentId)) continue;
-      pushEdge(parentId, step, 'implicit');
-    }
-  }
-
-  // --- Step 8: branch bars (one per parent with >1 child) -----------------
-  const branchBars: BranchBar[] = [];
-  for (const step of steps) {
-    const children = childrenOf.get(step.id)!;
-    if (children.length > 1) {
-      const parent = nodeById.get(step.id)!;
-      const centres = children.map((childId) => nodeById.get(childId)!.x + CARD_W / 2);
-      const xStart = Math.min(...centres);
-      const xEnd = Math.max(...centres);
-      branchBars.push({
-        parentId: step.id,
-        row: parent.row,
-        xStart,
-        xEnd,
-        xMid: (xStart + xEnd) / 2,
-        y: parent.y + CARD_H + BRANCH_BAR_OFFSET_Y,
+      edges.push({
+        fromId: parentId, toId: step.id,
+        edgeType: classifyEdgeType(childrenOf.get(parentId)!.length, allDependsOn(step).length),
+        dependencyKind: 'implicit',
       });
     }
   }
+  return edges;
+}
 
-  // --- Step 9: group dividers ---------------------------------------------
-  const groupDividers: GroupDivider[] = [];
-  for (let i = 0; i < groupCount - 1; i++) {
-    groupDividers.push({
-      x: groupXStart[i + 1]! - DIVIDER_WIDTH / 2,
-      leftGroup: i,
-      rightGroup: i + 1,
-    });
+function buildBranchBars(steps: LayoutStep[], childrenOf: Map<string, string[]>, nodeById: Map<string, DagNode>): BranchBar[] {
+  const branchBars: BranchBar[] = [];
+  for (const step of steps) {
+    const children = childrenOf.get(step.id)!;
+    if (children.length <= 1) continue;
+    const parent = nodeById.get(step.id)!;
+    const centres = children.map((childId) => nodeById.get(childId)!.x + CARD_W / 2);
+    const xStart = Math.min(...centres);
+    const xEnd = Math.max(...centres);
+    branchBars.push({ parentId: step.id, row: parent.row, xStart, xEnd, xMid: (xStart + xEnd) / 2, y: parent.y + CARD_H + BRANCH_BAR_OFFSET_Y });
+  }
+  return branchBars;
+}
+
+export function computeDagLayout(steps: LayoutStep[]): DagLayout {
+  if (steps.length === 0) {
+    return { nodes: [], edges: [], branchBars: [], groupDividers: [], canvasWidth: 0, canvasHeight: 0, groupCount: 0 };
   }
 
-  // --- Step 10: canvas dimensions -----------------------------------------
+  const { byInputIndex, stepById, childrenOf } = buildGraph(steps);
+  const row = assignRows(steps, stepById, childrenOf, byInputIndex);
+  const { group, groupCount } = assignGroups(steps, childrenOf);
+  const { cells, col, cellKey } = buildCells(steps, group, row, byInputIndex);
+  const { groupWidth, groupXStart } = computeGroupOffsets(cells, groupCount);
+  const { nodes, nodeById } = placeNodes(steps, group, row, col, cells, cellKey, groupWidth, groupXStart);
+  const edges = buildEdges(steps, childrenOf);
+  const branchBars = buildBranchBars(steps, childrenOf, nodeById);
+
+  const groupDividers: GroupDivider[] = [];
+  for (let i = 0; i < groupCount - 1; i++) {
+    groupDividers.push({ x: groupXStart[i + 1]! - DIVIDER_WIDTH / 2, leftGroup: i, rightGroup: i + 1 });
+  }
+
   let maxRight = 0;
   let maxBottom = 0;
   for (const node of nodes) {
@@ -327,13 +335,5 @@ export function computeDagLayout(steps: LayoutStep[]): DagLayout {
     maxBottom = Math.max(maxBottom, node.y + CARD_H);
   }
 
-  return {
-    nodes,
-    edges,
-    branchBars,
-    groupDividers,
-    canvasWidth: maxRight + CANVAS_PADDING,
-    canvasHeight: maxBottom + CANVAS_PADDING,
-    groupCount,
-  };
+  return { nodes, edges, branchBars, groupDividers, canvasWidth: maxRight + CANVAS_PADDING, canvasHeight: maxBottom + CANVAS_PADDING, groupCount };
 }

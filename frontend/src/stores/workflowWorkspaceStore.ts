@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { RunHistorySourceFormat } from '@/stores/runHistoryStore'
 import type { Workflow } from '@/types/workflow'
 
-export type OpenedWorkflowRecord = {
+type OpenedWorkflowRecord = {
   workflow: Workflow
   sourceName: string
   sourceFormat: RunHistorySourceFormat

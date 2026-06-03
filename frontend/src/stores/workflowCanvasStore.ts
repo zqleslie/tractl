@@ -27,7 +27,7 @@ const SKIPPED_STEP_RESULT: StepResult = {
 
 export type CanvasView = 'graph' | 'code'
 export type AutoSaveState = 'saved' | 'saving'
-export type OpenStepDefaultTab =
+type OpenStepDefaultTab =
   | 'request'
   | 'dependencies'
   | 'pre-script'
@@ -36,7 +36,7 @@ export type OpenStepDefaultTab =
   | 'extracts'
   | 'result'
 
-export interface OpenStepOptions {
+interface OpenStepOptions {
   defaultTab?: OpenStepDefaultTab
 }
 

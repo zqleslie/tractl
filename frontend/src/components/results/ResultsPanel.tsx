@@ -1,4 +1,1 @@
-export {
-  RequestResultsPanel as ResultsPanel,
-  type RequestResultsPanelProps as ResultsPanelProps,
-} from '@/components/request-editor/results/RequestResultsPanel'
+export { RequestResultsPanel as ResultsPanel } from '@/components/request-editor/results/RequestResultsPanel'
