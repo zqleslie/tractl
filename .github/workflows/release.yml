@@ -7,8 +7,12 @@ on:
       - "v*.*.*-*"
   workflow_dispatch:
     inputs:
+      tag:
+        description: "Existing git tag to release (must already exist on the remote)"
+        type: string
+        required: true
       draft:
-        description: "Create the GitHub Release as a draft"
+        description: "Create the GitHub Release as a draft (stable tags only; pre-release tags are always draft)"
         type: boolean
         default: true
 
@@ -16,7 +20,7 @@ permissions:
   contents: write   # create GitHub Releases + upload assets
 
 concurrency:
-  group: release-${{ github.ref_name }}
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -28,10 +32,50 @@ jobs:
     outputs:
       draft: ${{ steps.release-policy.outputs.draft }}
       publish_homebrew: ${{ steps.release-policy.outputs.publish_homebrew }}
+      release_tag: ${{ steps.release-ref.outputs.tag }}
     steps:
+      - name: Resolve release ref
+        id: release-ref
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          tag="${tag#"${tag%%[![:space:]]*}"}"
+          tag="${tag%"${tag##*[![:space:]]}"}"
+
+          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Release tag must match vMAJOR.MINOR.PATCH (optional -prerelease suffix): got '${tag}'"
+            exit 1
+          fi
+
+          {
+            echo "tag=${tag}"
+            echo "ref=refs/tags/${tag}"
+          } >> "${GITHUB_OUTPUT}"
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0   # goreleaser needs full history for changelog
+          ref: ${{ steps.release-ref.outputs.ref }}
+
+      - name: Verify tag points at HEAD
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.release-ref.outputs.tag }}
+        run: |
+          set -euo pipefail
+          tag_commit=$(git rev-parse "${RELEASE_TAG}^{commit}")
+          head_commit=$(git rev-parse HEAD)
+          if [[ "${tag_commit}" != "${head_commit}" ]]; then
+            echo "::error::Tag ${RELEASE_TAG} points to ${tag_commit} but checkout HEAD is ${head_commit}."
+            echo "::error::Move the tag to the intended commit and push it, or use a new version tag."
+            exit 1
+          fi
 
       - uses: ./.github/actions/build-web-assets
 
@@ -41,7 +85,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          tag="${GITHUB_REF_NAME}"
+          tag="${{ steps.release-ref.outputs.tag }}"
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
             draft="${{ inputs.draft }}"
           elif [[ "${tag}" =~ -(alpha|beta|rc)(\.|[0-9]|$) ]]; then
@@ -83,6 +127,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ steps.release-ref.outputs.tag }}
 
   # ── Job 2: Desktop binary for macOS (arm64 + amd64) ──────────────────────
   # Wails requires a macOS runner — Go cannot cross-compile a Wails app.
@@ -99,6 +144,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: refs/tags/${{ needs.goreleaser.outputs.release_tag }}
 
       - uses: actions/setup-go@v5
         with:
@@ -122,14 +168,14 @@ jobs:
           cd cmd/desktop
           wails build \
             -ldflags "-s -w \
-              -X 'github.com/tractl/tractl/internal/version.Version=${{ github.ref_name }}' \
+              -X 'github.com/tractl/tractl/internal/version.Version=${{ needs.goreleaser.outputs.release_tag }}' \
               -X 'github.com/tractl/tractl/internal/version.Commit=${{ github.sha }}'" \
             -trimpath \
             -platform darwin/${{ matrix.arch }}
 
       - name: Package DMG
         run: |
-          VERSION="${{ github.ref_name }}"
+          VERSION="${{ needs.goreleaser.outputs.release_tag }}"
           ARCH="${{ matrix.arch }}"
           hdiutil create \
             -volname "traCtl" \
@@ -141,8 +187,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${{ github.ref_name }}" \
-            "traCtl_${{ github.ref_name }}_darwin_${{ matrix.arch }}.dmg" \
+          gh release upload "${{ needs.goreleaser.outputs.release_tag }}" \
+            "traCtl_${{ needs.goreleaser.outputs.release_tag }}_darwin_${{ matrix.arch }}.dmg" \
             --repo ${{ github.repository }} \
             --clobber
 
@@ -152,7 +198,7 @@ jobs:
   update-cask:
     name: Update Homebrew Cask
     runs-on: ubuntu-latest
-    needs: [desktop-macos]
+    needs: [goreleaser, desktop-macos]
     if: needs.goreleaser.outputs.publish_homebrew == 'true'
     steps:
       - name: Install GitHub CLI
@@ -161,7 +207,7 @@ jobs:
       - name: Update Cask in homebrew-tap
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ needs.goreleaser.outputs.release_tag }}
           REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

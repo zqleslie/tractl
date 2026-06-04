@@ -32,7 +32,7 @@ CGO_ENABLED := 0
 BUILD_FLAGS := -trimpath -ldflags "$(LDFLAGS)"
 
 # ── Docker ────────────────────────────────────────────────────────────────────
-DOCKER_REPO := tractl/tractl
+DOCKER_REPO := softwits/tractl
 DOCKER_TAG  ?= $(VERSION)
 
 .PHONY: all help deps deps-frontend deps-all install install-cli \
@@ -348,7 +348,7 @@ release-snapshot:
 docker: docker-web docker-ci
 
 # docker-web builds the web server image that serves the React + WASM app.
-# User runs: docker run -p 7428:7428 tractl/tractl:web
+# User runs: docker run -p 7428:7428 softwits/tractl:web
 # Then opens: http://localhost:7428
 docker-web:
 	docker buildx build \

@@ -3,7 +3,7 @@
 # Web server image — serves the traCtl web app on port 7428.
 #
 # Usage:
-#   docker run -p 7428:7428 tractl/tractl:web
+#   docker run -p 7428:7428 softwits/tractl:web
 #   open http://localhost:7428
 #
 # goreleaser copies the pre-built tractl-server binary into this image.

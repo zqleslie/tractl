@@ -98,8 +98,8 @@ dockers:
     use: buildx
     dockerfile: build/docker/Dockerfile.web
     image_templates:
-      - "tractl/tractl:web-{{ .Tag }}-amd64"
-      - "tractl/tractl:web-amd64"
+      - "softwits/tractl:web-{{ .Tag }}-amd64"
+      - "softwits/tractl:web-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--build-arg=VERSION={{ .Version }}"
@@ -113,8 +113,8 @@ dockers:
     use: buildx
     dockerfile: build/docker/Dockerfile.web
     image_templates:
-      - "tractl/tractl:web-{{ .Tag }}-arm64"
-      - "tractl/tractl:web-arm64"
+      - "softwits/tractl:web-{{ .Tag }}-arm64"
+      - "softwits/tractl:web-arm64"
     build_flag_templates:
       - "--platform=linux/arm64"
       - "--build-arg=VERSION={{ .Version }}"
@@ -128,8 +128,8 @@ dockers:
     use: buildx
     dockerfile: build/docker/Dockerfile.ci
     image_templates:
-      - "tractl/tractl:ci-{{ .Tag }}-amd64"
-      - "tractl/tractl:ci-amd64"
+      - "softwits/tractl:ci-{{ .Tag }}-amd64"
+      - "softwits/tractl:ci-amd64"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--build-arg=VERSION={{ .Version }}"
@@ -143,35 +143,35 @@ dockers:
     use: buildx
     dockerfile: build/docker/Dockerfile.ci
     image_templates:
-      - "tractl/tractl:ci-{{ .Tag }}-arm64"
-      - "tractl/tractl:ci-arm64"
+      - "softwits/tractl:ci-{{ .Tag }}-arm64"
+      - "softwits/tractl:ci-arm64"
     build_flag_templates:
       - "--platform=linux/arm64"
       - "--build-arg=VERSION={{ .Version }}"
       - "--build-arg=COMMIT={{ .ShortCommit }}"
 
 docker_manifests:
-  - name_template: "tractl/tractl:web-{{ .Tag }}"
+  - name_template: "softwits/tractl:web-{{ .Tag }}"
     image_templates:
-      - "tractl/tractl:web-{{ .Tag }}-amd64"
-      - "tractl/tractl:web-{{ .Tag }}-arm64"
+      - "softwits/tractl:web-{{ .Tag }}-amd64"
+      - "softwits/tractl:web-{{ .Tag }}-arm64"
 
-  - name_template: "tractl/tractl:web"
+  - name_template: "softwits/tractl:web"
     skip_push: "{{ if .IsSnapshot }}true{{ else }}false{{ end }}"
     image_templates:
-      - "tractl/tractl:web-amd64"
-      - "tractl/tractl:web-arm64"
+      - "softwits/tractl:web-amd64"
+      - "softwits/tractl:web-arm64"
 
-  - name_template: "tractl/tractl:ci-{{ .Tag }}"
+  - name_template: "softwits/tractl:ci-{{ .Tag }}"
     image_templates:
-      - "tractl/tractl:ci-{{ .Tag }}-amd64"
-      - "tractl/tractl:ci-{{ .Tag }}-arm64"
+      - "softwits/tractl:ci-{{ .Tag }}-amd64"
+      - "softwits/tractl:ci-{{ .Tag }}-arm64"
 
-  - name_template: "tractl/tractl:ci"
+  - name_template: "softwits/tractl:ci"
     skip_push: "{{ if .IsSnapshot }}true{{ else }}false{{ end }}"
     image_templates:
-      - "tractl/tractl:ci-amd64"
-      - "tractl/tractl:ci-arm64"
+      - "softwits/tractl:ci-amd64"
+      - "softwits/tractl:ci-arm64"
 
 homebrew_casks:
   - name: tractl
@@ -216,7 +216,7 @@ release:
 
     **Web app**
     ```bash
-    docker run -p 7428:7428 tractl/tractl:web
+    docker run -p 7428:7428 softwits/tractl:web
     # then open http://localhost:7428
     ```
 
