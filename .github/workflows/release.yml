@@ -5,9 +5,19 @@ on:
     tags:
       - "v*.*.*"
       - "v*.*.*-*"
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: "Create the GitHub Release as a draft"
+        type: boolean
+        default: true
 
 permissions:
   contents: write   # create GitHub Releases + upload assets
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
 
@@ -15,24 +25,43 @@ jobs:
   goreleaser:
     name: CLI release
     runs-on: ubuntu-latest
+    outputs:
+      draft: ${{ steps.release-policy.outputs.draft }}
+      publish_homebrew: ${{ steps.release-policy.outputs.publish_homebrew }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0   # goreleaser needs full history for changelog
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
+      - uses: ./.github/actions/build-web-assets
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: frontend/package.json
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+      - name: Resolve release policy
+        id: release-policy
+        shell: bash
+        run: |
+          set -euo pipefail
 
-      - name: Install frontend dependencies
-        run: cd frontend && npm ci
+          tag="${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            draft="${{ inputs.draft }}"
+          elif [[ "${tag}" =~ -(alpha|beta|rc)(\.|[0-9]|$) ]]; then
+            draft="true"
+          else
+            draft="false"
+          fi
+
+          args="release --clean"
+          publish_homebrew="true"
+          if [[ "${draft}" == "true" ]]; then
+            args="${args} --draft --skip=homebrew"
+            publish_homebrew="false"
+          fi
+
+          {
+            echo "draft=${draft}"
+            echo "publish_homebrew=${publish_homebrew}"
+            echo "args=${args}"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -50,7 +79,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           version: latest
-          args: release --clean
+          args: ${{ steps.release-policy.outputs.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
@@ -68,6 +97,8 @@ jobs:
         arch: [arm64, amd64]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-go@v5
         with:
@@ -122,12 +153,17 @@ jobs:
     name: Update Homebrew Cask
     runs-on: ubuntu-latest
     needs: [desktop-macos]
+    if: needs.goreleaser.outputs.publish_homebrew == 'true'
     steps:
+      - name: Install GitHub CLI
+        uses: cli/cli-action@v2
+
       - name: Update Cask in homebrew-tap
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           VERSION: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Download both DMGs to compute checksums
           gh release download "${VERSION}" \
@@ -176,5 +212,6 @@ jobs:
           git config user.name "tractl-bot"
           git config user.email "tractl@softwits.com"
           git add Casks/tractl-desktop.rb
+          git diff --cached --quiet && exit 0
           git commit -m "chore: update tractl-desktop cask to ${VERSION}"
           git push

@@ -13,11 +13,12 @@
 
 version: 2
 
+# Web embed (cmd/server/dist/web/) is produced by make build-web.
+# release.yml runs ./.github/actions/build-web-assets first; this hook skips when the tree exists.
 before:
   hooks:
     - go mod tidy
-    - make build-wasm
-    - make build-server
+    - bash -c 'test -f cmd/server/dist/web/index.html || make build-web'
 
 builds:
   - id: tractl
@@ -192,7 +193,8 @@ release:
     owner: tractl
     name: tractl
   prerelease: auto
-  draft: true # Promote to Public Preview — set it to false
+  # Draft/publish policy is set in .github/workflows/release.yml (tag pattern + workflow_dispatch).
+  draft: true
   name_template: "traCtl {{ .Tag }}"
   footer: |
     ## Install
