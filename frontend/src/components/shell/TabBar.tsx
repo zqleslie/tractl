@@ -84,7 +84,7 @@ export function TabBar() {
 
   return (
     <div
-      className="flex h-9 shrink-0 items-end gap-0.5 border-b-[0.5px] border-border bg-surface-elevated px-3 pt-1"
+      className="flex h-9 shrink-0 items-end gap-0.5 border-b-[0.5px] border-border bg-surface-sidebar px-3 pt-1"
       role="tablist"
       aria-label="Open workspace tabs"
       data-testid="tab-bar"

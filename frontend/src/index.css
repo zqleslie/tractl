@@ -25,8 +25,9 @@
   --line-height-ui-base: var(--density-line-height);
 
   --color-surface: #ffffff;
-  --color-surface-elevated: #f8f8f9;
-  --color-border: #d8d8dc;
+  --color-surface-elevated: #edf1f8;
+  --color-surface-sidebar: #f2f5fc;
+  --color-border: #c9cbd6;
   --color-text: #1a1a1f;
   --color-text-muted: #6b6b76;
 
@@ -72,6 +73,7 @@
 [data-theme='dark'] {
   --color-surface: #16171d;
   --color-surface-elevated: #1f2028;
+  --color-surface-sidebar: #12141c;
   --color-border: #2e303a;
   --color-text: #f3f4f6;
   --color-text-muted: #9ca3af;

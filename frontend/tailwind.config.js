@@ -11,6 +11,7 @@ export default {
       colors: {
         surface: 'var(--color-surface)',
         'surface-elevated': 'var(--color-surface-elevated)',
+        'surface-sidebar': 'var(--color-surface-sidebar)',
         border: 'var(--color-border)',
         text: 'var(--color-text)',
         'text-muted': 'var(--color-text-muted)',

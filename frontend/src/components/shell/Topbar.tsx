@@ -37,7 +37,7 @@ export function Topbar() {
 
   return (
     <header
-      className="grid h-[42px] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b-[0.5px] border-border bg-surface px-3"
+      className="grid h-[42px] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b-[0.5px] border-border bg-surface-sidebar px-3"
       data-testid="topbar"
     >
       <div aria-hidden="true" />

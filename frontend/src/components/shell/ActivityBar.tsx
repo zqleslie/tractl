@@ -37,7 +37,7 @@ export function ActivityBar() {
   return (
     <nav
       className={cn(
-        'flex shrink-0 flex-col border-r-[0.5px] border-border bg-surface transition-[width] duration-200',
+        'flex shrink-0 flex-col border-r-[0.5px] border-border bg-surface-sidebar transition-[width] duration-200',
         expanded ? 'w-40' : 'w-12',
       )}
       aria-label="Primary"

@@ -26,7 +26,7 @@ export function SidePanel() {
 
   return (
     <aside
-      className="flex w-[260px] shrink-0 flex-col border-r-[0.5px] border-border bg-surface"
+      className="flex w-[260px] shrink-0 flex-col border-r-[0.5px] border-border bg-surface-sidebar"
       data-testid="side-panel"
     >
       {!isRequestsPanel ? (
