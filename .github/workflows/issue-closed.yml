@@ -1,0 +1,248 @@
+name: Issue Closed — Move to Done + Unblock Dependents
+
+# Triggers when an issue is closed (human review sign-off).
+# Actions:
+#   1. Moves the issue to Done on the Project board
+#   2. Removes needs-review label
+#   3. Scans open issues for "Blocked By: #N" references pointing to this
+#      issue and moves those issues to Ready (unblocks them automatically)
+#
+# This is the piece that replaces manually scanning the handoff log to
+# find what can be picked up next. When you close issue #6 (Phase 11.1),
+# the workflow automatically moves Phase 11.2, 11.3, 11.5 to Ready.
+#
+# Prerequisites:
+#   - Secret GH_PROJECT_TOKEN: PAT with scopes repo + project
+#   - Variable PROJECT_NUMBER: GitHub Project number
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  close-and-unblock:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Move closed issue to Done ─────────────────────────────────────────
+      - name: Move issue to Done on Project board
+        env:
+          GH_TOKEN: ${{ secrets.GH_PROJECT_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PROJECT_NUMBER: ${{ vars.PROJECT_NUMBER }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          PROJECT_DATA=$(gh api graphql -f query="
+            {
+              repository(owner: \"$REPO_OWNER\", name: \"$REPO_NAME\") {
+                issue(number: $ISSUE_NUMBER) {
+                  projectItems(first: 10) {
+                    nodes {
+                      id
+                      project { id number }
+                    }
+                  }
+                }
+              }
+            }")
+
+          ITEM_ID=$(echo "$PROJECT_DATA" \
+            | jq -r ".data.repository.issue.projectItems.nodes[] \
+              | select(.project.number == $PROJECT_NUMBER) | .id")
+          PROJECT_ID=$(echo "$PROJECT_DATA" \
+            | jq -r ".data.repository.issue.projectItems.nodes[] \
+              | select(.project.number == $PROJECT_NUMBER) | .project.id")
+
+          if [[ -z "$ITEM_ID" || "$ITEM_ID" == "null" ]]; then
+            echo "Issue not in project — skipping."
+            exit 0
+          fi
+
+          FIELD_DATA=$(gh api graphql -f query="
+            {
+              node(id: \"$PROJECT_ID\") {
+                ... on ProjectV2 {
+                  fields(first: 20) {
+                    nodes {
+                      ... on ProjectV2SingleSelectField {
+                        id name
+                        options { id name }
+                      }
+                    }
+                  }
+                }
+              }
+            }")
+
+          STATUS_FIELD_ID=$(echo "$FIELD_DATA" \
+            | jq -r '.data.node.fields.nodes[] | select(.name == "Status") | .id')
+          DONE_ID=$(echo "$FIELD_DATA" \
+            | jq -r '.data.node.fields.nodes[] | select(.name == "Status")
+                      | .options[] | select(.name == "Done") | .id')
+
+          gh api graphql -f query="
+            mutation {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: \"$PROJECT_ID\"
+                itemId: \"$ITEM_ID\"
+                fieldId: \"$STATUS_FIELD_ID\"
+                value: { singleSelectOptionId: \"$DONE_ID\" }
+              }) {
+                projectV2Item { id }
+              }
+            }"
+
+          echo "Issue #$ISSUE_NUMBER moved to Done."
+
+      # ── 2. Remove needs-review label ─────────────────────────────────────────
+      - name: Remove needs-review label
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PROJECT_TOKEN }}
+          script: |
+            const issue = context.payload.issue.number;
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                issue_number: issue,
+                name: 'needs-review',
+              });
+            } catch (e) {
+              // Label not present — that is fine
+            }
+
+      # ── 3. Find and unblock dependent issues ─────────────────────────────────
+      - name: Unblock dependent issues
+        uses: actions/github-script@v7
+        env:
+          GH_TOKEN: ${{ secrets.GH_PROJECT_TOKEN }}
+          PROJECT_NUMBER: ${{ vars.PROJECT_NUMBER }}
+        with:
+          github-token: ${{ secrets.GH_PROJECT_TOKEN }}
+          script: |
+            const closedIssue = context.payload.issue.number;
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+
+            // Fetch all open issues and find ones blocked by the closed issue.
+            // We look at the custom "Blocked By" field in the issue body
+            // AND in the Project board field.
+            //
+            // Convention used in our issues:
+            //   "Blocked By: #N" or "blocked on #N" in the issue body
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner, repo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            const pattern = new RegExp(
+              `(blocked[\\s\\S]*?#${closedIssue}|closes.*#${closedIssue})`,
+              'i'
+            );
+
+            const toUnblock = openIssues.filter(i =>
+              i.body && pattern.test(i.body) && i.number !== closedIssue
+            );
+
+            if (toUnblock.length === 0) {
+              console.log(`No issues blocked by #${closedIssue}.`);
+              return;
+            }
+
+            console.log(`Found ${toUnblock.length} blocked issue(s) to unblock.`);
+
+            // Get project info to update status
+            const projectNumber = parseInt(process.env.PROJECT_NUMBER);
+
+            for (const issue of toUnblock) {
+              console.log(`Unblocking #${issue.number}: ${issue.title}`);
+
+              // Get the project item for this issue
+              const projectData = await github.graphql(`
+                {
+                  repository(owner: "${owner}", name: "${repo}") {
+                    issue(number: ${issue.number}) {
+                      projectItems(first: 10) {
+                        nodes {
+                          id
+                          project { id number }
+                        }
+                      }
+                    }
+                  }
+                }
+              `);
+
+              const itemNode = projectData.repository.issue.projectItems.nodes
+                .find(n => n.project.number === projectNumber);
+
+              if (!itemNode) {
+                console.log(`  #${issue.number} not in project — skipping.`);
+                continue;
+              }
+
+              // Get Status field and Ready option
+              const fieldData = await github.graphql(`
+                {
+                  node(id: "${itemNode.project.id}") {
+                    ... on ProjectV2 {
+                      fields(first: 20) {
+                        nodes {
+                          ... on ProjectV2SingleSelectField {
+                            id name
+                            options { id name }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `);
+
+              const statusField = fieldData.node.fields.nodes
+                .find(n => n.name === 'Status');
+              const readyOption = statusField?.options
+                .find(o => o.name === 'Ready');
+
+              if (!readyOption) {
+                console.log('  Ready option not found in Status field.');
+                continue;
+              }
+
+              await github.graphql(`
+                mutation {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: "${itemNode.project.id}"
+                    itemId: "${itemNode.id}"
+                    fieldId: "${statusField.id}"
+                    value: { singleSelectOptionId: "${readyOption.id}" }
+                  }) {
+                    projectV2Item { id }
+                  }
+                }
+              `);
+
+              // Remove "blocked" label from the now-unblocked issue
+              try {
+                await github.rest.issues.removeLabel({
+                  owner, repo,
+                  issue_number: issue.number,
+                  name: 'blocked',
+                });
+              } catch (e) { /* label not present */ }
+
+              // Comment on the unblocked issue
+              await github.rest.issues.createComment({
+                owner, repo,
+                issue_number: issue.number,
+                body: `**Unblocked** — Issue #${closedIssue} closed.\n\nThis issue has been moved to **Ready** on the Project board and is available to pick up.`,
+              });
+
+              console.log(`  ✓ #${issue.number} moved to Ready`);
+            }
