@@ -4037,6 +4037,56 @@ No
 
 ---
 
+## Entry: BUILD-CI-RELEASE-001
+
+Date: 2026-06-04
+Phase: Build System
+Milestone: CI/release pipeline deduplication + operator documentation
+Owner / Agent: Cursor
+Status: COMPLETE
+
+### Work Summary
+
+Consolidated duplicate CI/release build steps without adding `ci.yml` (PR-only gate remains `pr.yml`).
+
+Files Created:
+  .github/actions/build-web-assets/action.yml
+  docs/spec/release.md
+
+Files Modified:
+  .github/workflows/pr.yml — build job uses composite action (`build-target: build-wasm`) + `make build-cli`
+  .github/workflows/release.yml — goreleaser job uses composite action (default `build-web`); draft/Homebrew policy unchanged
+  .goreleaser.yml — `before` hooks: skip `make build-web` when embed tree exists; draft comment points to Actions policy
+
+Files Removed:
+  .github/workflows/ci.yml (duplicate PR matrix; never merged to main in this session)
+
+### Architectural Notes
+
+- Composite action under `.github/actions/` (not `workflow_call`) per maintainer layout.
+- PR build scope: CLI + WASM only (`build-wasm`); full `build-web` reserved for release.
+- Post-merge `push` to `main` does not run PR workflow (by design).
+- Release draft/pre-release: `release.yml` policy + `--draft` / `--skip=homebrew`; stable tags publish formula and run cask job.
+
+### Verification
+
+- YAML/action structure reviewed against Makefile targets (`build-web` → `build-wasm` + frontend).
+- Operator doc covers org secrets, tag push, manual dispatch, draft promotion.
+
+### Blockers
+
+None.
+
+### Next Required Action
+
+Optional: HTML contributing page linking `docs/spec/release.md`; wire `desktop-macos` frontend setup into a second composite action if duplication becomes painful.
+
+### Escalation Required
+
+No
+
+---
+
 # Success Criteria
 
 This handoff log succeeds when:

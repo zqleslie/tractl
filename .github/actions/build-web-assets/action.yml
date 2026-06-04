@@ -1,0 +1,53 @@
+name: Build web assets
+description: Set up Go and Node dependencies, then build the web asset target.
+
+inputs:
+  go-version-file:
+    description: Path to the Go version file.
+    required: false
+    default: go.mod
+  go-cache-dependency-path:
+    description: Newline-separated Go dependency files used for cache keys.
+    required: false
+    default: |
+      go.sum
+      cmd/desktop/go.sum
+  node-version-file:
+    description: Path to the Node version file.
+    required: false
+    default: frontend/package.json
+  npm-cache-dependency-path:
+    description: Newline-separated npm lockfiles used for cache keys.
+    required: false
+    default: |
+      package-lock.json
+      frontend/package-lock.json
+  build-target:
+    description: Make target to run after dependencies are installed.
+    required: false
+    default: build-web
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: ${{ inputs.go-version-file }}
+        cache: true
+        cache-dependency-path: ${{ inputs.go-cache-dependency-path }}
+
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: ${{ inputs.node-version-file }}
+        cache: npm
+        cache-dependency-path: ${{ inputs.npm-cache-dependency-path }}
+
+    - name: Install frontend dependencies
+      shell: bash
+      run: cd frontend && npm ci
+
+    - name: Build web assets
+      shell: bash
+      run: make "${{ inputs.build-target }}"

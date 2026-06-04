@@ -4,6 +4,10 @@ on:
   pull_request:
     branches: [master, main]
 
+concurrency:
+  group: pr-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     name: Format / Vet / Lint / Unit Tests
@@ -17,6 +21,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+          cache-dependency-path: |
+            go.sum
+            cmd/desktop/go.sum
 
       - name: Server embed stub (go:embed dist/web)
         run: make embed-stub
@@ -51,6 +58,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+          cache-dependency-path: |
+            go.sum
+            cmd/desktop/go.sum
 
       - name: Integration tests
         run: make test-integration
@@ -67,6 +77,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+          cache-dependency-path: |
+            go.sum
+            cmd/desktop/go.sum
 
       - name: E2E tests
         run: make test-e2e
@@ -78,23 +91,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: ./.github/actions/build-web-assets
         with:
-          go-version-file: go.mod
-          cache: true
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: frontend/package.json
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        run: cd frontend && npm ci
+          build-target: build-wasm
 
       - name: Build CLI binary
         run: make build-cli
-
-      - name: Build WASM
-        run: make build-wasm
